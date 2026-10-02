@@ -1,0 +1,17 @@
+{
+  "name": "Mầm Chung",
+  "short_name": "Mầm Chung",
+  "lang": "vi",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFBF6",
+  "theme_color": "#7E9B57",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

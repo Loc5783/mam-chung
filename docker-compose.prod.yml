@@ -1,0 +1,25 @@
+services:
+  mongo:
+    ports: !reset []
+  api:
+    ports: !reset []
+    environment:
+      NODE_ENV: production
+      CORS_ORIGIN: https://${DOMAIN}
+  web:
+    ports: !reset []
+  caddy:
+    image: caddy:2-alpine
+    ports: ["80:80", "443:443"]
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      [
+        "./Caddyfile:/etc/caddy/Caddyfile:ro",
+        "caddy_data:/data",
+        "caddy_config:/config",
+      ]
+    depends_on: [web]
+volumes:
+  caddy_data:
+  caddy_config:
