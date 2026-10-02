@@ -8,7 +8,11 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
       error: {
         code: "VALIDATION_ERROR",
         message: "Dữ liệu không hợp lệ.",
-        details: error.issues,
+        details: error.issues.map((issue) => ({
+          path: issue.path,
+          message: issue.message,
+          code: issue.code,
+        })),
       },
     });
     return;
@@ -19,6 +23,19 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
         code: error.code,
         message: error.message,
         details: error.details,
+      },
+    });
+    return;
+  }
+  if (
+    error?.type === "entity.parse.failed" ||
+    error?.type === "entity.too.large"
+  ) {
+    res.status(error.type === "entity.too.large" ? 413 : 400).json({
+      error: {
+        code: "INVALID_BODY",
+        message: "Nội dung yêu cầu không hợp lệ hoặc quá lớn.",
+        details: [],
       },
     });
     return;

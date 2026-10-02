@@ -15,7 +15,8 @@
     "test": "npm run test --workspaces",
     "build": "npm run build --workspaces",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "dev:local": "node scripts/dev-local.cjs"
   },
   "devDependencies": {
     "prettier": "^3.3.3"

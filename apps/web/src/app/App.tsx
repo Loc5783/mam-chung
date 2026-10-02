@@ -21,6 +21,11 @@ import {
 import { AuthPage } from "../features/auth/AuthPage";
 import { Dashboard } from "../features/dashboard/Dashboard";
 import { Card, EmptyState, Toast } from "../components/ui";
+import { AuthBootstrap, AuthGate } from "../features/auth/AuthGate";
+import { useAuthStore } from "../features/auth/store";
+import { SettingsPage } from "../features/settings/SettingsPage";
+import { AccountHome } from "../features/dashboard/AccountHome";
+import { Avatar } from "../components/ui/Avatar";
 const navigation = [
   { to: "/", label: "Tổng quan", icon: LayoutDashboard },
   { to: "/finance", label: "Tài chính cá nhân", icon: Wallet },
@@ -28,14 +33,17 @@ const navigation = [
   { to: "/tasks", label: "Công việc", icon: CheckSquare },
   { to: "/fitness", label: "Tập luyện", icon: Dumbbell },
 ];
-function Layout() {
+function Layout({ preview = false }: { preview?: boolean }) {
+  const user = useAuthStore((s) => s.user);
   const location = useLocation();
   const current =
-    navigation.find((n) => n.to === location.pathname)?.label || "Cài đặt";
+    location.pathname === "/preview"
+      ? "Tổng quan mẫu"
+      : navigation.find((n) => n.to === location.pathname)?.label || "Cài đặt";
   return (
     <div className="app-layout">
       <aside className="sidebar">
-        <Link className="brand" to="/">
+        <Link className="brand" to={preview ? "/preview" : "/"}>
           <span className="brand-icon">
             <Sprout />
           </span>
@@ -65,11 +73,11 @@ function Layout() {
             <Settings size={20} />
             Cài đặt
           </NavLink>
-          <Link to="/login" className="profile">
-            <span className="avatar">B</span>
+          <Link to={user ? "/settings" : "/login"} className="profile">
+            <Avatar user={user} />
             <span>
-              <b>Chào bạn</b>
-              <small>Đăng nhập để bắt đầu</small>
+              <b>{user?.name || "Chào bạn"}</b>
+              <small>{user ? "Hồ sơ của bạn" : "Đăng nhập để bắt đầu"}</small>
             </span>
             <LogIn size={17} />
           </Link>
@@ -81,8 +89,9 @@ function Layout() {
             Mầm Chung <ChevronRight size={13} /> <b>{current}</b>
           </span>
           <span className="topbar-right">
-            <span className="preview-indicator" /> Giao diện mẫu{" "}
-            <span className="avatar small">B</span>
+            <span className="preview-indicator" />{" "}
+            {preview ? "Giao diện mẫu" : "Không gian cá nhân"}{" "}
+            <Avatar user={user} small />
           </span>
         </header>
         <main className="page-content">
@@ -136,28 +145,34 @@ function FeaturePage({ title }: { title: string }) {
 export function App() {
   return (
     <>
+      <AuthBootstrap />
       <Routes>
         <Route path="/login" element={<AuthPage />} />
         <Route path="/register" element={<AuthPage registerMode />} />
-        <Route element={<Layout />}>
+        <Route path="/preview" element={<Layout preview />}>
           <Route index element={<Dashboard />} />
-          {[
-            ["finance", "Tài chính cá nhân"],
-            ["couple", "Không gian chung"],
-            ["tasks", "Công việc"],
-            ["fitness", "Tập luyện"],
-            ["settings", "Cài đặt"],
-          ].map(([path, title]) => (
+        </Route>
+        <Route element={<AuthGate />}>
+          <Route element={<Layout />}>
+            <Route index element={<AccountHome />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            {[
+              ["finance", "Tài chính cá nhân"],
+              ["couple", "Không gian chung"],
+              ["tasks", "Công việc"],
+              ["fitness", "Tập luyện"],
+            ].map(([path, title]) => (
+              <Route
+                key={path}
+                path={path}
+                element={<FeaturePage title={title} />}
+              />
+            ))}
             <Route
-              key={path}
-              path={path}
-              element={<FeaturePage title={title} />}
+              path="*"
+              element={<FeaturePage title="Không tìm thấy trang" />}
             />
-          ))}
-          <Route
-            path="*"
-            element={<FeaturePage title="Không tìm thấy trang" />}
-          />
+          </Route>
         </Route>
       </Routes>
       <Toast />

@@ -1,38 +1,88 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useLocation, useNavigate, Navigate } from "react-router-dom";
 import { Sprout, ArrowLeft, Heart, Leaf } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "../../components/ui";
 import { useUiStore } from "../../app/store";
-const schema = z.object({
+import { useAuthStore } from "./store";
+import {
+  apiClient,
+  errorMessage,
+  setSession,
+  SessionResponse,
+} from "../../lib/apiClient";
+const password = z
+  .string()
+  .min(8, "Mật khẩu cần ít nhất 8 ký tự.")
+  .regex(/(?=.*[A-Za-z])(?=.*\d)/, "Mật khẩu cần có chữ và số.")
+  .refine(
+    (value) => new TextEncoder().encode(value).length <= 72,
+    "Mật khẩu không được vượt quá 72 byte.",
+  );
+const loginSchema = z.object({
   name: z.string().optional(),
-  email: z.string().email("Vui lòng nhập email hợp lệ."),
-  password: z
-    .string()
-    .min(8, "Mật khẩu cần ít nhất 8 ký tự.")
-    .regex(/(?=.*[A-Za-z])(?=.*\d)/, "Mật khẩu cần có chữ và số."),
+  email: z.string().trim().email("Vui lòng nhập email hợp lệ."),
+  password: z.string().min(1, "Vui lòng nhập mật khẩu."),
 });
-type Values = z.infer<typeof schema>;
+const registerSchema = loginSchema.extend({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Tên cần ít nhất 2 ký tự.")
+    .max(100, "Tên không được vượt quá 100 ký tự."),
+  password,
+});
+type Values = z.infer<typeof loginSchema>;
 export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<Values>({
-    resolver: zodResolver(
-      registerMode
-        ? schema.extend({
-            name: z.string().trim().min(2, "Tên cần ít nhất 2 ký tự."),
-          })
-        : schema,
-    ),
+    resolver: zodResolver(registerMode ? registerSchema : loginSchema),
   });
+  const [error, setError] = useState("");
   const notify = useUiStore((s) => s.notify);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const status = useAuthStore((s) => s.status);
+  const destination =
+    typeof location.state?.from === "string" &&
+    location.state.from.startsWith("/") &&
+    !location.state.from.startsWith("//")
+      ? location.state.from
+      : "/";
+  if (status === "authenticated") return <Navigate to={destination} replace />;
+  const submit = async (values: Values) => {
+    setError("");
+    try {
+      const { data } = await apiClient.post<SessionResponse>(
+        registerMode ? "/auth/register" : "/auth/login",
+        registerMode
+          ? {
+              name: values.name,
+              email: values.email,
+              password: values.password,
+            }
+          : { email: values.email, password: values.password },
+      );
+      setSession(data);
+      notify(
+        registerMode
+          ? "Tài khoản đã sẵn sàng. Chào mừng bạn đến Mầm Chung!"
+          : "Đăng nhập thành công. Mừng bạn trở lại!",
+      );
+      navigate(destination, { replace: true });
+    } catch (err) {
+      setError(errorMessage(err));
+    }
+  };
   return (
     <div className="auth-page">
       <div className="auth-story">
-        <Link className="brand" to="/">
+        <Link className="brand" to="/preview">
           <span className="brand-icon">
             <Sprout />
           </span>
@@ -60,7 +110,7 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
         <small>Cho bạn, và cho chúng mình.</small>
       </div>
       <main className="auth-main">
-        <Link className="back-link" to="/">
+        <Link className="back-link" to="/preview">
           <ArrowLeft size={16} /> Xem giao diện mẫu
         </Link>
         <div className="auth-form-wrap">
@@ -71,15 +121,9 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
               ? "Tạo tài khoản để bắt đầu hành trình của bạn."
               : "Một ngày mới, một bước nhỏ về phía trước."}
           </p>
-          <div className="demo-note">
-            Giai đoạn 0 · Biểu mẫu minh họa, chưa kết nối xác thực.
-          </div>
           <form
-            onSubmit={handleSubmit(() =>
-              notify(
-                "Biểu mẫu hợp lệ. Xác thực thật sẽ được kết nối ở giai đoạn 1.",
-              ),
-            )}
+            className="live-auth-form"
+            onSubmit={handleSubmit(submit)}
             noValidate
           >
             {registerMode && (
@@ -88,6 +132,7 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
                 <input
                   autoComplete="name"
                   placeholder="Tên của bạn"
+                  disabled={isSubmitting}
                   {...register("name")}
                 />
                 {errors.name && (
@@ -103,6 +148,7 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
                 type="email"
                 autoComplete="email"
                 placeholder="ban@example.com"
+                disabled={isSubmitting}
                 {...register("email")}
               />
               {errors.email && (
@@ -118,7 +164,12 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
                 autoComplete={
                   registerMode ? "new-password" : "current-password"
                 }
-                placeholder="Ít nhất 8 ký tự, có chữ và số"
+                placeholder={
+                  registerMode
+                    ? "Ít nhất 8 ký tự, có chữ và số"
+                    : "Nhập mật khẩu của bạn"
+                }
+                disabled={isSubmitting}
                 {...register("password")}
               />
               {errors.password && (
@@ -127,8 +178,17 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
                 </span>
               )}
             </label>
-            <Button type="submit">
-              {registerMode ? "Tạo tài khoản mẫu" : "Kiểm tra đăng nhập mẫu"}
+            {error && (
+              <div className="form-error" role="alert">
+                {error}
+              </div>
+            )}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting
+                ? "Đang xử lý…"
+                : registerMode
+                  ? "Tạo tài khoản"
+                  : "Đăng nhập"}
             </Button>
           </form>
           <p className="auth-switch">

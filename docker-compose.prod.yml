@@ -5,6 +5,7 @@ services:
     ports: !reset []
     environment:
       NODE_ENV: production
+      TRUST_PROXY_HOPS: 2
       CORS_ORIGIN: https://${DOMAIN}
   web:
     ports: !reset []
