@@ -61,7 +61,7 @@ const recurringSchema = z
     endDate: z.string(),
     enabled: z.boolean(),
   })
-  .refine((v) => !v.endDate || v.nextDate <= v.endDate, {
+  .refine((v) => !v.enabled || !v.endDate || v.nextDate <= v.endDate, {
     path: ["endDate"],
     message: "Ngày kết thúc phải sau hoặc bằng kỳ tiếp theo.",
   });

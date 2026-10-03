@@ -55,7 +55,7 @@ export const recurringCreate = transactionCreate
   })
   .strict()
   .refine(
-    (v) => !v.endDate || v.nextDate <= v.endDate,
+    (v) => !v.enabled || !v.endDate || v.nextDate <= v.endDate,
     "Ngày kết thúc phải sau kỳ đầu.",
   );
 export const recurringUpdate = transactionCreate

@@ -17,7 +17,7 @@ export const userRepository = {
       { $inc: { sessionRevision: 1 } },
       { new: true, session },
     ).select("+passwordHash"),
-  failedLogin: (id: string, now: Date) => {
+  failedLogin: (id: string, version: number, now: Date) => {
     const count = {
       $add: [
         {
@@ -38,6 +38,7 @@ export const userRepository = {
     return User.findOneAndUpdate(
       {
         _id: id,
+        securityVersion: version,
         deletedAt: null,
         $or: [{ lockUntil: null }, { lockUntil: { $lte: now } }],
       },

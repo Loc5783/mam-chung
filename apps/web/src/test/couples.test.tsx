@@ -422,3 +422,18 @@ it("server membership refresh clears stale coupleId after partner leaves", async
   await screen.findByText("Một chỗ dành cho chúng mình");
   expect(useAuthStore.getState().user?.coupleId).toBeNull();
 });
+
+it("mã mời đã tạo vẫn hiển thị khi tải lại hồ sơ bị lỗi mạng", async () => {
+  active = structuredClone(solo);
+  const original = vi.mocked(apiClient.get).getMockImplementation()!;
+  vi.mocked(apiClient.get).mockImplementation(async (url, config) => {
+    if (url === "/users/me") throw new Error("Mất mạng");
+    return original(url, config);
+  });
+  wrap(<CouplePage />);
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Tạo mã mời" }),
+  );
+  expect(await screen.findByText("ABCD2345")).toBeInTheDocument();
+  expect(apiClient.post).toHaveBeenCalledTimes(1);
+});

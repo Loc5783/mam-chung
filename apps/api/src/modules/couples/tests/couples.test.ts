@@ -530,3 +530,14 @@ describe("REST validation and access", () => {
     ).toBe(429);
   });
 });
+
+it("không chuyển quyền cho chính mình bằng mã user viết hoa", async () => {
+  await pair();
+  await expect(
+    s.transferOwner(a, { userId: a.toUpperCase() }),
+  ).rejects.toMatchObject({ code: "SAME_OWNER" });
+  expect((await s.me(a)).couple?.role).toBe("owner");
+  expect(
+    await CoupleMember.countDocuments({ active: true, role: "owner" }),
+  ).toBe(1);
+});

@@ -94,6 +94,7 @@ export const authService = {
     if (!(await bcrypt.compare(input.password, user.passwordHash))) {
       const updated = await userRepository.failedLogin(
         user.id as string,
+        user.securityVersion,
         new Date(),
       );
       if (updated?.lockUntil && updated.lockUntil > new Date())

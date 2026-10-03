@@ -364,7 +364,7 @@ export const planningService = {
       const r = await repo.template(userId, id, session);
       if (!r) throw missing();
       const merged = { ...r.toObject(), ...input };
-      if (merged.endDate && merged.nextDate > merged.endDate)
+      if (merged.enabled && merged.endDate && merged.nextDate > merged.endDate)
         throw new AppError(
           400,
           "VALIDATION_ERROR",
@@ -382,8 +382,9 @@ export const planningService = {
         merged.type,
         session,
       );
+      if (input.nextDate && input.nextDate !== r.nextDate)
+        r.anchorDay = Number(input.nextDate.slice(-2));
       Object.assign(r, input);
-      if (input.nextDate) r.anchorDay = Number(input.nextDate.slice(-2));
       r.lastError = null;
       r.lastAttemptDate = null;
       await r.save({ session });

@@ -73,8 +73,10 @@ function ProfileForm({ user }: { user: Profile }) {
     onSuccess: async (data) => {
       useAuthStore.getState().updateUser(data);
       client.setQueryData(["profile", user.id], data);
-      if (data.timezone !== user.timezone)
+      if (data.timezone !== user.timezone) {
         await client.invalidateQueries({ queryKey: ["finance", user.id] });
+        await client.invalidateQueries({ queryKey: ["couple", user.id] });
+      }
       notify("Đã cập nhật hồ sơ.");
     },
   });

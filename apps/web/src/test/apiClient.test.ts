@@ -193,3 +193,102 @@ describe("Quản lý access token và refresh", () => {
     expect(axios.isAxiosError(new AxiosError())).toBe(true);
   });
 });
+
+it("401 cũ sau đổi tài khoản không được thử lại thao tác dưới người mới", async () => {
+  let reject!: (reason: unknown) => void;
+  let old!: InternalAxiosRequestConfig;
+  const renew = vi.fn(async (c: InternalAxiosRequestConfig) =>
+    response(c, {
+      accessToken: "new-refreshed",
+      user: { ...profile, id: "other" },
+    }),
+  );
+  refresh.defaults.adapter = renew;
+  const requests = vi.fn((c: InternalAxiosRequestConfig) => {
+    old = c;
+    return new Promise<AxiosResponse>((_res, rej) => {
+      reject = rej;
+    });
+  });
+  apiClient.defaults.adapter = requests;
+  const pending = apiClient.post("/transactions", { amount: 100 });
+  await vi.waitFor(() => expect(reject).toBeTypeOf("function"));
+  setSession({ accessToken: "other-token", user: { ...profile, id: "other" } });
+  reject(
+    new AxiosError(
+      "expired",
+      undefined,
+      old,
+      undefined,
+      response(old, {}, 401),
+    ),
+  );
+  await expect(pending).rejects.toThrow("Phiên đã thay đổi.");
+  expect(requests).toHaveBeenCalledTimes(1);
+  expect(renew).not.toHaveBeenCalled();
+  expect(useAuthStore.getState().accessToken).toBe("other-token");
+});
+it("phản hồi thành công cũ không được đi vào hồ sơ/cache của phiên mới", async () => {
+  let resolve!: (r: AxiosResponse) => void;
+  let config!: InternalAxiosRequestConfig;
+  apiClient.defaults.adapter = (c) => {
+    config = c;
+    return new Promise((res) => {
+      resolve = res;
+    });
+  };
+  const pending = apiClient.get("/users/me");
+  await vi.waitFor(() => expect(resolve).toBeTypeOf("function"));
+  setSession({ accessToken: "other-token", user: { ...profile, id: "other" } });
+  resolve(response(config, profile));
+  await expect(pending).rejects.toThrow("Phiên đã thay đổi.");
+  expect(useAuthStore.getState().user?.id).toBe("other");
+});
+it("refresh mất mạng giữ phiên để người dùng thử lại", async () => {
+  apiClient.defaults.adapter = (c) => fail(c, 401);
+  refresh.defaults.adapter = () =>
+    Promise.reject(new AxiosError("Network error"));
+  await expect(apiClient.get("/users/me")).rejects.toThrow("Network error");
+  expect(useAuthStore.getState().accessToken).toBe("expired");
+});
+it("cookie của tài khoản khác không dùng để thử lại giao dịch", async () => {
+  let calls = 0;
+  apiClient.defaults.adapter = (c) => {
+    calls++;
+    return fail(c, 401);
+  };
+  refresh.defaults.adapter = async (c) =>
+    response(c, { accessToken: "other", user: { ...profile, id: "other" } });
+  await expect(apiClient.post("/transactions", {})).rejects.toThrow(
+    "Phiên đã thay đổi.",
+  );
+  expect(calls).toBe(1);
+  expect(useAuthStore.getState().user).toBeNull();
+});
+
+it("phiên mới không dùng chung refresh đang chờ của phiên cũ", async () => {
+  let rejectOld!: (reason: unknown) => void;
+  let calls = 0;
+  refresh.defaults.adapter = (c) => {
+    calls++;
+    if (calls === 1)
+      return new Promise<AxiosResponse>((_res, rej) => {
+        rejectOld = rej;
+      });
+    return Promise.resolve(
+      response(c, {
+        accessToken: "renewed-new",
+        user: { ...profile, id: "other" },
+      }),
+    );
+  };
+  const old = refreshSession();
+  const rejected = expect(old).rejects.toThrow("Old refresh failed");
+  await vi.waitFor(() => expect(rejectOld).toBeTypeOf("function"));
+  setSession({ accessToken: "new-login", user: { ...profile, id: "other" } });
+  expect((await refreshSession()).accessToken).toBe("renewed-new");
+  rejectOld(new AxiosError("Old refresh failed"));
+  await rejected;
+  expect(calls).toBe(2);
+  expect(useAuthStore.getState().accessToken).toBe("renewed-new");
+});

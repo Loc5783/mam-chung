@@ -735,3 +735,50 @@ it("budget threshold compares integers exactly near the safe-money ceiling", asy
     (await service.budgets(userId, { month: "2026-10" })).items[0].status,
   ).toBe("warning");
 });
+
+test("sửa ghi chú lịch đã kết thúc; bật lại vẫn cần gia hạn", async () => {
+  const r = await recurring({ endDate: "2026-10-03" });
+  await service.runRecurring(userId, r.id, now);
+  expect(
+    (await service.updateRecurring(userId, r.id, { notes: "Đã hoàn tất" }))
+      .notes,
+  ).toBe("Đã hoàn tất");
+  await expect(
+    service.updateRecurring(userId, r.id, { enabled: true }),
+  ).rejects.toMatchObject({ code: "VALIDATION_ERROR" });
+  await service.updateRecurring(userId, r.id, {
+    enabled: true,
+    endDate: "2026-10-10",
+  });
+  expect((await service.runRecurring(userId, r.id, now)).created).toBe(1);
+  expect(await RecurringRun.countDocuments({ recurringId: r.id })).toBe(2);
+});
+test("CSV và lịch sử dùng cùng bộ lọc ghi chú/nhãn", async () => {
+  await entry(10, {
+    description: "Một dòng riêng",
+    notes: "Từ khóa [CSV]",
+    tags: ["nhãn-csv"],
+  });
+  await entry(20, { description: "Không liên quan" });
+  const csv = await service.exportCsv(userId, { search: "[CSV]" });
+  expect(csv).toContain("Một dòng riêng");
+  expect(csv).not.toContain("Không liên quan");
+  expect(
+    (await finance.transactions(userId, { search: "nhãn-csv" })).total,
+  ).toBe(1);
+});
+
+test("sửa mẫu tháng mà không đổi ngày giữ neo 31 sau tháng ngắn", async () => {
+  const r = await recurring({ frequency: "monthly", nextDate: "2026-01-31" });
+  await service.runRecurring(userId, r.id, new Date("2026-01-31T10:00:00Z"));
+  const current = (await service.recurring(userId, {})).items[0];
+  expect(current.nextDate).toBe("2026-02-28");
+  await service.updateRecurring(userId, r.id, {
+    nextDate: current.nextDate,
+    notes: "Chỉ sửa ghi chú",
+  });
+  await service.runRecurring(userId, r.id, new Date("2026-02-28T10:00:00Z"));
+  expect((await service.recurring(userId, {})).items[0].nextDate).toBe(
+    "2026-03-31",
+  );
+});

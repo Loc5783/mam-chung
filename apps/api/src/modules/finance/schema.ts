@@ -2,7 +2,8 @@ import { z } from "zod";
 import { validDateOnly } from "../../utils/dates";
 export const objectId = z
   .string()
-  .regex(/^[a-f\d]{24}$/i, "Mã tài nguyên không hợp lệ.");
+  .regex(/^[a-f\d]{24}$/i, "Mã tài nguyên không hợp lệ.")
+  .transform((value) => value.toLowerCase());
 export const money = z
   .number()
   .int("Số tiền phải là số nguyên VND.")

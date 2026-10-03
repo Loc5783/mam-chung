@@ -508,3 +508,27 @@ describe("Auth và người dùng trên MongoDB replica set", () => {
     ).toBe(400);
   });
 });
+
+test("đăng nhập sai trả chậm không cộng lỗi vào mật khẩu vừa đổi", async () => {
+  const first = await register();
+  const spy = jest.spyOn(bcrypt, "compare").mockImplementationOnce(async () => {
+    await User.updateOne(
+      { _id: first.body.user.id },
+      {
+        $inc: { securityVersion: 1 },
+        $set: { loginAttempts: 0, lockUntil: null },
+      },
+    );
+    return false;
+  });
+  try {
+    await expect(
+      authService.login({ email: account.email, password: "Wrong12345" }),
+    ).rejects.toMatchObject({ code: "INVALID_CREDENTIALS" });
+    const user = await User.findById(first.body.user.id);
+    expect(user!.loginAttempts).toBe(0);
+    expect(user!.lockUntil).toBeNull();
+  } finally {
+    spy.mockRestore();
+  }
+});

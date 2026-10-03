@@ -413,3 +413,30 @@ it("lỗi máy chủ hiển thị trong biểu mẫu ngân sách", async () => {
     await screen.findByText("Danh mục đã có ngân sách cho tháng này."),
   ).toBeInTheDocument();
 });
+
+it("lưu ghi chú mẫu định kỳ đã kết thúc mà không bị chặn bởi kỳ sau", async () => {
+  vi.spyOn(apiClient, "put").mockResolvedValue({ data: {} });
+  wrap(
+    <RecurringForm
+      recurring={{
+        ...recurring,
+        enabled: false,
+        nextDate: "2026-11-30",
+        endDate: "2026-10-31",
+      }}
+      wallets={wallets}
+      categories={categories}
+      onClose={vi.fn()}
+    />,
+  );
+  await userEvent.type(screen.getByLabelText("Ghi chú"), "Đã hoàn tất");
+  await userEvent.click(
+    screen.getByRole("button", { name: "Lưu lịch định kỳ" }),
+  );
+  await waitFor(() =>
+    expect(apiClient.put).toHaveBeenCalledWith(
+      "/recurring/recurring",
+      expect.objectContaining({ enabled: false, notes: "Đã hoàn tất" }),
+    ),
+  );
+});

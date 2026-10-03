@@ -262,8 +262,10 @@ function transactionFilter(
     filter.type = query.type;
     filter.kind = "transaction";
   }
-  if (query.search)
-    filter.description = { $regex: escapeSearch(query.search), $options: "i" };
+  if (query.search) {
+    const match = { $regex: escapeSearch(query.search), $options: "i" };
+    filter.$or = [{ description: match }, { notes: match }, { tags: match }];
+  }
   const { lower, upper } = dateBounds(query.from, query.to, timeZone);
   if (lower || upper)
     filter.date = {

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiClient } from "../../lib/apiClient";
+import { apiClient, getSessionEpoch } from "../../lib/apiClient";
 import { useAuthStore, Profile } from "../auth/store";
 import { useUiStore } from "../../app/store";
 import { CoupleData } from "./types";
@@ -44,12 +44,31 @@ export function useCoupleMutation<T>(
     notify = useUiStore((s) => s.notify);
   return useMutation({
     mutationFn: run,
-    onSuccess: async (v) => {
-      const { data } = await apiClient.get<Profile>("/users/me");
-      useAuthStore.getState().updateUser(data);
-      await query.invalidateQueries({ queryKey: ["couple"] });
+    onMutate: () => ({
+      epoch: getSessionEpoch(),
+      viewerId: useAuthStore.getState().user?.id,
+    }),
+    onSuccess: async (v, _variables, context) => {
+      const current = () =>
+        context?.epoch === getSessionEpoch() &&
+        context?.viewerId === useAuthStore.getState().user?.id;
+      if (!current()) return;
       done?.(v);
       notify(message);
+      // The write has committed. Refresh failures must not hide its result.
+      void query.invalidateQueries({ queryKey: ["couple", context?.viewerId] });
+      try {
+        const { data } = await apiClient.get<Profile>("/users/me");
+        if (current() && data.id === context?.viewerId) {
+          useAuthStore.getState().updateUser(data);
+          query.setQueryData(["profile", data.id], data);
+        }
+      } catch {
+        // The couple query reconciles membership on its next successful poll.
+        void query.invalidateQueries({
+          queryKey: ["profile", context?.viewerId],
+        });
+      }
     },
   });
 }

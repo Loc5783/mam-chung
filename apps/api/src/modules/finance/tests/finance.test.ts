@@ -944,3 +944,86 @@ describe("Dashboard và múi giờ", () => {
     expect(dst.upper!.getTime() - dst.lower!.getTime()).toBe(23 * 3600000);
   });
 });
+
+describe("Hồi quy kiểm toán logic", () => {
+  test("cùng ví khác kiểu chữ không được chuyển tiền cho chính mình", async () => {
+    const w = await wallet(100);
+    await expect(
+      service.transfer(userId, {
+        fromWalletId: w.id,
+        toWalletId: w.id.toUpperCase(),
+        amount: 20,
+        date,
+      }),
+    ).rejects.toMatchObject({ code: "SAME_WALLET" });
+    expect(await balance(w.id)).toBe(100);
+    expect(
+      await FinancialTransaction.countDocuments({ kind: "transfer" }),
+    ).toBe(0);
+  });
+  test("sửa thu nhập đã tiêu hết với mã ví viết hoa chỉ áp dụng chênh lệch cuối", async () => {
+    const w = await wallet();
+    const tx = await entry(w.id, "income", 100);
+    await entry(w.id, "expense", 100);
+    await service.updateTransaction(userId, tx.id, {
+      walletId: w.id.toUpperCase(),
+      amount: 120,
+    });
+    expect(await balance(w.id)).toBe(20);
+    expect((await service.reconcile(userId, w.id, {})).matched).toBe(true);
+  });
+  test("không thay thế danh mục bằng chính nó với mã viết hoa", async () => {
+    const c = await service.createCategory(userId, {
+      name: "Danh mục kiểm toán",
+      type: "expense",
+    });
+    const w = await wallet(100);
+    await entry(w.id, "expense", 10, { categoryId: c.id });
+    await expect(
+      service.deleteCategory(userId, c.id, {
+        replacementId: c.id.toUpperCase(),
+      }),
+    ).rejects.toMatchObject({ code: "REPLACEMENT_REQUIRED" });
+    expect((await Category.findById(c.id))!.deletedAt).toBeNull();
+  });
+  test("tìm ghi chú và nhãn theo chuỗi literal, không trùng dòng và không lộ user khác", async () => {
+    const w = await wallet(100);
+    const tx = await entry(w.id, "expense", 10, {
+      notes: "Kiểm toán [đặc biệt]",
+      tags: ["Kiểm toán [đặc biệt]"],
+    });
+    const other = await service.createWallet(otherId, {
+      name: "Ví khác",
+      type: "cash",
+      initialBalance: 100,
+    });
+    await service.createTransaction(otherId, {
+      walletId: other.id,
+      categoryId: expenseId,
+      type: "expense",
+      amount: 20,
+      date,
+      description: "Kiểm toán [đặc biệt]",
+    });
+    const result = await service.transactions(userId, {
+      search: "kiểm toán [đặc biệt]",
+    });
+    expect(result.total).toBe(1);
+    expect(result.items[0].id).toBe(tx.id);
+    expect(result.summary.expense).toBe(10);
+    expect((await service.transactions(userId, { search: ".*" })).total).toBe(
+      0,
+    );
+  });
+  test("lọc ngày đúng ở năm nhỏ hơn 100 và ngày đổi giờ tại nửa đêm", () => {
+    expect(parseFinancialDate("0099-10-02", "UTC").toISOString()).toBe(
+      "0099-10-02T12:00:00.000Z",
+    );
+    const b = dateBounds("2026-09-06", "2026-09-06", "America/Santiago");
+    expect(b.lower!.toISOString()).toBe("2026-09-06T04:00:00.000Z");
+    expect(b.upper!.toISOString()).toBe("2026-09-07T03:00:00.000Z");
+  });
+  test("không âm thầm đổi ngày không tồn tại trong múi giờ", () => {
+    expect(() => parseFinancialDate("2011-12-30", "Pacific/Apia")).toThrow();
+  });
+});
