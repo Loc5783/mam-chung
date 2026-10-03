@@ -37,6 +37,13 @@ export const userService = {
         "Vui lòng rời hoặc giải tán không gian chung trước khi xóa tài khoản.",
       );
     await inTransaction(async (session) => {
+      const current = await userRepository.byId(userId, session);
+      if (current?.coupleId)
+        throw new AppError(
+          409,
+          "COUPLE_ACTIVE",
+          "Vui lòng rời hoặc giải tán không gian chung trước khi xóa tài khoản.",
+        );
       if (!(await userRepository.remove(userId, user.securityVersion, session)))
         throw new AppError(
           401,

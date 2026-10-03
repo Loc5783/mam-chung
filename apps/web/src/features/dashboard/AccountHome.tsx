@@ -1,12 +1,7 @@
+import { CouplePreview } from "../couples/CouplePage";
 import { FinanceOverview } from "../finance/FinanceOverview";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  Heart,
-  CheckSquare,
-  Dumbbell,
-  ArrowRight,
-  ShieldCheck,
-} from "lucide-react";
+import { CheckSquare, Dumbbell, ArrowRight, ShieldCheck } from "lucide-react";
 import { useAuthStore } from "../auth/store";
 import { Card, EmptyState } from "../../components/ui";
 export function AccountHome() {
@@ -31,22 +26,17 @@ export function AccountHome() {
       <div className="account-note">
         <ShieldCheck size={20} />
         <span>
-          Tài chính cá nhân đã sẵn sàng. Không gian chung, công việc và tập
-          luyện sẽ được mở theo các giai đoạn tiếp theo.
+          Tài chính cá nhân và không gian chung đã sẵn sàng. Công việc và tập
+          luyện sẽ được mở ở các giai đoạn tiếp theo.
         </span>
       </div>
       <FinanceOverview
         onAdd={() => navigate("/finance?tab=transactions&add=1")}
         onWallet={() => navigate("/finance?tab=wallets&add=1")}
       />
+      <CouplePreview />
       <div className="account-grid">
         {[
-          {
-            title: "Không gian chung",
-            icon: Heart,
-            to: "/couple",
-            description: "Cùng người thương vun đắp một hành trình.",
-          },
           {
             title: "Công việc",
             icon: CheckSquare,

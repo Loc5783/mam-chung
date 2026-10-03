@@ -92,3 +92,30 @@ Dành dụm cho mục tiêu không tạo expense hay tự trừ ví. Người d�
 Mẫu định kỳ dùng trường của POST /transactions trừ date; nextDate/endDate là YYYY-MM-DD. Job chạy khi khởi động và kiểm tra mỗi phút; chỉ ghi kỳ đến hạn theo ngày địa phương của người dùng. Ngày 29–31 giữ anchor: 31/01 → 28/02 → 31/03. Hết endDate tự tắt. Kỳ thất bại giữ nextDate/lỗi; job tự thử lại ngày địa phương kế tiếp hoặc người dùng dùng /run ngay sau khi sửa nguyên nhân. Mỗi kỳ có khóa (recurringId, scheduledDate); ghi sổ, số dư, khóa và nextDate cùng transaction. Xóa dòng sổ đã sinh không làm job tạo lại cùng kỳ.
 
 CSV nhận `from`, `to`, `walletId`, `categoryId`, `type`, `search`, `sort` như lịch sử. `page/limit` được parser chấp nhận nhưng không giới hạn kết quả xuất. Trên 10.000 dòng trả 422 và yêu cầu lọc hẹp hơn. Mọi ô được quote/escape, trường văn bản có tiền tố nguy hiểm được thêm dấu apostrophe; ngày giờ ISO UTC, tiền là số nguyên VND. CSV có cả opening/transfer khi bộ lọc cho phép; cột Bản ghi giúp phân biệt với thu/chi thường.
+
+## Giai đoạn 4 — Couple
+
+Tất cả endpoint cần Bearer. Mọi quyền kiểm tra lại từ DB trong service, không tin coupleId/role từ client. Một user chỉ có một membership active, một couple tối đa hai thành viên. Mã invalid/expired/used/revoked trả cùng 404; quyền owner thiếu trả 403; đang có couple/full/chưa chuyển quyền/chưa xác nhận công nợ trả 409.
+
+| Endpoint                                           | Nội dung                                                                                                    |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| POST /couples                                      | `{name, anniversary?}`; tạo active và membership owner nguyên tử                                            |
+| GET /couples/me                                    | `{couple:null}` khi chưa ghép, hoặc DTO active với members, anniversaryInfo, invite metadata, outstanding   |
+| PUT /couples/me                                    | Thành viên active sửa tên/ngày kỷ niệm; anniversary null để bỏ, không được ở tương lai                      |
+| POST /couples/invite                               | Body `{}`; owner tạo mã 8 ký tự random, 48h, dùng một lần, thu hồi mã trước; trả `{id,code,path,expiresAt}` |
+| DELETE /couples/invite                             | Body `{}`; owner thu hồi mọi mã active                                                                      |
+| GET /couples/invite/:code                          | Xem tên hành trình, tên người mời, hết hạn và isSelf; chỉ sau đăng nhập, không lộ email/token/dữ liệu chung |
+| POST /couples/accept                               | `{code}`; thêm member, dùng mã, cập nhật user cùng DB transaction                                           |
+| POST /couples/transfer-owner                       | `{userId}`; owner chuyển cho thành viên active còn lại                                                      |
+| DELETE /couples/leave                              | `{confirm:true,dissolve?:boolean,confirmOutstanding?:boolean}`; xem quy tắc bên dưới                        |
+| GET /couples/archives?page=1&limit=20              | Các hành trình lưu trữ của chính người dùng; DTO chỉ đọc                                                    |
+| GET /couples/archives/:id                          | Thành viên cũ mới xem được, ngoài quyền trả 404                                                             |
+| GET /couples/activity?coupleId=...&page=1&limit=20 | Feed phân trang của nhóm active mặc định hoặc archived theo quyền                                           |
+
+Couple DTO không chứa email của người kia, password hash hay mã mời/hash. `invite` chỉ có id/expiresAt, code chỉ hiển thị một lần lúc tạo (không lưu plaintext); nếu chưa lưu có thể tạo mã mới. Mã không được tự gửi qua email/chat. Route tạo/xem/chấp nhận mã giới hạn gộp 10 request/phút/tài khoản, thêm API limit chung theo IP.
+
+Owner có hai người phải chuyển quyền trước khi rời. Owner chỉ còn một mình cần dissolve=true. Member không được dissolve=true. Mọi lần rời đều cần confirm=true. Khi member rời hoặc solo owner giải tán, toàn bộ couple archived, cả hai membership inactive, cả hai user.coupleId=null, thu hồi invite và giữ feed/snapshot tên/ảnh. Cả hai có thể tạo/ghép hành trình mới; không nối người mới vào ledger của hành trình cũ. Không có API sửa archived. Parent couple.status là khóa bảo vệ toàn bộ dữ liệu chung cho các module tiếp theo.
+
+Nếu collection `settlements` còn status `unpaid`, `pending` hoặc `pending_confirm` và chưa xóa thì yêu cầu confirmOutstanding=true riêng. Không sửa/xóa công nợ trong hành động rời. Giai đoạn 4 chỉ có count/guard và outstanding.summaryAvailable=false; tổng tiền và quy trình thanh toán thuộc giai đoạn 5. Không hiển thị số nợ giả bằng 0.
+
+Anniversary là ngày 1900-01-01 trở lên, tính số ngày theo timezone người xem. 29/02 dùng 28/02 ở năm không nhuận; nhắc kỷ niệm trên dashboard khi hôm nay hoặc hiển thị số ngày còn lại. Feed ghi thao tác tạo, mời/thu hồi, ghép, sửa, chuyển quyền và lưu trữ trong cùng transaction; không ghi mã/token vào message. `requireCouple` chỉ hỗ trợ guard ban đầu; nghiệp vụ shared tương lai phải kiểm tra/lock active couple trong transaction để ngăn race với rời.

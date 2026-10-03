@@ -49,3 +49,15 @@
 - Báo cáo trả đủ tháng cả khi trống, chỉ regular income/expense; loại opening/transfer. Comparison null khi tháng trước bằng 0. Line chart top 5 để dễ đọc, bảng tổng vẫn có mọi danh mục. Đổi timezone hồ sơ làm mới cache tài chính.
 - CSV phản ánh toàn bộ bộ lọc, không chỉ trang. UTF-8 BOM/CRLF, escape quote và chống formula injection cho trường văn bản. Giới hạn 10.000 dòng để bảo vệ bộ nhớ; xuất lớn hơn/streaming thuộc tối ưu sau này. Không coi nội dung CSV là câu lệnh.
 - Mọi cập nhật kế hoạch khóa tài khoản và kiểm tra chủ sở hữu trong service; tài khoản đã xóa bị loại khỏi worker. Kiểm thử dùng replica set riêng, QA local riêng; tài khoản demo và dữ liệu hiện hữu được giữ nguyên.
+
+## Giai đoạn 4 — Couple
+
+- Một couple tối đa hai người; người tạo là owner, người nhận là member. User.coupleId và partial unique index CoupleMember(userId) khi active cùng bảo vệ một active membership. Mọi thay đổi khóa user/couple trong transaction; nhận mã đồng thời chỉ một người thành công.
+- Code 8 ký tự crypto.randomInt với bảng chữ bỏ I/O/0/1; SHA-256 lưu DB, plaintext chỉ trả lúc tạo. Mã có hiệu lực 48h, một lần, bị thu hồi khi tạo mới/rời. Không TTL-xóa used invite để giữ chứng cứ; tránh lộ tình trạng mã bằng lỗi 404 thống nhất. UI sao chép để người dùng tự gửi, không tự nhắn người khác.
+- Chỉ owner tạo/thu hồi mã và chuyển quyền. Cả hai thành viên active sửa tên/ngày kỷ niệm. Link lời mời cần đăng nhập; giữ đích đến khi chuyển qua đăng ký/đăng nhập. Preview không tự chấp nhận.
+- Khi member rời, archive toàn bộ couple và cả hai membership, xóa cả hai active pointer. Người còn lại bắt đầu couple mới thay vì thêm người thứ ba vào lịch sử cũ. Solo owner phải xác nhận giải tán; owner đang có partner phải chuyển quyền trước. Lịch sử immutable, chỉ thành viên cũ đọc; tên/ảnh snapshot tại lúc lưu trữ, không trả email hay profile riêng của partner.
+- Confirm=true bắt buộc trước rời. Guard công nợ đọc `settlements` với unpaid/pending/pending_confirm, cần xác nhận riêng khi count>0; không xóa công nợ. Tổng tiền và shared ledger ở giai đoạn 5, UI không giả định cân bằng/0đ. Couple.status archived điều khiển read-only shared resources; giai đoạn 5 phải kiểm tra trạng thái và lock cùng transaction, không chỉ middleware.
+- requireCouple tra DB và từ chối archived. Account deletion kiểm tra coupleId cả trong transaction sau password check để không xóa user vừa được ghép đồng thời. User membership changes không thay đổi tiền cá nhân.
+- Anniversary date-only >=1900, không tương lai, đếm ngày theo timezone người xem; 29/02 kỷ niệm vào 28/02 ở năm không nhuận. Dashboard nhắc ngay ngày kỷ niệm.
+- Feed audit scoped theo membership, phân trang; không nhận message/actor tùy ý và không chứa mã mời. Auto poll 5s khi mở trang, làm mới trên focus; sync coupleId từ server để người kia rời/chuyển quyền không để lại trạng thái cũ. WebSocket/thông báo đầy đủ ở các giai đoạn sau.
+- Quỹ, chia tiền, settlement và mục tiêu chung được triển khai tiếp ở giai đoạn 5; đây là Couple core và archive foundation, chưa hoàn thành toàn bộ ứng dụng.

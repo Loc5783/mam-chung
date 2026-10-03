@@ -1,3 +1,4 @@
+import { coupleRoutes } from "./modules/couples/routes";
 import { planningRoutes } from "./modules/planning/routes";
 import express from "express";
 import helmet from "helmet";
@@ -55,13 +56,14 @@ export function createApp() {
     res.status(connected ? 200 : 503).json({
       status: connected ? "ok" : "not_ready",
       database: connected ? "connected" : "disconnected",
-      phase: 3,
+      phase: 4,
     });
   });
   app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapi));
   app.get("/api/openapi.json", (_req, res) => res.json(openapi));
   app.use("/api/auth", authRoutes());
   app.use("/api/users", userRoutes());
+  app.use("/api", coupleRoutes());
   app.use("/api", planningRoutes());
   app.use("/api", financeRoutes());
   app.use((_req, _res, next) =>

@@ -1,3 +1,4 @@
+import { coupleModels } from "../modules/couples/models";
 import { planningModels } from "../modules/planning/models";
 import mongoose from "mongoose";
 import { env } from "./env";
@@ -12,6 +13,7 @@ import { seedCategories } from "../seeds/categories";
 export async function connectDatabase() {
   await mongoose.connect(env.MONGODB_URI);
   await Promise.all([
+    ...coupleModels.map((model) => model.init()),
     ...planningModels.map((model) => model.init()),
     User.init(),
     RefreshToken.init(),

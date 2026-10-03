@@ -193,7 +193,10 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
           </form>
           <p className="auth-switch">
             {registerMode ? "Đã có tài khoản?" : "Chưa có tài khoản?"}{" "}
-            <Link to={registerMode ? "/login" : "/register"}>
+            <Link
+              to={registerMode ? "/login" : "/register"}
+              state={{ from: destination }}
+            >
               {registerMode ? "Đăng nhập" : "Đăng ký ngay"}
             </Link>
           </p>

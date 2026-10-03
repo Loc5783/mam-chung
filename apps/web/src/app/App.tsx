@@ -1,3 +1,4 @@
+import { CouplePage, InvitePage } from "../features/couples/CouplePage";
 import {
   NavLink,
   Link,
@@ -91,7 +92,11 @@ function Layout({ preview = false }: { preview?: boolean }) {
           </span>
           <span className="topbar-right">
             <span className="preview-indicator" />{" "}
-            {preview ? "Giao diện mẫu" : "Không gian cá nhân"}{" "}
+            {preview
+              ? "Giao diện mẫu"
+              : location.pathname.startsWith("/couple")
+                ? "Không gian chung"
+                : "Không gian cá nhân"}{" "}
             <Avatar user={user} small />
           </span>
         </header>
@@ -158,8 +163,9 @@ export function App() {
             <Route index element={<AccountHome />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/finance" element={<FinancePage />} />
+            <Route path="/couple" element={<CouplePage />} />
+            <Route path="/invite/:code" element={<InvitePage />} />
             {[
-              ["couple", "Không gian chung"],
               ["tasks", "Công việc"],
               ["fitness", "Tập luyện"],
             ].map(([path, title]) => (

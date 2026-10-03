@@ -2326,3 +2326,228 @@ svg {
     flex-wrap: wrap;
   }
 }
+.couple-hero {
+  background: linear-gradient(130deg, #fff 20%, #fbe6ed 100%);
+  text-align: center;
+  margin-bottom: 24px;
+}
+.couple-hero h2 {
+  font-size: 32px;
+  margin: 12px 0 24px;
+}
+.couple-members {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+  flex-wrap: wrap;
+}
+.couple-person {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 110px;
+}
+.couple-person small {
+  color: var(--ink-muted);
+}
+.couple-avatar {
+  background: #fbe6ed;
+  border: 4px solid white;
+  border-radius: 50%;
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  color: #b3577a;
+  font-size: 28px;
+  font-weight: 600;
+  overflow: hidden;
+}
+.couple-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.couple-person.waiting {
+  opacity: 0.65;
+}
+.anniversary-box {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin: 28px 0 18px;
+  color: #b3577a;
+}
+.anniversary-box b {
+  font-size: 23px;
+}
+.anniversary-box p {
+  margin: 5px 0;
+}
+.couple-two-column {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  margin-bottom: 24px;
+}
+.couple-two-column h2 {
+  margin: 0 0 12px;
+}
+.couple-two-column p {
+  line-height: 1.7;
+}
+.couple-code-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.couple-code-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.couple-code-form input {
+  text-transform: uppercase;
+  letter-spacing: 3px;
+}
+.couple-heart {
+  color: #b3577a;
+  margin-bottom: 12px;
+}
+.couple-feed,
+.couple-archives {
+  margin: 24px 0;
+}
+.activity-list {
+  list-style: none;
+  padding: 0;
+}
+.activity-list li {
+  display: flex;
+  gap: 14px;
+  padding: 15px 0;
+  border-bottom: 1px solid var(--border);
+}
+.activity-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e38fa9;
+  flex: none;
+  margin-top: 7px;
+}
+.activity-list p {
+  margin: 0 0 7px;
+  line-height: 1.6;
+}
+.activity-list time {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.couple-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 18px 0;
+}
+.invite-code-box {
+  padding: 20px;
+  background: #f2f6ea;
+  border-radius: 16px;
+  margin: 18px 0;
+}
+.invite-code-box strong {
+  font-size: 30px;
+  letter-spacing: 5px;
+  display: block;
+  overflow-wrap: anywhere;
+}
+.archive-list button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 16px 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+}
+.archive-list small {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink-muted);
+}
+.couple-archive-note {
+  padding: 12px;
+  border-radius: 12px;
+  background: #f2f6ea;
+}
+.invite-page {
+  max-width: 650px;
+  margin: 32px auto;
+}
+.invite-page h1 {
+  font-size: 32px;
+}
+.invite-page p {
+  line-height: 1.7;
+}
+.couple-dashboard {
+  margin: 24px 0;
+}
+.couple-dashboard h3 {
+  font-family: Fraunces, serif;
+  font-size: 24px;
+}
+.couple-code-form input,
+.settings-form input[type="date"] {
+  min-width: 0;
+  width: 100%;
+}
+@media (max-width: 700px) {
+  .couple-two-column {
+    grid-template-columns: 1fr;
+  }
+  .couple-members {
+    gap: 20px;
+  }
+  .couple-hero h2 {
+    font-size: 27px;
+  }
+  .couple-hero {
+    padding: 24px 16px;
+  }
+  .anniversary-box b {
+    font-size: 20px;
+  }
+  .invite-code-box strong {
+    font-size: 25px;
+    letter-spacing: 3px;
+  }
+  .couple-actions .button {
+    flex: 1;
+  }
+  .invite-page h1 {
+    font-size: 28px;
+  }
+}
+
+.couple-two-column > :only-child {
+  grid-column: 1 / -1;
+}
+.settings-form .checkbox-label {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+}
+.settings-form .checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  margin-top: 3px;
+}
