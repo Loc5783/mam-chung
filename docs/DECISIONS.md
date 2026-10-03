@@ -72,3 +72,15 @@
 - Chỉ creator hoặc owner xóa khoản chi; chặn khi settlement paid hoặc pending_confirm. Xóa chi quỹ hoàn lại số dư trong cùng transaction. Retry/concurrency không tạo thêm lần trừ hay settlement.
 - Đóng góp quỹ và thanh toán là ghi nhận tiền đã chuyển ngoài ứng dụng; không tích hợp ngân hàng. Mục tiêu chung là theo dõi tiền để riêng, không trừ quỹ, có lịch sử và hoàn tác bởi người góp hoặc owner.
 - Tổng quan tháng theo timezone người xem; archived dùng tháng tại thời điểm archivedAt. Query cache scoped theo user/couple, poll 15 giây khi mở trang; cơ chế phiên ngăn kết quả từ tài khoản cũ lọt vào tài khoản mới.
+
+## Giai đoạn 6 — Công việc
+
+- Một Task hỗ trợ personal/shared, checklist và shopping. Không di chuyển task giữa các scope để tránh lộ việc riêng và nhầm lịch sử. Shared coupleId lấy từ user hiện tại, không nhận client body.
+- Personal creator tự quản lý; assignedTo chỉ self hoặc null. Shared cả hai sửa/xóa, không yêu cầu owner/creator; assignedTo phải thuộc membership active. Archived chỉ đọc cho thành viên cũ, không nối ledger/tasks cho partner mới.
+- Mọi write khóa user và parent couple trong transaction; revision bắt buộc khi update/status/delete. Request stale trả409, UI đọc lại danh sách nhưng giữ form cũ để người dùng đóng/mở lại trước sửa. Không dùng last-write-wins làm mất tick/checklist của partner.
+- DONE ghi completedAt; chuyển ra khỏi DONE xóa completedAt. Request DONE cùng trạng thái không đổi timestamp hoặc tăng revision. Hủy không tạo bản lặp.
+- Lặp hoàn thành sinh đúng một successor bằng partial unique sourceTaskId, cùng transaction. Checklist reset, comments không copy, deadline dựa hạn cũ; monthly giữ anchor qua tháng ngắn. Không chạy worker/catch-up tự động: mỗi lần hoàn thành tạo một bản kế tiếp. Reopen/delete successor không bỏ dấu đã sinh, không tạo trùng.
+- Soft delete giữ lịch sử DB và comments, nhưng API không cho truy cập task đã xóa. Không xóa dây chuyền successor. Đổi lịch của bản cũ không sửa successor đã sinh.
+- Bình luận text thuần tối đa500 ký tự, authorName snapshot, không HTML; chỉ shared active ghi. Activity feed chỉ ghi hành động chung, không lộ title/description của việc riêng.
+- Search escape literal; due/today/overdue là ngày lịch theo timezone user và loại terminal statuses. Đổi timezone làm mới cache tasks/shared để tổng quan không còn ngày/tháng cũ.
+- List/Kanban cùng dữ liệu và phân trang20; Kanban bốn cột của trang hiện tại, chọn status thay cho kéo-thả. Query scoped theo user/context, poll15 giây khi mở; thông báo đầy đủ thuộc giai đoạn8.

@@ -1,3 +1,4 @@
+import { taskModels } from "../modules/tasks/models";
 import { sharedModels } from "../modules/shared/models";
 import { coupleModels } from "../modules/couples/models";
 import { planningModels } from "../modules/planning/models";
@@ -14,6 +15,7 @@ import { seedCategories } from "../seeds/categories";
 export async function connectDatabase() {
   await mongoose.connect(env.MONGODB_URI);
   await Promise.all([
+    ...taskModels.map((model) => model.init()),
     ...sharedModels.map((model) => model.init()),
     ...coupleModels.map((model) => model.init()),
     ...planningModels.map((model) => model.init()),

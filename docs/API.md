@@ -149,3 +149,27 @@ Tạo khoản chi: `{sharedWalletId,payerId,amount,date,description,categoryId,p
 Các danh sách lịch sử dùng `page` (mặc định 1), `limit` (mặc định 20, tối đa 100), `from`, `to` (YYYY-MM-DD), `coupleId?`. Sổ chi thêm `sharedWalletId`; công nợ thêm `status:pending|pending_confirm|paid`. Khoảng ngày bao gồm cả ngày kết thúc, theo timezone hồ sơ: đóng góp/khoản chi lọc ngày ghi nhận, settlements lọc ngày tạo khoản nợ. Mục tiêu và quỹ trả danh sách đầy đủ theo context.
 
 Xóa chi có nợ đã xác nhận hoặc đang chờ xác nhận trả 409. Chi từ quỹ thiếu tiền không ghi bất kỳ phần nào. Ghi nhận đóng góp/thanh toán không chuyển tiền thật và không tự trừ ví cá nhân. Xem Swagger tại `/api/docs` để có DTO và schema đầy đủ.
+
+## Giai đoạn 6 — Công việc
+
+Mọi endpoint có tiền tố `/api` và cần đăng nhập. Task cá nhân chỉ creator được đọc/sửa/xóa; task chung cho cả hai thành viên. Couple archived chỉ đọc qua quyền thành viên cũ, mọi write bị chặn trong transaction.
+
+| Endpoint                 | Nội dung                                                                                           |
+| ------------------------ | -------------------------------------------------------------------------------------------------- |
+| GET /tasks               | Danh sách phân trang, bộ lọc bên dưới                                                              |
+| POST /tasks              | `{title,scope?,description?,deadline?,priority?,assignedTo?,kind?,labels?,checklist?,recurrence?}` |
+| GET /tasks/:id           | Chi tiết và `revision`, `readOnly`; không có quyền trả 404                                         |
+| PUT /tasks/:id           | Các trường sửa được như tạo, trừ scope; bắt buộc `revision`                                        |
+| DELETE /tasks/:id        | Body `{revision}`; soft delete, giữ bản lặp kế tiếp và bình luận                                   |
+| PATCH /tasks/:id/status  | `{status,revision}`; DONE ghi completedAt và tạo một bản kế tiếp nếu lặp                           |
+| GET /tasks/:id/comments  | Bình luận việc chung, `page`, `limit`; cả archived được đọc                                        |
+| POST /tasks/:id/comments | `{text}` 1–500 ký tự, chỉ shared active                                                            |
+| GET /tasks/members       | Tên/id dùng phân công, `coupleId?` để xem snapshot archived; không trả email                       |
+
+`scope`: `personal` (mặc định khi tạo), `shared`; `coupleId=null` cho việc riêng. List `scope=all|personal|shared|mine` (mặc định all); mine chỉ `assignedTo` là người xem. Không chuyển scope khi sửa. Shared lấy couple active từ server, không nhận coupleId tùy ý trong body. `assignedTo` có thể null, personal chỉ self, shared phải là thành viên active. `kind=task|shopping`; shopping dùng checklist tick từng món.
+
+`priority=LOW|MEDIUM|HIGH|URGENT`; `status=TODO|IN_PROGRESS|DONE|CANCELLED`. Checklist tối đa 100 dòng `{id?:UUID,text,done?}`, server sinh id nếu thiếu; id không trùng. Labels tối đa 10 nhãn, mỗi nhãn 30 ký tự. `deadline` là YYYY-MM-DD hoặc null, `recurrence=none|daily|weekly|monthly`; lặp cần deadline. Tiêu đề tối đa 160, mô tả 2.000 ký tự.
+
+List: `page=1`, `limit=20` (tối đa100), `status`, `priority`, `kind`, `label`, `search` (tiêu đề/mô tả/nhãn, literal không phải regex), `from`, `to` (bao gồm hai ngày), `due=today|overdue`, `sort=deadline|priority|newest|oldest`. Hôm nay/quá hạn theo timezone hồ sơ, bỏ DONE/CANCELLED và việc không hạn. `coupleId` trong list chỉ dành cho người từng tham gia; tách toàn bộ việc riêng và hành trình mới. Trả `{items,total,page,limit,readOnly}`.
+
+Revision cũ trả 409 TASK_CHANGED; cần tải lại trước khi sửa, không tự ghi đè. Đổi sang DONE sinh một bản TODO kế tiếp cùng phạm vi/người được giao/nhãn, checklist bỏ tick, không sao chép bình luận. Ngày kế tiếp dựa trên deadline cũ, không nhảy theo ngày bấm; tháng ngắn clamp và giữ anchor để trở lại ngày gốc. Mở lại/hoàn thành lại việc cũ không sinh trùng, kể cả bản kế tiếp đã bị xóa. Xóa việc gốc không xóa bản kế tiếp. Sửa ngày/chu kỳ việc gốc sau khi đã tạo kế tiếp không tự sửa bản đã tạo.

@@ -1,8 +1,9 @@
+import { TasksPreview } from "../tasks/TasksPage";
 import { SharedPreview } from "../shared/SharedFinancePage";
 import { CouplePreview } from "../couples/CouplePage";
 import { FinanceOverview } from "../finance/FinanceOverview";
 import { Link, useNavigate } from "react-router-dom";
-import { CheckSquare, Dumbbell, ArrowRight, ShieldCheck } from "lucide-react";
+import { Dumbbell, ArrowRight, ShieldCheck } from "lucide-react";
 import { useAuthStore } from "../auth/store";
 import { Card, EmptyState } from "../../components/ui";
 export function AccountHome() {
@@ -27,8 +28,8 @@ export function AccountHome() {
       <div className="account-note">
         <ShieldCheck size={20} />
         <span>
-          Tài chính cá nhân và không gian chung đã sẵn sàng. Công việc và tập
-          luyện sẽ được mở ở các giai đoạn tiếp theo.
+          Tài chính cá nhân và không gian chung đã sẵn sàng. Tập luyện sẽ được
+          mở ở các giai đoạn tiếp theo.
         </span>
       </div>
       <FinanceOverview
@@ -37,14 +38,9 @@ export function AccountHome() {
       />
       <CouplePreview />
       <SharedPreview />
+      <TasksPreview />
       <div className="account-grid">
         {[
-          {
-            title: "Công việc",
-            icon: CheckSquare,
-            to: "/tasks",
-            description: "Sắp xếp từng việc nhỏ cho một ngày nhẹ nhàng.",
-          },
           {
             title: "Tập luyện",
             icon: Dumbbell,

@@ -76,6 +76,8 @@ function ProfileForm({ user }: { user: Profile }) {
       if (data.timezone !== user.timezone) {
         await client.invalidateQueries({ queryKey: ["finance", user.id] });
         await client.invalidateQueries({ queryKey: ["couple", user.id] });
+        await client.invalidateQueries({ queryKey: ["shared", user.id] });
+        await client.invalidateQueries({ queryKey: ["tasks", user.id] });
       }
       notify("Đã cập nhật hồ sơ.");
     },

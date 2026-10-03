@@ -127,7 +127,7 @@ describe("Tài khoản và giao diện", () => {
       screen.getAllByRole("link", { name: "Công việc" })[0],
     );
     expect(
-      screen.getByRole("heading", { name: "Công việc đang chờ được vun đắp" }),
+      screen.getByRole("heading", { name: "Công việc" }),
     ).toBeInTheDocument();
   });
   it("cập nhật tên hồ sơ và thông tin trên sidebar", async () => {

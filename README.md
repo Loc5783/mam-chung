@@ -1,6 +1,6 @@
 # Mầm Chung 🌱
 
-Ứng dụng quản lý tài chính, công việc và tập luyện cho cá nhân/cặp đôi theo master prompt. **Đã hoàn thành giai đoạn 0–5: nền tảng, tài khoản, tài chính cá nhân, ngân sách, mục tiêu, định kỳ, báo cáo và CSV.** Couple đã có tạo/mời/ghép đôi, ngày kỷ niệm và lưu trữ. Tài chính chung đã có quỹ, đóng góp, chia tiền, công nợ hai bước và mục tiêu. Todo và fitness thuộc các giai đoạn tiếp theo. Bản này chưa đủ điều kiện production toàn diện.
+Ứng dụng quản lý tài chính, công việc và tập luyện cho cá nhân/cặp đôi theo master prompt. **Đã hoàn thành giai đoạn 0–6: nền tảng, tài khoản, tài chính cá nhân, ngân sách, mục tiêu, định kỳ, báo cáo và CSV.** Couple đã có tạo/mời/ghép đôi, ngày kỷ niệm và lưu trữ. Tài chính chung đã có quỹ, đóng góp, chia tiền, công nợ hai bước và mục tiêu. Công việc cá nhân/chung, Kanban, việc con, lặp lại, bình luận và mua sắm chung đã sẵn sàng. Fitness thuộc giai đoạn tiếp theo. Bản này chưa đủ điều kiện production toàn diện.
 
 ## Chạy ngay trên máy (không cần Docker)
 
@@ -51,7 +51,13 @@ Lần đầu tải MongoDB 7.0.14 từ nguồn chính thức (Windows khoảng 5
 - Mục tiêu chung có đóng góp và hoàn tác; dashboard hiển thị số dư, chi tháng theo danh mục, công nợ và mục tiêu.
 - Hành trình đã lưu trữ giữ toàn bộ sổ chung ở chế độ chỉ đọc. Ứng dụng ghi nhận tiền, không chuyển tiền ngân hàng.
 
-Chi tiết triển khai và kiểm tra: [Giai đoạn 5](docs/PHASE_5.md).
+- Công việc tại `/tasks`: cá nhân/chung/giao cho tôi; lọc trạng thái, ưu tiên, hạn, nhãn, tìm kiếm và sắp xếp.
+- Danh sách và Kanban bốn cột; chọn trạng thái để chuyển việc, ghi thời gian hoàn thành.
+- Checklist, lặp ngày/tuần/tháng, bình luận ngắn trên việc chung, danh sách mua sắm tick từng món.
+- Cả hai sửa việc chung; revision bảo vệ khi sửa đồng thời. Lịch sử couple cũ chỉ đọc; việc cá nhân vẫn riêng.
+- Tổng quan có việc hôm nay, quá hạn và hoàn thành nhanh theo múi giờ hồ sơ.
+
+Chi tiết triển khai và kiểm tra: [Giai đoạn 5](docs/PHASE_5.md), [Giai đoạn 6](docs/PHASE_6.md).
 
 ## Chạy qua Docker
 

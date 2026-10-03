@@ -74,6 +74,7 @@ const activitySchema = new Schema(
         "updated",
         "owner_transferred",
         "shared_finance",
+        "tasks",
         "archived",
       ],
       required: true,

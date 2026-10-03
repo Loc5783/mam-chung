@@ -498,6 +498,12 @@ function CoupleView({ couple }: { couple: CoupleData }) {
           >
             Xem quỹ & công nợ →
           </Link>
+          <Link
+            className="card-link"
+            to={archived ? `/tasks?coupleId=${couple.id}` : "/tasks"}
+          >
+            Công việc & mua sắm chung →
+          </Link>
           <p className="muted">
             Quỹ chung, phần chia và lịch sử hoàn tiền được ghi rõ cho cả hai.
           </p>
