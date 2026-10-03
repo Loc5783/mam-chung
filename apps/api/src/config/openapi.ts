@@ -1,3 +1,4 @@
+import { sharedSchemas, sharedPaths } from "../modules/shared/openapi";
 import { coupleSchemas, couplePaths } from "../modules/couples/openapi";
 import { planningSchemas, planningPaths } from "../modules/planning/openapi";
 import { financeSchemas, financePaths } from "../modules/finance/openapi";
@@ -25,15 +26,16 @@ export const openapi = {
   openapi: "3.0.3",
   info: {
     title: "Mầm Chung API",
-    version: "0.5.0",
+    version: "0.6.0",
     description:
-      "Giai đoạn 4 — tài khoản, tài chính cá nhân, kế hoạch và Couple. Refresh token chỉ được đặt trong cookie httpOnly; không trả qua JSON.",
+      "Giai đoạn 5 — tài khoản, tài chính cá nhân, kế hoạch, Couple và tài chính chung. Refresh token chỉ được đặt trong cookie httpOnly; không trả qua JSON.",
   },
   components: {
     securitySchemes: {
       bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
     },
     schemas: {
+      ...sharedSchemas,
       ...financeSchemas,
       ...planningSchemas,
       ...coupleSchemas,
@@ -126,6 +128,7 @@ export const openapi = {
   paths: {
     ...financePaths,
     ...couplePaths,
+    ...sharedPaths,
     ...planningPaths,
     "/api/health": {
       get: {

@@ -492,8 +492,14 @@ function CoupleView({ couple }: { couple: CoupleData }) {
           )}
         <Card>
           <h2>Công nợ chung</h2>
+          <Link
+            className="card-link"
+            to={archived ? `/shared?coupleId=${couple.id}` : "/shared"}
+          >
+            Xem quỹ & công nợ →
+          </Link>
           <p className="muted">
-            Quỹ chung, chia tiền và tổng công nợ sẽ sớm có mặt tại đây.
+            Quỹ chung, phần chia và lịch sử hoàn tiền được ghi rõ cho cả hai.
           </p>
           {couple.outstanding.count > 0 && (
             <p className="form-error">
@@ -579,6 +585,9 @@ export function CouplePage() {
         <div>
           <span className="eyebrow">CÙNG NHAU LỚN LÊN</span>
           <h1>Không gian chung</h1>
+          <Link className="card-link" to="/shared">
+            Quỹ chung & công nợ →
+          </Link>
           <p>Một hành trình, hai người cùng vun đắp.</p>
         </div>
       </div>

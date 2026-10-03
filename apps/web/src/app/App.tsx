@@ -1,3 +1,4 @@
+import { SharedFinancePage } from "../features/shared/SharedFinancePage";
 import { CouplePage, InvitePage } from "../features/couples/CouplePage";
 import {
   NavLink,
@@ -41,7 +42,10 @@ function Layout({ preview = false }: { preview?: boolean }) {
   const current =
     location.pathname === "/preview"
       ? "Tổng quan mẫu"
-      : navigation.find((n) => n.to === location.pathname)?.label || "Cài đặt";
+      : location.pathname === "/shared"
+        ? "Tài chính chung"
+        : navigation.find((n) => n.to === location.pathname)?.label ||
+          "Cài đặt";
   return (
     <div className="app-layout">
       <aside className="sidebar">
@@ -94,7 +98,8 @@ function Layout({ preview = false }: { preview?: boolean }) {
             <span className="preview-indicator" />{" "}
             {preview
               ? "Giao diện mẫu"
-              : location.pathname.startsWith("/couple")
+              : location.pathname.startsWith("/couple") ||
+                  location.pathname.startsWith("/shared")
                 ? "Không gian chung"
                 : "Không gian cá nhân"}{" "}
             <Avatar user={user} small />
@@ -164,6 +169,7 @@ export function App() {
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/finance" element={<FinancePage />} />
             <Route path="/couple" element={<CouplePage />} />
+            <Route path="/shared" element={<SharedFinancePage />} />
             <Route path="/invite/:code" element={<InvitePage />} />
             {[
               ["tasks", "Công việc"],

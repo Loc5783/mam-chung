@@ -166,7 +166,7 @@ async function dto(
     invite: invite
       ? { id: invite.id as string, expiresAt: invite.expiresAt }
       : null,
-    outstanding: { count: outstandingCount, summaryAvailable: false },
+    outstanding: { count: outstandingCount, summaryAvailable: true },
   };
 }
 function checkAnniversary(day: string | null | undefined, zone: string) {

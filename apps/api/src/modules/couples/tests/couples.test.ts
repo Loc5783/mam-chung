@@ -368,11 +368,13 @@ describe("ownership, anniversary, feed and archives", () => {
     await mongoose.connection.collection("settlements").insertMany([
       {
         coupleId: new mongoose.Types.ObjectId(out.id),
+        sourceTransactionId: new mongoose.Types.ObjectId(),
         status: "unpaid",
         deletedAt: null,
       },
       {
         coupleId: new mongoose.Types.ObjectId(out.id),
+        sourceTransactionId: new mongoose.Types.ObjectId(),
         status: "paid",
         deletedAt: null,
       },

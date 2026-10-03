@@ -1,6 +1,6 @@
 # Mầm Chung 🌱
 
-Ứng dụng quản lý tài chính, công việc và tập luyện cho cá nhân/cặp đôi theo master prompt. **Đã hoàn thành giai đoạn 0–4: nền tảng, tài khoản, tài chính cá nhân, ngân sách, mục tiêu, định kỳ, báo cáo và CSV.** Couple đã có tạo/mời/ghép đôi, ngày kỷ niệm và lưu trữ. Tài chính chung, todo và fitness sẽ được triển khai ở các giai đoạn sau. Bản này chưa đủ điều kiện production toàn diện.
+Ứng dụng quản lý tài chính, công việc và tập luyện cho cá nhân/cặp đôi theo master prompt. **Đã hoàn thành giai đoạn 0–5: nền tảng, tài khoản, tài chính cá nhân, ngân sách, mục tiêu, định kỳ, báo cáo và CSV.** Couple đã có tạo/mời/ghép đôi, ngày kỷ niệm và lưu trữ. Tài chính chung đã có quỹ, đóng góp, chia tiền, công nợ hai bước và mục tiêu. Todo và fitness thuộc các giai đoạn tiếp theo. Bản này chưa đủ điều kiện production toàn diện.
 
 ## Chạy ngay trên máy (không cần Docker)
 
@@ -44,6 +44,14 @@ Lần đầu tải MongoDB 7.0.14 từ nguồn chính thức (Windows khoảng 5
 - Couple tại `/couple`: tạo hành trình, mã/link mời 48 giờ một lần, ghép đôi, chuyển quyền, rời/giải tán; lịch sử lưu trữ chỉ đọc cho cả hai.
 - Ngày kỷ niệm, số ngày bên nhau, nhắc trên tổng quan, bảng hoạt động cập nhật mỗi 5 giây khi mở trang.
 - Trang `/invite/:code` yêu cầu đăng nhập, xem lời mời trước khi chấp nhận; chỉ chia sẻ tên/ảnh, tài chính cá nhân vẫn riêng tư.
+
+- Tài chính chung tại `/shared`: nhiều quỹ, nạp tiền theo người góp, lịch sử, lưu trữ/khôi phục.
+- Khoản chi chung trả từ quỹ hoặc ứng cá nhân; chia đều, số tiền tùy chỉnh hoặc phần trăm, tổng luôn khớp đến một đồng.
+- Công nợ tự tạo từ khoản ứng: người nợ báo đã trả, người nhận xác nhận/từ chối; tổng hợp ròng và lịch sử có bộ lọc.
+- Mục tiêu chung có đóng góp và hoàn tác; dashboard hiển thị số dư, chi tháng theo danh mục, công nợ và mục tiêu.
+- Hành trình đã lưu trữ giữ toàn bộ sổ chung ở chế độ chỉ đọc. Ứng dụng ghi nhận tiền, không chuyển tiền ngân hàng.
+
+Chi tiết triển khai và kiểm tra: [Giai đoạn 5](docs/PHASE_5.md).
 
 ## Chạy qua Docker
 

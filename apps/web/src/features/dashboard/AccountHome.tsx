@@ -1,3 +1,4 @@
+import { SharedPreview } from "../shared/SharedFinancePage";
 import { CouplePreview } from "../couples/CouplePage";
 import { FinanceOverview } from "../finance/FinanceOverview";
 import { Link, useNavigate } from "react-router-dom";
@@ -35,6 +36,7 @@ export function AccountHome() {
         onWallet={() => navigate("/finance?tab=wallets&add=1")}
       />
       <CouplePreview />
+      <SharedPreview />
       <div className="account-grid">
         {[
           {

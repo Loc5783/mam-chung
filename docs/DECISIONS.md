@@ -61,3 +61,14 @@
 - Anniversary date-only >=1900, không tương lai, đếm ngày theo timezone người xem; 29/02 kỷ niệm vào 28/02 ở năm không nhuận. Dashboard nhắc ngay ngày kỷ niệm.
 - Feed audit scoped theo membership, phân trang; không nhận message/actor tùy ý và không chứa mã mời. Auto poll 5s khi mở trang, làm mới trên focus; sync coupleId từ server để người kia rời/chuyển quyền không để lại trạng thái cũ. WebSocket/thông báo đầy đủ ở các giai đoạn sau.
 - Quỹ, chia tiền, settlement và mục tiêu chung được triển khai tiếp ở giai đoạn 5; đây là Couple core và archive foundation, chưa hoàn thành toàn bộ ứng dụng.
+
+## Giai đoạn 5 — Tài chính chung
+
+- Quỹ bắt đầu ở 0; số dư chỉ đổi do đóng góp hoặc chi quỹ. Không nhận số dư từ client. Quỹ có lịch sử chỉ lưu trữ/khôi phục, không xóa để mất dấu tiền.
+- Cả hai thành viên active quản lý quỹ và mục tiêu; khoản chi cần đủ hai thành viên. Mọi write khóa user và parent couple cùng transaction, kiểm tra active lần nữa; archived chỉ đọc cho thành viên cũ.
+- Tiền VND nguyên, an toàn trong giới hạn Number.MAX_SAFE_INTEGER. Chia đều để số đồng lẻ cho người trả. Custom cộng bằng BigInt, tổng phải đúng. Percent tối đa hai số thập phân, tổng 100%; làm tròn xuống phần người kia, phần còn lại thuộc người trả.
+- Chi từ quỹ trừ số dư, không tạo nợ. Ứng cá nhân không đổi quỹ/ ví riêng; chỉ tạo settlement cho phần người kia. Chọn danh mục chi hệ thống, không tiết lộ danh mục cá nhân cho partner.
+- Settlement tự sinh từ khoản chi, không tạo tùy ý. Debtor báo đã trả, creditor xác nhận hoặc trả lại pending kèm ghi chú. Công nợ ròng là phép tổng hợp, không tự đóng các khoản đối ứng.
+- Chỉ creator hoặc owner xóa khoản chi; chặn khi settlement paid hoặc pending_confirm. Xóa chi quỹ hoàn lại số dư trong cùng transaction. Retry/concurrency không tạo thêm lần trừ hay settlement.
+- Đóng góp quỹ và thanh toán là ghi nhận tiền đã chuyển ngoài ứng dụng; không tích hợp ngân hàng. Mục tiêu chung là theo dõi tiền để riêng, không trừ quỹ, có lịch sử và hoàn tác bởi người góp hoặc owner.
+- Tổng quan tháng theo timezone người xem; archived dùng tháng tại thời điểm archivedAt. Query cache scoped theo user/couple, poll 15 giây khi mở trang; cơ chế phiên ngăn kết quả từ tài khoản cũ lọt vào tài khoản mới.

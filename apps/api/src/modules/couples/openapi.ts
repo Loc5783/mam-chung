@@ -69,7 +69,7 @@ export const coupleSchemas = {
         count: { type: "integer" },
         summaryAvailable: {
           type: "boolean",
-          description: "false until shared finance phase",
+          description: "Tổng hợp công nợ khả dụng tại /settlements/summary.",
         },
       }),
     },
