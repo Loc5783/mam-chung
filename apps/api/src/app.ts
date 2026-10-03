@@ -1,3 +1,4 @@
+import { planningRoutes } from "./modules/planning/routes";
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
@@ -54,13 +55,14 @@ export function createApp() {
     res.status(connected ? 200 : 503).json({
       status: connected ? "ok" : "not_ready",
       database: connected ? "connected" : "disconnected",
-      phase: 2,
+      phase: 3,
     });
   });
   app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapi));
   app.get("/api/openapi.json", (_req, res) => res.json(openapi));
   app.use("/api/auth", authRoutes());
   app.use("/api/users", userRoutes());
+  app.use("/api", planningRoutes());
   app.use("/api", financeRoutes());
   app.use((_req, _res, next) =>
     next(new AppError(404, "NOT_FOUND", "Không tìm thấy tài nguyên.")),

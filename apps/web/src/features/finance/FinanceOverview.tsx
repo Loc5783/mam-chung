@@ -1,3 +1,4 @@
+import { BudgetPreview } from "../planning/PlanningPanel";
 import { FinanceIcon } from "./FinanceIcon";
 import {
   ArrowDownLeft,
@@ -258,6 +259,7 @@ export function FinanceOverview({
           </Link>
         </Card>
       </div>
+      <BudgetPreview />
       <Card className="recent-card">
         <div className="section-heading">
           <div>

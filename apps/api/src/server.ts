@@ -1,3 +1,4 @@
+import { startRecurringJob } from "./modules/planning/job";
 import mongoose from "mongoose";
 import { app } from "./app";
 import { connectDatabase } from "./config/db";
@@ -8,9 +9,12 @@ async function start() {
   const server = app.listen(env.PORT, () =>
     logger.info({ port: env.PORT }, "Mầm Chung đã sẵn sàng"),
   );
+  const stopJob = startRecurringJob();
   const stop = () => {
     server.close(() => {
-      void mongoose.disconnect().then(() => process.exit(0));
+      void stopJob()
+        .then(() => mongoose.disconnect())
+        .then(() => process.exit(0));
     });
     setTimeout(() => process.exit(1), 10000).unref();
   };

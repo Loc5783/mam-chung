@@ -1,3 +1,4 @@
+import { planningSchemas, planningPaths } from "../modules/planning/openapi";
 import { financeSchemas, financePaths } from "../modules/finance/openapi";
 const error = {
   description: "Lỗi thống nhất",
@@ -23,9 +24,9 @@ export const openapi = {
   openapi: "3.0.3",
   info: {
     title: "Mầm Chung API",
-    version: "0.3.0",
+    version: "0.4.0",
     description:
-      "Giai đoạn 2 — tài khoản và tài chính cá nhân. Refresh token chỉ được đặt trong cookie httpOnly; không trả qua JSON.",
+      "Giai đoạn 3 — tài khoản, tài chính cá nhân và kế hoạch tài chính. Refresh token chỉ được đặt trong cookie httpOnly; không trả qua JSON.",
   },
   components: {
     securitySchemes: {
@@ -33,6 +34,7 @@ export const openapi = {
     },
     schemas: {
       ...financeSchemas,
+      ...planningSchemas,
       Error: {
         type: "object",
         properties: {
@@ -121,6 +123,7 @@ export const openapi = {
   },
   paths: {
     ...financePaths,
+    ...planningPaths,
     "/api/health": {
       get: {
         summary: "Kiểm tra tình trạng hệ thống",

@@ -28,7 +28,7 @@ Các API tài chính/couple/todo/fitness chưa tồn tại. Các tiện ích hea
 
 ## Tài chính cá nhân (giai đoạn 2)
 
-Mọi endpoint dưới đây cần `Authorization: Bearer <accessToken>`. ID tài nguyên phải là ObjectId 24 ký tự hex; tài nguyên không thuộc tài khoản trả 404. Body và query strict, không nhận userId/balance/currency tùy ý. Input sai trả 400; thiếu số dư, ví lưu trữ hoặc quy tắc xung đột trả 409. Swagger gồm schema request/response và tham số.
+Mọi endpoint dưới đây cần `Authorization: Bearer <accessToken>`. ID tài nguyên phải là ObjectId 24 ký tự hex; tài nguyên không thuộc tài khoản trả 404. Body và query strict, không nhận userId/balance/currency tùy ý. Input sai trả 400; thiếu số dư trả 422; ví lưu trữ hoặc quy tắc xung đột trả 409. Swagger gồm schema request/response và tham số.
 
 | Endpoint                         | Nội dung                                                                         |
 | -------------------------------- | -------------------------------------------------------------------------------- |
@@ -62,4 +62,33 @@ Tạo giao dịch:
 
 Số tiền nguyên VND >0, tối đa 9007199254740991; không dùng số thực. Danh mục phải cùng loại giao dịch và thuộc hệ thống hoặc chính tài khoản. Ngày có thể là date-only (12:00 theo múi giờ hồ sơ) hoặc ISO8601 kèm offset. Mô tả 1–200 ký tự, ghi chú ≤1000, ≤10 nhãn, mỗi nhãn 1–30 ký tự. PUT nhận một hoặc nhiều trường, không nhận kind/transferId. Opening bất biến; transfer không sửa/nhân bản riêng lẻ. Mọi cập nhật số dư cùng transaction với sổ.
 
-`incomeChange/expenseChange` là % so với tháng trước, null khi tháng trước bằng 0. Số dư dashboard gồm ví lưu trữ. Ngân sách/mục tiêu/định kỳ/reports/CSV chưa nằm trong giai đoạn 2.
+`incomeChange/expenseChange` là % so với tháng trước, null khi tháng trước bằng 0. Số dư dashboard gồm ví lưu trữ. Ngân sách/mục tiêu/định kỳ/reports/CSV được bổ sung ở giai đoạn 3 bên dưới.
+
+## Giai đoạn 3 — Kế hoạch tài chính
+
+Tất cả endpoint cần Bearer và kiểm tra quyền theo người dùng ở service; input strict Zod. Không nhận `userId`, số dư/progress/spent hay trạng thái chạy từ client. Thiếu tiền 422; trùng ngân sách hoặc tài nguyên đang tham chiếu 409; tài nguyên ngoài quyền 404.
+
+| Endpoint                                        | Nội dung                                                                                                 |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| GET /budgets?month=YYYY-MM                      | Mặc định tháng hiện tại theo timezone; items gồm spent, remaining, progress, status                      |
+| POST /budgets                                   | categoryId (chi), month, amount nguyên VND >0; duy nhất danh mục/tháng/người dùng                        |
+| PUT/DELETE /budgets/:id                         | Sửa một hoặc nhiều trường / soft delete                                                                  |
+| GET/POST /goals                                 | Danh sách / tạo với name, targetAmount, deadline date hoặc null, notes, color                            |
+| PUT/DELETE /goals/:id                           | Sửa mục tiêu / soft delete, giữ lịch sử audit                                                            |
+| POST /goals/:id/contribute                      | amount, date (date-only hoặc ISO offset), notes; tăng savedAmount nguyên tử                              |
+| GET /goals/:id/contributions?page=1&limit=20    | Lịch sử phân trang, sort mới nhất                                                                        |
+| DELETE /goals/:id/contributions/:contributionId | Hoàn tác một khoản ghi nhận; giảm savedAmount và soft delete cùng transaction                            |
+| GET/POST /recurring                             | Danh sách / tạo mẫu giao dịch kèm frequency weekly/monthly, nextDate, endDate hoặc null, enabled         |
+| PUT/DELETE /recurring/:id                       | Sửa, bật/tạm dừng / soft delete; giữ giao dịch đã sinh                                                   |
+| POST /recurring/:id/run                         | Body `{}`; thử chạy bù đến hôm nay, tối đa 100 kỳ/lượt; trả created, error, catchUpLimit                 |
+| GET /reports/monthly?months=6&endMonth=YYYY-MM  | 6 hoặc 12 tháng liên tiếp, mặc định đến tháng hiện tại; thu/chi/net, category totals/trends, comparisons |
+| GET /reports/by-category                        | Cùng bộ lọc và payload báo cáo; dùng categories cho xu hướng chi                                         |
+| GET /transactions/export                        | CSV attachment UTF-8 BOM, cùng bộ lọc/sort lịch sử, không phân trang                                     |
+
+Ngân sách chỉ tính expense/kind=transaction chưa xóa, ranh giới ngày/tháng theo timezone hồ sơ; opening/transfer không tính. Ngưỡng cảnh báo dùng so sánh số nguyên chính xác. Tiến độ hiển thị một chữ số thập phân, không phải số dư tiền.
+
+Dành dụm cho mục tiêu không tạo expense hay tự trừ ví. Người dùng đang ghi nhận phần tiền đã để riêng. Có thể vượt mục tiêu; hoàn tác không được chạy hai lần. Mục tiêu chung sẽ thuộc giai đoạn tài chính chung.
+
+Mẫu định kỳ dùng trường của POST /transactions trừ date; nextDate/endDate là YYYY-MM-DD. Job chạy khi khởi động và kiểm tra mỗi phút; chỉ ghi kỳ đến hạn theo ngày địa phương của người dùng. Ngày 29–31 giữ anchor: 31/01 → 28/02 → 31/03. Hết endDate tự tắt. Kỳ thất bại giữ nextDate/lỗi; job tự thử lại ngày địa phương kế tiếp hoặc người dùng dùng /run ngay sau khi sửa nguyên nhân. Mỗi kỳ có khóa (recurringId, scheduledDate); ghi sổ, số dư, khóa và nextDate cùng transaction. Xóa dòng sổ đã sinh không làm job tạo lại cùng kỳ.
+
+CSV nhận `from`, `to`, `walletId`, `categoryId`, `type`, `search`, `sort` như lịch sử. `page/limit` được parser chấp nhận nhưng không giới hạn kết quả xuất. Trên 10.000 dòng trả 422 và yêu cầu lọc hẹp hơn. Mọi ô được quote/escape, trường văn bản có tiền tố nguy hiểm được thêm dấu apostrophe; ngày giờ ISO UTC, tiền là số nguyên VND. CSV có cả opening/transfer khi bộ lọc cho phép; cột Bản ghi giúp phân biệt với thu/chi thường.

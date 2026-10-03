@@ -1,3 +1,4 @@
+import { Budget, Recurring } from "../planning/models";
 import { ClientSession, FilterQuery, Types } from "mongoose";
 import { AppError } from "../../utils/AppError";
 import {
@@ -41,6 +42,27 @@ const escapeSearch = (value: string) =>
         : character,
     )
     .join("");
+async function guardPlanningCategory(
+  userId: string,
+  id: string,
+  session: ClientSession,
+) {
+  if (
+    (await Budget.exists({ userId, categoryId: id, deletedAt: null }).session(
+      session,
+    )) ||
+    (await Recurring.exists({
+      userId,
+      categoryId: id,
+      deletedAt: null,
+    }).session(session))
+  )
+    throw new AppError(
+      409,
+      "CATEGORY_IN_USE",
+      "Danh mục đang dùng trong ngân sách hoặc lịch định kỳ. Hãy đổi danh mục hoặc xóa các mục đó trước.",
+    );
+}
 const notFound = () =>
   new AppError(404, "NOT_FOUND", "Không tìm thấy tài nguyên.");
 async function readUser(userId: string, session: ClientSession) {
@@ -384,6 +406,18 @@ export const financeService = {
           "WALLET_HAS_TRANSACTIONS",
           "Ví đã có giao dịch. Hãy lưu trữ ví thay vì xóa.",
         );
+      if (
+        await Recurring.exists({
+          userId,
+          walletId: id,
+          deletedAt: null,
+        }).session(session)
+      )
+        throw new AppError(
+          409,
+          "WALLET_IN_USE",
+          "Ví đang dùng trong lịch định kỳ. Hãy đổi ví hoặc xóa lịch trước.",
+        );
       wallet.deletedAt = new Date();
       await repo.saveWallet(wallet, session);
     });
@@ -475,6 +509,8 @@ export const financeService = {
             "CATEGORY_IN_USE",
             "Danh mục đã có giao dịch nên không thể đổi loại thu/chi.",
           );
+        if (input.type && input.type !== category.type)
+          await guardPlanningCategory(userId, id, session);
         Object.assign(category, input);
         category.nameKey = category.name.normalize("NFKC").toLowerCase();
         category.revision++;
@@ -496,6 +532,7 @@ export const financeService = {
           "SYSTEM_CATEGORY",
           "Không được xóa danh mục hệ thống.",
         );
+      await guardPlanningCategory(userId, id, session);
       const hasHistory = await repo.categoryHistory(userId, id, session);
       if (hasHistory) {
         if (!input.replacementId || input.replacementId === id)
@@ -820,4 +857,14 @@ export const financeService = {
       };
     });
   },
+};
+
+export const financeLedger = {
+  readUser,
+  lockUser,
+  requireWallet,
+  requireCategory,
+  createEntry,
+  transactionFilter,
+  sortBy,
 };

@@ -1,3 +1,4 @@
+import { PlanningPanel, ExportHistoryButton } from "../planning/PlanningPanel";
 import { FinanceIcon } from "./FinanceIcon";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -33,6 +34,10 @@ const tabs = [
   ["wallets", "Ví của tôi"],
   ["transactions", "Thu & chi"],
   ["categories", "Danh mục"],
+  ["budgets", "Ngân sách"],
+  ["goals", "Mục tiêu"],
+  ["recurring", "Định kỳ"],
+  ["reports", "Báo cáo"],
 ] as const;
 const walletTypes = {
   cash: "Tiền mặt",
@@ -143,6 +148,12 @@ export function FinancePage() {
               Thử lại
             </Button>
           </Card>
+        ) : ["budgets", "goals", "recurring", "reports"].includes(tab) ? (
+          <PlanningPanel
+            section={tab}
+            wallets={allWallets}
+            categories={allCategories}
+          />
         ) : tab === "wallets" ? (
           <WalletList wallets={allWallets} onDialog={setDialog} />
         ) : tab === "categories" ? (
@@ -410,12 +421,16 @@ export function TransactionHistory({
     setFilters({ ...filters, [key]: value });
   };
   const data = query.data;
+  useEffect(() => {
+    if (data && page > Math.max(1, Math.ceil(data.total / 20)))
+      setPage(Math.max(1, Math.ceil(data.total / 20)));
+  }, [data, page]);
   return (
     <>
       <Card className="history-filter-card">
         <div className="section-heading">
           <h2>Sổ thu & chi</h2>
-          <span className="muted">Tìm lại từng khoản nhỏ</span>
+          <ExportHistoryButton filters={filters} />
         </div>
         <div className="history-filters">
           <label className="search-field">

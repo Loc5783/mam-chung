@@ -1,6 +1,6 @@
 # Mầm Chung 🌱
 
-Ứng dụng quản lý tài chính, công việc và tập luyện cho cá nhân/cặp đôi theo master prompt. **Đã hoàn thành giai đoạn 0–2: nền tảng, tài khoản/xác thực và tài chính cá nhân.** Ngân sách/mục tiêu/định kỳ/báo cáo, couple, todo và fitness sẽ được triển khai ở các giai đoạn sau. Bản này chưa đủ điều kiện production toàn diện.
+Ứng dụng quản lý tài chính, công việc và tập luyện cho cá nhân/cặp đôi theo master prompt. **Đã hoàn thành giai đoạn 0–3: nền tảng, tài khoản, tài chính cá nhân, ngân sách, mục tiêu, định kỳ, báo cáo và CSV.** Couple, tài chính chung, todo và fitness sẽ được triển khai ở các giai đoạn sau. Bản này chưa đủ điều kiện production toàn diện.
 
 ## Chạy ngay trên máy (không cần Docker)
 
@@ -34,6 +34,12 @@ Lần đầu tải MongoDB 7.0.14 từ nguồn chính thức (Windows khoảng 5
 - Chuyển tiền hai ví bằng một transaction, hai dòng liên kết, không tính vào tổng thu/chi.
 - Danh mục mặc định và riêng; xóa danh mục riêng có lịch sử cần danh mục thay thế.
 - Tổng quan thực: số dư mọi ví, thu/chi theo tháng và múi giờ hồ sơ, so sánh tháng trước, biểu đồ chi và giao dịch gần đây.
+
+- Ngân sách theo danh mục chi và tháng, tiến độ thực theo sổ, nhắc 80%/100%.
+- Mục tiêu tiết kiệm: hạn, màu, dành dụm, lịch sử và hoàn tác khoản ghi nhận. Tiền dành dụm là theo dõi riêng, không tự trừ ví.
+- Giao dịch tuần/tháng: bật/tạm dừng, ngày kết thúc, chạy bù, thử lại kỳ thiếu tiền; khóa duy nhất để chống ghi trùng.
+- Báo cáo 6/12 tháng: cột thu chi, so sánh tháng trước, xu hướng chi theo danh mục và bảng số liệu.
+- Xuất CSV theo bộ lọc lịch sử, UTF-8 BOM, tối đa 10.000 dòng/lần; trường văn bản được bảo vệ trước công thức bảng tính.
 
 ## Chạy qua Docker
 
@@ -85,8 +91,8 @@ CORS_ORIGIN production phải là domain HTTPS thật. TRUST_PROXY_HOPS=0 khi AP
 - `apps/api`: Express/Mongoose; route → controller → service → repository; Zod, auth, lỗi thống nhất.
 - `docs/MASTER_PROMPT.md`: yêu cầu nguồn.
 - `docs/DECISIONS.md`: quyết định triển khai.
-- `docs/PHASE_0.md`, `docs/PHASE_1.md`, `docs/PHASE_2.md`: báo cáo từng giai đoạn.
+- `docs/PHASE_0.md`, `docs/PHASE_1.md`, `docs/PHASE_2.md`, `docs/PHASE_3.md`: báo cáo từng giai đoạn.
 - `docs/API.md`: API và quy ước. OpenAPI thực tế ở `/api/openapi.json`.
 - `.github/workflows/ci.yml`: lint/test/build/format; chưa chạy trên GitHub vì chưa có remote.
 
-Tiếp theo: **Giai đoạn 3 — ngân sách, mục tiêu, giao dịch định kỳ, báo cáo và xuất CSV.**
+Tiếp theo: **Giai đoạn 4 — Couple: mời/chấp nhận/rời, ngày kỷ niệm và activity feed.**

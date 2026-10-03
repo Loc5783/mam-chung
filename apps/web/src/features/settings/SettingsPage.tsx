@@ -70,9 +70,11 @@ function ProfileForm({ user }: { user: Profile }) {
           avatar: values.avatar || null,
         })
       ).data,
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       useAuthStore.getState().updateUser(data);
       client.setQueryData(["profile", user.id], data);
+      if (data.timezone !== user.timezone)
+        await client.invalidateQueries({ queryKey: ["finance", user.id] });
       notify("Đã cập nhật hồ sơ.");
     },
   });

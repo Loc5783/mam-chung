@@ -38,3 +38,14 @@
 - Đối soát mặc định chỉ đọc; sửa theo sổ cần repair=true và xác nhận riêng trong UI. Nhân bản tạo giao dịch mới vào ngày hiện tại (hoặc ngày chỉ định), có ảnh hưởng số dư.
 - Dữ liệu kiểm tra giao diện được tạo trong tài khoản QA riêng, chỉ là số tiền giả lập. Không seed tiền giả vào tài khoản người dùng thật.
 - Giai đoạn 3 mới triển khai ngân sách, mục tiêu, định kỳ, báo cáo nâng cao và CSV theo mục 17 của prompt.
+
+## Giai đoạn 3 — Kế hoạch tài chính
+
+- Ngân sách cá nhân duy nhất theo người dùng/danh mục/tháng, chỉ danh mục chi. Tính spent từ sổ trong snapshot thay vì cập nhật bộ đếm song song; cảnh báo >=80% và >=100% so sánh BigInt để tránh làm tròn ở số lớn. Không chặn chi vì vượt ngân sách.
+- Mục tiêu cá nhân là ghi nhận tiền đã để riêng, không tự trừ ví và không tính expense. Nạp và hoàn tác dùng transaction + khóa người dùng; số tiền savedAmount không nhận từ client. Lịch sử có soft delete, mục tiêu có thể vượt 100%. Couple goal chờ couple và tài chính chung (giai đoạn 4–5).
+- Lịch tuần/tháng lưu ngày địa phương và anchorDay. Ngày cuối tháng ngắn được clamp, tháng sau trở lại anchor. Job khởi động và kiểm tra mỗi phút để đáp ứng mọi múi giờ, chỉ ghi kỳ đến hạn; không cần cron bên ngoài. Máy chủ dừng thì không tự ghi, khi chạy lại sẽ chạy bù.
+- Mỗi kỳ có RecurringRun với khóa duy nhất (recurringId, scheduledDate), cùng transaction với sổ, ví, nextDate. Khóa người dùng serialize các request/job và bảo vệ khi nhiều server cùng chạy. Không tái tạo kỳ nếu người dùng xóa giao dịch đã sinh. Chạy bù tối đa 100 kỳ/lượt; lượt sau tiếp tục.
+- Thiếu tiền hoặc ví lưu trữ không làm tiến ngày: lưu lỗi để UI hiển thị. Auto job thử lại vào ngày địa phương kế tiếp; nút chạy kỳ đến hạn cho phép thử ngay. Tạm dừng/xóa mẫu không hoàn nguyên giao dịch đã có. Không xóa ví hoặc đổi loại/xóa danh mục còn được ngân sách/lịch tham chiếu; cần chuyển hoặc xóa kế hoạch trước.
+- Báo cáo trả đủ tháng cả khi trống, chỉ regular income/expense; loại opening/transfer. Comparison null khi tháng trước bằng 0. Line chart top 5 để dễ đọc, bảng tổng vẫn có mọi danh mục. Đổi timezone hồ sơ làm mới cache tài chính.
+- CSV phản ánh toàn bộ bộ lọc, không chỉ trang. UTF-8 BOM/CRLF, escape quote và chống formula injection cho trường văn bản. Giới hạn 10.000 dòng để bảo vệ bộ nhớ; xuất lớn hơn/streaming thuộc tối ưu sau này. Không coi nội dung CSV là câu lệnh.
+- Mọi cập nhật kế hoạch khóa tài khoản và kiểm tra chủ sở hữu trong service; tài khoản đã xóa bị loại khỏi worker. Kiểm thử dùng replica set riêng, QA local riêng; tài khoản demo và dữ liệu hiện hữu được giữ nguyên.

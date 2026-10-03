@@ -273,7 +273,7 @@ function operation(
     },
   };
 }
-const historyParams = [
+export const historyParams = [
   ...pagination,
   parameter(
     "from",
