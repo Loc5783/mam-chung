@@ -1,3 +1,4 @@
+import { financeSchemas, financePaths } from "../modules/finance/openapi";
 const error = {
   description: "Lỗi thống nhất",
   content: {
@@ -22,15 +23,16 @@ export const openapi = {
   openapi: "3.0.3",
   info: {
     title: "Mầm Chung API",
-    version: "0.2.0",
+    version: "0.3.0",
     description:
-      "Giai đoạn 1 — tài khoản và xác thực. Refresh token chỉ được đặt trong cookie httpOnly; không trả qua JSON.",
+      "Giai đoạn 2 — tài khoản và tài chính cá nhân. Refresh token chỉ được đặt trong cookie httpOnly; không trả qua JSON.",
   },
   components: {
     securitySchemes: {
       bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
     },
     schemas: {
+      ...financeSchemas,
       Error: {
         type: "object",
         properties: {
@@ -118,6 +120,7 @@ export const openapi = {
     },
   },
   paths: {
+    ...financePaths,
     "/api/health": {
       get: {
         summary: "Kiểm tra tình trạng hệ thống",

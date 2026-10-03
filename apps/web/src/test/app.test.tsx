@@ -41,6 +41,22 @@ function renderApp(path = "/", authenticated = false) {
 }
 beforeEach(() => {
   vi.restoreAllMocks();
+  vi.spyOn(apiClient, "get").mockResolvedValue({
+    data: {
+      month: "2026-10",
+      timezone: "Asia/Ho_Chi_Minh",
+      totalBalance: 0,
+      income: 0,
+      expense: 0,
+      incomeChange: null,
+      expenseChange: null,
+      wallets: [],
+      spending: [],
+      recent: [],
+      items: [],
+      total: 0,
+    },
+  });
   useAuthStore.getState().clear();
 });
 describe("Tài khoản và giao diện", () => {

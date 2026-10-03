@@ -11,6 +11,7 @@ import { AppError } from "./utils/AppError";
 import { errorHandler } from "./middlewares/errorHandler";
 import { authRoutes } from "./modules/auth/routes";
 import { userRoutes } from "./modules/users/routes";
+import { financeRoutes } from "./modules/finance/routes";
 export function createApp() {
   const app = express();
   app.disable("x-powered-by");
@@ -53,13 +54,14 @@ export function createApp() {
     res.status(connected ? 200 : 503).json({
       status: connected ? "ok" : "not_ready",
       database: connected ? "connected" : "disconnected",
-      phase: 1,
+      phase: 2,
     });
   });
   app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapi));
   app.get("/api/openapi.json", (_req, res) => res.json(openapi));
   app.use("/api/auth", authRoutes());
   app.use("/api/users", userRoutes());
+  app.use("/api", financeRoutes());
   app.use((_req, _res, next) =>
     next(new AppError(404, "NOT_FOUND", "Không tìm thấy tài nguyên.")),
   );

@@ -18,7 +18,7 @@ export function Modal({
     const select = () =>
       Array.from(
         element?.querySelectorAll<HTMLElement>(
-          'button:not(:disabled),input:not(:disabled),[href],[tabindex="0"]',
+          'button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[href],[tabindex="0"]',
         ) ?? [],
       );
     (element?.querySelector<HTMLElement>("input") ?? select()[0])?.focus();

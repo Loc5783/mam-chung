@@ -1,6 +1,6 @@
 # Mầm Chung 🌱
 
-Ứng dụng quản lý tài chính, công việc và tập luyện cho cá nhân/cặp đôi theo master prompt. **Đã hoàn thành giai đoạn 0 và 1: nền tảng + tài khoản/xác thực.** Các nghiệp vụ tài chính, couple, todo và fitness chưa được triển khai. Bản này chưa đủ điều kiện production toàn diện.
+Ứng dụng quản lý tài chính, công việc và tập luyện cho cá nhân/cặp đôi theo master prompt. **Đã hoàn thành giai đoạn 0–2: nền tảng, tài khoản/xác thực và tài chính cá nhân.** Ngân sách/mục tiêu/định kỳ/báo cáo, couple, todo và fitness sẽ được triển khai ở các giai đoạn sau. Bản này chưa đủ điều kiện production toàn diện.
 
 ## Chạy ngay trên máy (không cần Docker)
 
@@ -28,6 +28,12 @@ Lần đầu tải MongoDB 7.0.14 từ nguồn chính thức (Windows khoảng 5
 - Xóa tài khoản với xác nhận mật khẩu, soft delete và thu hồi mọi phiên.
 - Route guard, tự làm mới token khi 401, khôi phục phiên khi tải lại, Web Locks phối hợp refresh giữa tab trên trình duyệt hỗ trợ.
 - Trang `/preview` dùng dữ liệu minh họa được ghi nhãn; trang `/` sau đăng nhập không hiển thị số dư mẫu như dữ liệu thật.
+
+- Tài chính tại `/finance`: ví tiền mặt/ngân hàng/điện tử, lưu trữ/khôi phục, đối soát.
+- Thu/chi: tạo/sửa/xóa/nhân bản, ghi chú/nhãn, lọc ngày/ví/danh mục/loại, tìm kiếm, sắp xếp và phân trang.
+- Chuyển tiền hai ví bằng một transaction, hai dòng liên kết, không tính vào tổng thu/chi.
+- Danh mục mặc định và riêng; xóa danh mục riêng có lịch sử cần danh mục thay thế.
+- Tổng quan thực: số dư mọi ví, thu/chi theo tháng và múi giờ hồ sơ, so sánh tháng trước, biểu đồ chi và giao dịch gần đây.
 
 ## Chạy qua Docker
 
@@ -61,7 +67,7 @@ npm run build
 npm run format:check
 ```
 
-Backend Jest/Supertest chạy MongoDB replica set riêng, yêu cầu tải binary lần đầu. Coverage service tự thu thập và bắt buộc statements/functions/lines ≥80%. Frontend dùng Vitest/Testing Library để kiểm tra các form, guard và interceptor.
+Backend Jest/Supertest chạy MongoDB replica set riêng, yêu cầu tải binary lần đầu. Coverage service tự thu thập và bắt buộc statements/branches/functions/lines ≥80%. Frontend dùng Vitest/Testing Library để kiểm tra các form, guard và interceptor.
 
 ## HTTPS và proxy (giai đoạn 11)
 
@@ -79,8 +85,8 @@ CORS_ORIGIN production phải là domain HTTPS thật. TRUST_PROXY_HOPS=0 khi AP
 - `apps/api`: Express/Mongoose; route → controller → service → repository; Zod, auth, lỗi thống nhất.
 - `docs/MASTER_PROMPT.md`: yêu cầu nguồn.
 - `docs/DECISIONS.md`: quyết định triển khai.
-- `docs/PHASE_0.md`, `docs/PHASE_1.md`: báo cáo từng giai đoạn.
+- `docs/PHASE_0.md`, `docs/PHASE_1.md`, `docs/PHASE_2.md`: báo cáo từng giai đoạn.
 - `docs/API.md`: API và quy ước. OpenAPI thực tế ở `/api/openapi.json`.
 - `.github/workflows/ci.yml`: lint/test/build/format; chưa chạy trên GitHub vì chưa có remote.
 
-Tiếp theo: **Giai đoạn 2 — tài chính cá nhân** (ví, danh mục, giao dịch, chuyển tiền, đối soát và kiểm thử số dư).
+Tiếp theo: **Giai đoạn 3 — ngân sách, mục tiêu, giao dịch định kỳ, báo cáo và xuất CSV.**

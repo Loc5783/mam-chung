@@ -26,6 +26,7 @@ import { useAuthStore } from "../features/auth/store";
 import { SettingsPage } from "../features/settings/SettingsPage";
 import { AccountHome } from "../features/dashboard/AccountHome";
 import { Avatar } from "../components/ui/Avatar";
+import { FinancePage } from "../features/finance/FinancePage";
 const navigation = [
   { to: "/", label: "Tổng quan", icon: LayoutDashboard },
   { to: "/finance", label: "Tài chính cá nhân", icon: Wallet },
@@ -113,9 +114,9 @@ function Layout({ preview = false }: { preview?: boolean }) {
         ))}
       </nav>
       <Link
-        to="/login"
+        to={user ? "/finance?tab=transactions&add=1" : "/login"}
         className="quick-add"
-        aria-label="Đăng nhập để thêm nhanh"
+        aria-label={user ? "Ghi giao dịch nhanh" : "Đăng nhập để thêm nhanh"}
       >
         <Plus size={23} />
       </Link>
@@ -156,8 +157,8 @@ export function App() {
           <Route element={<Layout />}>
             <Route index element={<AccountHome />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/finance" element={<FinancePage />} />
             {[
-              ["finance", "Tài chính cá nhân"],
               ["couple", "Không gian chung"],
               ["tasks", "Công việc"],
               ["fitness", "Tập luyện"],

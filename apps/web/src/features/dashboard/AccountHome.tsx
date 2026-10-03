@@ -1,6 +1,6 @@
-import { Link } from "react-router-dom";
+import { FinanceOverview } from "../finance/FinanceOverview";
+import { Link, useNavigate } from "react-router-dom";
 import {
-  Wallet,
   Heart,
   CheckSquare,
   Dumbbell,
@@ -10,6 +10,7 @@ import {
 import { useAuthStore } from "../auth/store";
 import { Card, EmptyState } from "../../components/ui";
 export function AccountHome() {
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user)!;
   const date = new Intl.DateTimeFormat("vi-VN", {
     dateStyle: "full",
@@ -30,18 +31,16 @@ export function AccountHome() {
       <div className="account-note">
         <ShieldCheck size={20} />
         <span>
-          Tài khoản đã được kết nối. Các công cụ tài chính, cặp đôi, công việc
-          và tập luyện sẽ được mở theo từng giai đoạn.
+          Tài chính cá nhân đã sẵn sàng. Không gian chung, công việc và tập
+          luyện sẽ được mở theo các giai đoạn tiếp theo.
         </span>
       </div>
+      <FinanceOverview
+        onAdd={() => navigate("/finance?tab=transactions&add=1")}
+        onWallet={() => navigate("/finance?tab=wallets&add=1")}
+      />
       <div className="account-grid">
         {[
-          {
-            title: "Tài chính cá nhân",
-            icon: Wallet,
-            to: "/finance",
-            description: "Ví, thu chi và những mục tiêu tiết kiệm của bạn.",
-          },
           {
             title: "Không gian chung",
             icon: Heart,
