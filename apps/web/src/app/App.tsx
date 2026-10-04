@@ -1,8 +1,30 @@
+import { lazy, Suspense } from "react";
+import { PageBoundary, RouteFocus } from "../components/ui/PageBoundary";
+import { PwaStatus } from "../features/pwa/PwaStatus";
 import { NotificationBell } from "../features/notifications/NotificationBell";
-import { FitnessPage } from "../features/fitness/FitnessPage";
-import { TasksPage } from "../features/tasks/TasksPage";
-import { SharedFinancePage } from "../features/shared/SharedFinancePage";
-import { CouplePage, InvitePage } from "../features/couples/CouplePage";
+const FitnessPage = lazy(() =>
+  import("../features/fitness/FitnessPage").then((m) => ({
+    default: m.FitnessPage,
+  })),
+);
+const TasksPage = lazy(() =>
+  import("../features/tasks/TasksPage").then((m) => ({ default: m.TasksPage })),
+);
+const SharedFinancePage = lazy(() =>
+  import("../features/shared/SharedFinancePage").then((m) => ({
+    default: m.SharedFinancePage,
+  })),
+);
+const CouplePage = lazy(() =>
+  import("../features/couples/CouplePage").then((m) => ({
+    default: m.CouplePage,
+  })),
+);
+const InvitePage = lazy(() =>
+  import("../features/couples/CouplePage").then((m) => ({
+    default: m.InvitePage,
+  })),
+);
 import {
   NavLink,
   Link,
@@ -24,14 +46,30 @@ import {
   Plus,
 } from "lucide-react";
 import { AuthPage } from "../features/auth/AuthPage";
-import { Dashboard } from "../features/dashboard/Dashboard";
+const Dashboard = lazy(() =>
+  import("../features/dashboard/Dashboard").then((m) => ({
+    default: m.Dashboard,
+  })),
+);
 import { Card, EmptyState, Toast } from "../components/ui";
 import { AuthBootstrap, AuthGate } from "../features/auth/AuthGate";
 import { useAuthStore } from "../features/auth/store";
-import { SettingsPage } from "../features/settings/SettingsPage";
-import { AccountHome } from "../features/dashboard/AccountHome";
+const SettingsPage = lazy(() =>
+  import("../features/settings/SettingsPage").then((m) => ({
+    default: m.SettingsPage,
+  })),
+);
+const AccountHome = lazy(() =>
+  import("../features/dashboard/AccountHome").then((m) => ({
+    default: m.AccountHome,
+  })),
+);
 import { Avatar } from "../components/ui/Avatar";
-import { FinancePage } from "../features/finance/FinancePage";
+const FinancePage = lazy(() =>
+  import("../features/finance/FinancePage").then((m) => ({
+    default: m.FinancePage,
+  })),
+);
 const navigation = [
   { to: "/", label: "Tổng quan", icon: LayoutDashboard },
   { to: "/finance", label: "Tài chính cá nhân", icon: Wallet },
@@ -99,18 +137,24 @@ function Layout({ preview = false }: { preview?: boolean }) {
           </span>
           <span className="topbar-right">
             <span className="preview-indicator" />{" "}
-            {preview
-              ? "Giao diện mẫu"
-              : location.pathname.startsWith("/couple") ||
-                  location.pathname.startsWith("/shared")
-                ? "Không gian chung"
-                : "Không gian cá nhân"}{" "}
+            <span className="topbar-context">
+              {preview
+                ? "Giao diện mẫu"
+                : location.pathname.startsWith("/couple") ||
+                    location.pathname.startsWith("/shared")
+                  ? "Không gian chung"
+                  : "Không gian cá nhân"}
+            </span>{" "}
             {user && !preview && <NotificationBell />}
             <Avatar user={user} small />
           </span>
         </header>
-        <main className="page-content">
-          <Outlet />
+        <main id="main-content" tabIndex={-1} className="page-content">
+          <PageBoundary key={location.pathname}>
+            <Suspense fallback={<p role="status">Đang tải trang…</p>}>
+              <Outlet />
+            </Suspense>
+          </PageBoundary>
         </main>
       </div>
       <nav className="bottom-nav" aria-label="Điều hướng trên điện thoại">
@@ -160,6 +204,11 @@ function FeaturePage({ title }: { title: string }) {
 export function App() {
   return (
     <>
+      <a className="skip-link" href="#main-content">
+        Đến nội dung chính
+      </a>
+      <RouteFocus />
+      <PwaStatus />
       <AuthBootstrap />
       <Routes>
         <Route path="/login" element={<AuthPage />} />

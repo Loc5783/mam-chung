@@ -1,3 +1,4 @@
+import { moveTabFocus } from "../../components/ui/tabs";
 import { PlanningPanel, ExportHistoryButton } from "../planning/PlanningPanel";
 import { FinanceIcon } from "./FinanceIcon";
 import { useEffect, useState } from "react";
@@ -110,6 +111,7 @@ export function FinancePage() {
       <div
         className="finance-tabs"
         role="tablist"
+        onKeyDown={moveTabFocus}
         aria-label="Tài chính cá nhân"
       >
         {tabs.map(([key, label]) => (
@@ -117,6 +119,7 @@ export function FinancePage() {
             key={key}
             role="tab"
             aria-selected={tab === key}
+            tabIndex={tab === key ? 0 : -1}
             className={tab === key ? "active" : ""}
             onClick={() => setTab(key)}
           >

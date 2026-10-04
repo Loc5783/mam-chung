@@ -1,18 +1,9 @@
+import { moveTabFocus } from "../../components/ui/tabs";
+import { Chart } from "./FitnessChart";
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  CartesianGrid,
-} from "recharts";
-import { Plus, Dumbbell } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { Plus } from "lucide-react";
 import { Card, Button, EmptyState, Skeleton } from "../../components/ui";
 import { Modal } from "../../components/ui/Modal";
 import { apiClient, errorMessage } from "../../lib/apiClient";
@@ -126,41 +117,6 @@ function Pager({
         Sau
       </Button>
     </div>
-  );
-}
-function Chart({
-  rows,
-  keys,
-}: {
-  rows: Record<string, unknown>[];
-  keys: { key: string; name: string; color: string }[];
-}) {
-  return rows.length ? (
-    <div className="fitness-chart">
-      <ResponsiveContainer width="100%" height={260}>
-        <LineChart data={rows}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e4e8d9" />
-          <XAxis dataKey="date" />
-          <YAxis />
-          <Tooltip />
-          {keys.map((k) => (
-            <Line
-              key={k.key}
-              type="monotone"
-              dataKey={k.key}
-              name={k.name}
-              stroke={k.color}
-              strokeWidth={2}
-              connectNulls={false}
-            />
-          ))}
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
-  ) : (
-    <EmptyState title="Chưa có dữ liệu">
-      Ghi lại buổi tập hoặc số đo để xem tiến trình.
-    </EmptyState>
   );
 }
 function Analytics({
@@ -644,7 +600,12 @@ export function FitnessPage() {
       <p className="account-note">
         Dữ liệu tập luyện và số đo chỉ bạn xem được, kể cả khi đã ghép đôi.
       </p>
-      <div className="fitness-tabs" role="tablist" aria-label="Tập luyện">
+      <div
+        className="fitness-tabs"
+        role="tablist"
+        onKeyDown={moveTabFocus}
+        aria-label="Tập luyện"
+      >
         {[
           ["overview", "Tiến bộ"],
           ["sessions", "Buổi tập"],
@@ -656,6 +617,7 @@ export function FitnessPage() {
             key={k}
             role="tab"
             aria-selected={tab === k}
+            tabIndex={tab === k ? 0 : -1}
             onClick={() => setTab(k)}
           >
             {label}
@@ -1061,48 +1023,5 @@ export function FitnessPage() {
         </Modal>
       )}
     </>
-  );
-}
-export function FitnessPreview({ provided }: { provided?: Report }) {
-  const q = useFitnessQuery<Report>(
-    "/fitness/stats",
-    { range: "7d" },
-    !provided,
-  );
-  const data = provided ?? q.data;
-  return (
-    <Card>
-      <div className="section-heading">
-        <h2>Nhịp tập luyện</h2>
-        <Dumbbell size={23} />
-      </div>
-      {!provided && q.isPending ? (
-        <Skeleton />
-      ) : !provided && q.isError ? (
-        <ErrorBox error={q.error} />
-      ) : (
-        <>
-          <p>
-            {data!.stats.weekSessions} buổi tuần này · Volume tuần{" "}
-            {fmt(data!.comparison.current.volume)}
-          </p>
-          {data!.latest ? (
-            <p>
-              Gần nhất: {data!.latest.date} · {data!.latest.durationMinutes}{" "}
-              phút · Volume {fmt(data!.latest.volume)}
-            </p>
-          ) : (
-            <p>Chưa có buổi tập. Ghi buổi đầu tiên để bắt đầu.</p>
-          )}
-          <Chart
-            rows={data!.volume}
-            keys={[{ key: "volume", name: "Volume", color: "#7e9b57" }]}
-          />
-        </>
-      )}
-      <Link className="card-link" to="/fitness">
-        Mở sổ tập luyện →
-      </Link>
-    </Card>
   );
 }

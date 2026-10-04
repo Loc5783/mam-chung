@@ -13,9 +13,9 @@
   --bg: #fafbf6;
   --surface: #ffffff;
   --ink: #2b3324;
-  --ink-muted: #75806b;
+  --ink-muted: #626e59;
   --border: #e4e8d9;
-  --danger: #d2664f;
+  --danger: #b34833;
   font-family: "Be Vietnam Pro", sans-serif;
   color: var(--ink);
   background: var(--bg);
@@ -277,7 +277,7 @@ svg {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: var(--primary);
+  background: var(--primary-dark);
   color: white;
   border-radius: 10px;
   padding: 13px 17px;
@@ -3178,5 +3178,104 @@ svg {
   }
   .topbar-right .preview-indicator {
     display: none;
+  }
+}
+.skip-link {
+  position: fixed;
+  z-index: 110;
+  top: 12px;
+  left: 12px;
+  transform: translateY(-200%);
+  background: #57713a;
+  color: #fff;
+  padding: 14px;
+  border-radius: 8px;
+}
+.skip-link:focus {
+  transform: none;
+}
+:focus-visible {
+  outline: 3px solid #57713a;
+  outline-offset: 3px;
+}
+main:focus {
+  outline: none;
+}
+.pwa-status {
+  padding: 12px 24px;
+  background: #eef3e5;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.pwa-status p {
+  margin: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+@media (max-width: 600px) {
+  .topbar-right {
+    flex-shrink: 0;
+    gap: 8px;
+  }
+  .topbar > span:first-child {
+    min-width: 0;
+  }
+  .page-heading h1 {
+    overflow-wrap: anywhere;
+  }
+  .button,
+  .icon-button,
+  .notification-bell {
+    min-height: 44px;
+  }
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+  .modal-panel {
+    max-height: calc(100dvh - 32px);
+  }
+  .pwa-status {
+    padding: 12px;
+    font-size: 14px;
+  }
+}
+
+.pwa-status {
+  position: fixed;
+  z-index: 80;
+  left: 270px;
+  right: 24px;
+  bottom: 24px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px #2b332420;
+}
+@media (max-width: 900px) {
+  .pwa-status {
+    left: 16px;
+    right: 16px;
+    bottom: 94px;
+  }
+}
+
+@media (max-width: 600px) {
+  .topbar-context {
+    display: none;
+  }
+  .topbar > span:first-child {
+    flex: 1;
   }
 }

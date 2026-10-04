@@ -109,7 +109,7 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
         </div>
         <small>Cho bạn, và cho chúng mình.</small>
       </div>
-      <main className="auth-main">
+      <main id="main-content" tabIndex={-1} className="auth-main">
         <Link className="back-link" to="/preview">
           <ArrowLeft size={16} /> Xem giao diện mẫu
         </Link>
@@ -133,10 +133,16 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
                   autoComplete="name"
                   placeholder="Tên của bạn"
                   disabled={isSubmitting}
+                  aria-invalid={!!errors.name}
+                  aria-describedby={errors.name ? "auth-name-error" : undefined}
                   {...register("name")}
                 />
                 {errors.name && (
-                  <span className="field-error" role="alert">
+                  <span
+                    id="auth-name-error"
+                    className="field-error"
+                    role="alert"
+                  >
                     {errors.name.message}
                   </span>
                 )}
@@ -149,10 +155,16 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
                 autoComplete="email"
                 placeholder="ban@example.com"
                 disabled={isSubmitting}
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? "auth-email-error" : undefined}
                 {...register("email")}
               />
               {errors.email && (
-                <span className="field-error" role="alert">
+                <span
+                  id="auth-email-error"
+                  className="field-error"
+                  role="alert"
+                >
                   {errors.email.message}
                 </span>
               )}
@@ -170,10 +182,18 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
                     : "Nhập mật khẩu của bạn"
                 }
                 disabled={isSubmitting}
+                aria-invalid={!!errors.password}
+                aria-describedby={
+                  errors.password ? "auth-password-error" : undefined
+                }
                 {...register("password")}
               />
               {errors.password && (
-                <span className="field-error" role="alert">
+                <span
+                  id="auth-password-error"
+                  className="field-error"
+                  role="alert"
+                >
                   {errors.password.message}
                 </span>
               )}

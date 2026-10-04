@@ -1,3 +1,4 @@
+import { moveTabFocus } from "../../components/ui/tabs";
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -187,7 +188,12 @@ function SharedContent({ funds }: { funds: SharedFunds }) {
           )}
         </>
       )}
-      <div className="finance-tabs" role="tablist" aria-label="Tài chính chung">
+      <div
+        className="finance-tabs"
+        role="tablist"
+        onKeyDown={moveTabFocus}
+        aria-label="Tài chính chung"
+      >
         {[
           ["funds", "Quỹ chung"],
           ["transactions", "Sổ chi chung"],
@@ -199,6 +205,7 @@ function SharedContent({ funds }: { funds: SharedFunds }) {
             role="tab"
             className={tab === id ? "active" : ""}
             aria-selected={tab === id}
+            tabIndex={tab === id ? 0 : -1}
             onClick={() => setTab(id)}
           >
             {label}

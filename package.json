@@ -16,7 +16,9 @@
     "build": "npm run build --workspaces",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "dev:local": "node scripts/dev-local.cjs"
+    "dev:local": "node scripts/dev-local.cjs",
+    "seed:demo:local": "node scripts/seed-demo-local.cjs",
+    "check:pwa": "node scripts/check-pwa.cjs"
   },
   "devDependencies": {
     "prettier": "^3.3.3"

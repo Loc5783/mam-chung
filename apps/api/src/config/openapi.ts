@@ -25,19 +25,41 @@ const session = {
     "application/json": { schema: { $ref: "#/components/schemas/Session" } },
   },
 };
+function apiPaths(paths: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(paths).map(([path, operations]) => [
+      path.startsWith("/api/") ? path : "/api" + path,
+      operations,
+    ]),
+  );
+}
 export const openapi = {
   openapi: "3.0.3",
   info: {
     title: "Mầm Chung API",
-    version: "0.9.0",
+    version: "1.0.0",
     description:
-      "Giai đoạn 8 — Dashboard, thông báo trong ứng dụng; tài khoản, tài chính cá nhân, kế hoạch, Couple, tài chính chung, công việc và tập luyện riêng tư. Refresh token chỉ được đặt trong cookie httpOnly; không trả qua JSON.",
+      "Giai đoạn 9 — Dashboard, thông báo trong ứng dụng; tài khoản, tài chính cá nhân, kế hoạch, Couple, tài chính chung, công việc và tập luyện riêng tư. Refresh token chỉ được đặt trong cookie httpOnly; không trả qua JSON.",
   },
   components: {
     securitySchemes: {
       bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
     },
     schemas: {
+      Health: {
+        type: "object",
+        required: ["status", "database", "phase", "development"],
+        properties: {
+          status: { type: "string", enum: ["ok", "not_ready"] },
+          database: { type: "string", enum: ["connected", "disconnected"] },
+          phase: { type: "integer", example: 9 },
+          development: {
+            type: "boolean",
+            description:
+              "Chỉ true trong môi trường development; seed demo từ chối môi trường khác.",
+          },
+        },
+      },
       ...dashboardSchemas,
       ...fitnessSchemas,
       ...taskSchemas,
@@ -132,19 +154,33 @@ export const openapi = {
     },
   },
   paths: {
-    ...dashboardPaths,
-    ...fitnessPaths,
-    ...taskPaths,
-    ...financePaths,
-    ...couplePaths,
-    ...sharedPaths,
-    ...planningPaths,
+    ...apiPaths(dashboardPaths),
+    ...apiPaths(fitnessPaths),
+    ...apiPaths(taskPaths),
+    ...apiPaths(financePaths),
+    ...apiPaths(couplePaths),
+    ...apiPaths(sharedPaths),
+    ...apiPaths(planningPaths),
     "/api/health": {
       get: {
         summary: "Kiểm tra tình trạng hệ thống",
         responses: {
-          "200": { description: "MongoDB đã kết nối" },
-          "503": { description: "MongoDB chưa sẵn sàng" },
+          "200": {
+            description: "MongoDB đã kết nối",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Health" },
+              },
+            },
+          },
+          "503": {
+            description: "MongoDB chưa sẵn sàng",
+            content: {
+              "application/json": {
+                schema: { $ref: "#/components/schemas/Health" },
+              },
+            },
+          },
         },
       },
     },

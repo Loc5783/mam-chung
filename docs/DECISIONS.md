@@ -106,3 +106,12 @@
 - Không có địa chỉ người nhận mã mời. Receipt được tạo chỉ sau preview mã hợp lệ; lưu ID thay plaintext code. Thông báo mở trang Couple, người dùng nhập lại mã đã nhận. Không tự gửi mã hoặc chấp nhận lời mời.
 - Nhắc ngân sách khi đạt/vượt100%; mức80% có cảnh báo ngay trong thẻ ngân sách. Chỉ số chi từ ledger của chính người gọi. Nhắc task chỉ phụ trách, bỏ terminal/deleted. Công nợ theo active membership, creditor mới nhận yêu cầu xác nhận. Khi archive/rời, nhắc chung tự ẩn nhưng lịch sử sổ chung không bị xóa.
 - Link thông báo chỉ điều hướng các route nội bộ cho phép sau khi API đọc thành công; lỗi không đóng modal. Đọc tất cả không ảnh hưởng người kia. Bộ lọc/pagination thu hẹp được đưa về trang hợp lệ. Màn hình390px có kiểm tra thực và chặn tooltip Fitness làm tràn trang khi đổi viewport.
+
+## Giai đoạn 9 — Responsive, PWA và hiệu năng
+
+- Tách trang bằng React.lazy/Suspense, boundary có thử lại; Dashboard dùng preview nhỏ riêng để không kéo toàn bộ trang Tasks/Fitness. Biểu đồ riêng vendor chunk. Chia gói không được coi là bằng chứng Web Vitals; worker vẫn precache toàn bộ tài nguyên công khai trong nền.
+- PWA chỉ bản build. Version hash gồm tên asset có hash, manifest, icon, favicon, offline và template worker. Cache chỉ allowlist công khai, không index/trang có dữ liệu/API; navigation network-first và fallback offline chung. Không lưu token, cache tài khoản hoặc queue mutation ngoại tuyến. Update chờ bấm chủ động để tránh tự tải lại giữa biểu mẫu.
+- Modal portal, inert nền, giữ focus khi nhập, trap Tab/ShiftTab, Escape theo busy và trả focus; skip link/focus main khi chuyển route. Tab dùng roving tabindex, mũi tên/Home/End. Giảm chuyển động và tăng tương phản chữ/nút; chưa chứng nhận WCAG hoặc kiểm tra bằng screen reader thật.
+- Mobile320px ẩn dòng ngữ cảnh thừa trên topbar, giữ tên trang; input16px và nút tối thiểu44px; giới hạn modal theo viewport. Kiểm tra tràn bằng DOM và ảnh, không tự động suy ra mọi thiết bị đã qua.
+- Seed chỉ hai tài khoản giả được đánh dấu tên/email, chỉ API development loopback. Không thay tài khoản demo có sẵn hay xóa dữ liệu; giữ tài nguyên tồn tại theo tên/ghi chú. Báo đã trả tiền chỉ lúc tạo khoản chi cá nhân mẫu mới; chạy lại không tự ghi lại trạng thái người dùng đã đổi. Không hỗ trợ seed chạy song song hoặc migration production.
+- `check:pwa` kiểm tra bản build, icon PNG/kích thước, placeholder/allowlist và từng chunk<500KB trong CI. GitHub CI/production/cài OS chưa chạy, tách biệt với kiểm chứng local.

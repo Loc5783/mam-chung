@@ -68,9 +68,11 @@ beforeEach(() => {
   useAuthStore.getState().clear();
 });
 describe("Tài khoản và giao diện", () => {
-  it("xem dữ liệu mẫu tại trang preview", () => {
+  it("xem dữ liệu mẫu tại trang preview", async () => {
     renderApp("/preview");
-    expect(screen.getByText(/Các số liệu bên dưới/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Các số liệu bên dưới/, {}, { timeout: 5000 }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Chi tiêu của bạn" }),
     ).toBeInTheDocument();
@@ -135,7 +137,7 @@ describe("Tài khoản và giao diện", () => {
       screen.getAllByRole("link", { name: "Công việc" })[0],
     );
     expect(
-      screen.getByRole("heading", { name: "Công việc" }),
+      await screen.findByRole("heading", { name: "Công việc" }),
     ).toBeInTheDocument();
   });
   it("cập nhật tên hồ sơ và thông tin trên sidebar", async () => {

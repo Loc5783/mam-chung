@@ -1,6 +1,7 @@
+import { moveTabFocus } from "../../components/ui/tabs";
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
-import { CheckSquare, Plus, ShoppingBag } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
+import { Plus, ShoppingBag } from "lucide-react";
 import { Card, Button, EmptyState, Skeleton } from "../../components/ui";
 import { Modal } from "../../components/ui/Modal";
 import { apiClient, errorMessage } from "../../lib/apiClient";
@@ -404,10 +405,11 @@ export function TasksPage() {
         </p>
       )}
       <div className="task-toolbar">
-        <div role="tablist" aria-label="Cách xem">
+        <div role="tablist" onKeyDown={moveTabFocus} aria-label="Cách xem">
           <button
             role="tab"
             aria-selected={view === "list"}
+            tabIndex={view === "list" ? 0 : -1}
             onClick={() => setView("list")}
           >
             Danh sách
@@ -415,6 +417,7 @@ export function TasksPage() {
           <button
             role="tab"
             aria-selected={view === "kanban"}
+            tabIndex={view === "kanban" ? 0 : -1}
             onClick={() => setView("kanban")}
           >
             Kanban
@@ -640,85 +643,5 @@ export function TasksPage() {
         </Modal>
       )}
     </>
-  );
-}
-export function TasksPreview({
-  provided,
-}: {
-  provided?: { today: TaskPage; overdue: TaskPage };
-}) {
-  const aq = useTasksQuery<TaskPage>(
-      "/tasks",
-      { due: "today", limit: 5 },
-      !provided,
-    ),
-    bq = useTasksQuery<TaskPage>(
-      "/tasks",
-      { due: "overdue", limit: 5 },
-      !provided,
-    );
-  const a = provided
-      ? { data: provided.today, isPending: false, isError: false, error: null }
-      : aq,
-    b = provided
-      ? {
-          data: provided.overdue,
-          isPending: false,
-          isError: false,
-          error: null,
-        }
-      : bq;
-  const change = useTaskMutation(async (t: Task) =>
-    apiClient.patch("/tasks/" + t.id + "/status", {
-      status: "DONE",
-      revision: t.revision,
-    }),
-  );
-  return (
-    <Card>
-      <div className="section-heading">
-        <h2>Công việc hôm nay</h2>
-        <CheckSquare size={23} />
-      </div>
-      {a.isPending || b.isPending ? (
-        <Skeleton />
-      ) : a.isError || b.isError ? (
-        <Error error={a.error ?? b.error} />
-      ) : (
-        <>
-          {[
-            { title: `Hôm nay (${a.data!.total})`, items: a.data!.items },
-            { title: `Quá hạn (${b.data!.total})`, items: b.data!.items },
-          ].map((g) => (
-            <div key={g.title}>
-              <h3>{g.title}</h3>
-              {g.items.length ? (
-                g.items.map((t) => (
-                  <div key={t.id} className="task-preview-row">
-                    <span>
-                      {t.title}{" "}
-                      <small>{t.coupleId ? "Chung" : "Cá nhân"}</small>
-                    </span>
-                    <Button
-                      className="button-outline"
-                      disabled={change.isPending}
-                      onClick={() => change.mutate(t)}
-                    >
-                      Xong
-                    </Button>
-                  </div>
-                ))
-              ) : (
-                <p className="muted">Không có việc cần làm.</p>
-              )}
-            </div>
-          ))}
-        </>
-      )}
-      {change.isError && <Error error={change.error} />}
-      <Link className="card-link" to="/tasks">
-        Xem tất cả công việc →
-      </Link>
-    </Card>
   );
 }

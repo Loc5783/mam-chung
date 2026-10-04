@@ -1,3 +1,4 @@
+import { FitnessPreview } from "../features/fitness/FitnessPreview";
 import {
   render,
   screen,
@@ -10,11 +11,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, afterEach, it, expect, vi } from "vitest";
 import { FitnessForm, FitnessDialog } from "../features/fitness/FitnessForm";
-import {
-  FitnessPage,
-  FitnessPreview,
-  RestTimer,
-} from "../features/fitness/FitnessPage";
+import { FitnessPage, RestTimer } from "../features/fitness/FitnessPage";
 import { Session, WorkoutSet, Report } from "../features/fitness/types";
 import { apiClient } from "../lib/apiClient";
 import { useAuthStore } from "../features/auth/store";

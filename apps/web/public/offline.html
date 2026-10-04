@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#7E9B57" />
+    <title>Mất kết nối · Mầm Chung</title>
+    <style>
+      body {
+        font:
+          18px system-ui,
+          sans-serif;
+        background: #fafbf6;
+        color: #2b3324;
+        max-width: 38rem;
+        margin: 12vh auto;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 2rem;
+      }
+      p {
+        line-height: 1.7;
+      }
+      button {
+        font: inherit;
+        background: #57713a;
+        color: white;
+        border: 0;
+        border-radius: 12px;
+        padding: 16px;
+        cursor: pointer;
+      }
+      button:focus-visible {
+        outline: 3px solid #b3577a;
+        outline-offset: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/icon-192.png" width="80" height="80" alt="" />
+      <h1>Mầm Chung đang mất kết nối</h1>
+      <p>
+        Kết nối mạng để mở tài khoản và tiếp tục. Dữ liệu riêng không được lưu
+        trong bộ nhớ ngoại tuyến. Những thao tác chưa gửi thành công chưa được
+        lưu.
+      </p>
+      <button onclick="window.location.reload()">Thử kết nối lại</button>
+    </main>
+  </body>
+</html>

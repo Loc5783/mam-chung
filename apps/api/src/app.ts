@@ -61,7 +61,8 @@ export function createApp() {
     res.status(connected ? 200 : 503).json({
       status: connected ? "ok" : "not_ready",
       database: connected ? "connected" : "disconnected",
-      phase: 8,
+      phase: 9,
+      development: env.NODE_ENV === "development",
     });
   });
   app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapi));

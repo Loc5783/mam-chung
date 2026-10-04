@@ -1,4 +1,4 @@
-# API giai đoạn 1–7
+# API giai đoạn 1–9
 
 Swagger: GET /api/docs. OpenAPI JSON: GET /api/openapi.json.
 
@@ -238,3 +238,11 @@ Công nợ pending/pending_confirm nhắc hai bên; PAYMENT_CONFIRM chỉ ngư�
 Mã mời không có email người nhận: creator có nhắc đang chờ; người khác chỉ có COUPLE_INVITE sau GET /couples/invite/:code hợp lệ. Lưu receipt gồm userId/inviteId trong transaction; không plaintext code, không tự chấp nhận. Link thông báo mở `/couple`, người nhận nhập lại mã đã được người mời chia sẻ. Khi chấp nhận, hai bên có INVITE_ACCEPTED.
 
 Dashboard dùng các dịch vụ phân quyền hiện có, không chuyển dữ liệu cá nhân partner sang người gọi. Các phần được đọc tuần tự, không phải snapshot nguyên tử xuyên mô-đun. Kiểm tra lại cặp active trước trả phần chung; lỗi thật được trả cho client, không thay bằng số0 giả. Cache UI theo user; mutation làm mới Dashboard/thông báo, poll15 giây và focus. Đổi timezone làm mới cả hai để hạn việc và tháng đúng hồ sơ.
+
+## Hoàn thiện Swagger (giai đoạn 9)
+
+OpenAPI3.0.3, phiên bản1.0.0; 84 đường dẫn và118 schemas ở bản local đã kiểm tra. Mọi reference schema đều tồn tại. Các path thống nhất tiền tố `/api`, đã đối chiếu122 thao tác nghiệp vụ để tránh Swagger gọi sai địa chỉ. Các mô-đun request/response, phân trang, tham số và Bearer auth được giữ cùng Swagger dùng thật tại `/api/docs`. Đây là số path duy nhất, không phải số thao tác HTTP.
+
+`GET /api/health` trả `{status,database,phase,development}`; phase9, development chỉ true khi NODE_ENV=development. HTTP200 khi MongoDB kết nối;503 khi chưa sẵn sàng. Seed local kiểm tra trường development trước đăng nhập/tạo dữ liệu để từ chối API test/production. Health không tiết lộ URI hoặc secret.
+
+PWA không thay đổi contract API và không cache response API. Mọi mutation vẫn cần mạng và kiểm tra quyền/revision/transaction như các giai đoạn trước. Logout trả204 không có JSON body.

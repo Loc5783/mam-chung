@@ -1,10 +1,11 @@
+import { TasksPreview } from "../features/tasks/TasksPreview";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, it, expect, vi } from "vitest";
 import { TaskForm } from "../features/tasks/TaskForm";
-import { TasksPage, TasksPreview } from "../features/tasks/TasksPage";
+import { TasksPage } from "../features/tasks/TasksPage";
 import { Task, Members } from "../features/tasks/types";
 import { apiClient } from "../lib/apiClient";
 import { useAuthStore } from "../features/auth/store";

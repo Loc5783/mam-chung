@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FitnessPreview } from "../fitness/FitnessPage";
-import { TasksPreview } from "../tasks/TasksPage";
+import { FitnessPreview } from "../fitness/FitnessPreview";
+import { TasksPreview } from "../tasks/TasksPreview";
 import { FinanceOverview } from "../finance/FinanceOverview";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, ShieldCheck, Heart, Plus } from "lucide-react";
