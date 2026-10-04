@@ -29,10 +29,11 @@ export function useFinanceOptions() {
   });
   return { wallets, categories };
 }
-export function useFinanceDashboard() {
+export function useFinanceDashboard(enabled = true) {
   const userId = useAuthStore((s) => s.user!.id);
   return useQuery({
     queryKey: ["finance", userId, "dashboard"],
+    enabled,
     queryFn: async () =>
       (await apiClient.get<FinanceDashboard>("/finance/dashboard")).data,
   });
@@ -40,7 +41,13 @@ export function useFinanceDashboard() {
 export function useInvalidateFinance() {
   const client = useQueryClient();
   const userId = useAuthStore((s) => s.user!.id);
-  return () => client.invalidateQueries({ queryKey: ["finance", userId] });
+  return async () => {
+    await Promise.all([
+      client.invalidateQueries({ queryKey: ["finance", userId] }),
+      client.invalidateQueries({ queryKey: ["dashboard", userId] }),
+      client.invalidateQueries({ queryKey: ["notifications", userId] }),
+    ]);
+  };
 }
 export function localInputDate(value: Date | string, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-CA", {

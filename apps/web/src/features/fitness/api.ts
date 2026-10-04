@@ -5,9 +5,11 @@ import { useUiStore } from "../../app/store";
 export function useFitnessQuery<T>(
   path: string,
   params: Record<string, string | number> = {},
+  enabled = true,
 ) {
   const id = useAuthStore((s) => s.user!.id);
   return useQuery({
+    enabled,
     queryKey: ["fitness", id, path, params],
     queryFn: async () => (await apiClient.get<T>(path, { params })).data,
     refetchInterval: 15000,
@@ -28,6 +30,7 @@ export function useFitnessMutation<T>(
     onSuccess: (_r, _v, c) => {
       if (c?.epoch !== getSessionEpoch()) return;
       done(_r);
+      void client.invalidateQueries({ queryKey: ["dashboard", c?.id] });
       notify("Đã lưu dữ liệu tập luyện.");
       void client.invalidateQueries({ queryKey: ["fitness", c?.id] });
     },

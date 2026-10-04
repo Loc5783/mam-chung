@@ -1,3 +1,4 @@
+import { emptyHome } from "./dashboard-fixture";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
@@ -41,26 +42,29 @@ function renderApp(path = "/", authenticated = false) {
 }
 beforeEach(() => {
   vi.restoreAllMocks();
-  vi.spyOn(apiClient, "get").mockResolvedValue({
-    data: {
-      month: "2026-10",
-      timezone: "Asia/Ho_Chi_Minh",
-      totalBalance: 0,
-      income: 0,
-      expense: 0,
-      incomeChange: null,
-      expenseChange: null,
-      wallets: [],
-      spending: [],
-      recent: [],
-      items: [],
-      total: 0,
-      stats: { weekSessions: 0 },
-      comparison: { current: { volume: 0 } },
-      latest: null,
-      volume: [],
-    },
-  });
+  vi.spyOn(apiClient, "get").mockImplementation(async (path) => ({
+    data:
+      path === "/dashboard"
+        ? emptyHome()
+        : {
+            month: "2026-10",
+            timezone: "Asia/Ho_Chi_Minh",
+            totalBalance: 0,
+            income: 0,
+            expense: 0,
+            incomeChange: null,
+            expenseChange: null,
+            wallets: [],
+            spending: [],
+            recent: [],
+            items: [],
+            total: 0,
+            stats: { weekSessions: 0 },
+            comparison: { current: { volume: 0 } },
+            latest: null,
+            volume: [],
+          },
+  }));
   useAuthStore.getState().clear();
 });
 describe("Tài khoản và giao diện", () => {
@@ -254,4 +258,46 @@ describe("Tài khoản và giao diện", () => {
     expect(post).toHaveBeenCalledWith("/auth/logout");
     expect(useAuthStore.getState().status).toBe("anonymous");
   });
+});
+it("timezone change refreshes dashboard and notification dates for own account", async () => {
+  vi.spyOn(apiClient, "get").mockResolvedValue({ data: profile });
+  vi.spyOn(apiClient, "put").mockResolvedValue({
+    data: { ...profile, timezone: "America/New_York" },
+  });
+  const client = renderApp("/settings", true),
+    invalidate = vi.spyOn(client, "invalidateQueries");
+  await screen.findByLabelText("Họ và tên");
+  await userEvent.selectOptions(
+    screen.getByLabelText("Múi giờ"),
+    "America/New_York",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
+  await waitFor(() =>
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ["notifications", profile.id],
+    }),
+  );
+  expect(invalidate).toHaveBeenCalledWith({
+    queryKey: ["dashboard", profile.id],
+  });
+});
+it("late profile update cannot restore the account after logout", async () => {
+  vi.spyOn(apiClient, "get").mockResolvedValue({ data: profile });
+  let resolve!: (data: object) => void;
+  vi.spyOn(apiClient, "put").mockImplementation(
+    () =>
+      new Promise((r) => {
+        resolve = r;
+      }),
+  );
+  vi.spyOn(apiClient, "post").mockResolvedValue({ status: 204 });
+  renderApp("/settings", true);
+  await screen.findByLabelText("Họ và tên");
+  await userEvent.click(screen.getByRole("button", { name: "Lưu thay đổi" }));
+  await waitFor(() => expect(apiClient.put).toHaveBeenCalled());
+  await userEvent.click(screen.getByRole("button", { name: "Đăng xuất" }));
+  await screen.findByRole("button", { name: "Đăng nhập" });
+  resolve({ data: { ...profile, name: "Phản hồi cũ" } });
+  await waitFor(() => expect(useAuthStore.getState().user).toBeNull());
+  expect(useAuthStore.getState().status).toBe("anonymous");
 });

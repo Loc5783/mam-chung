@@ -1,3 +1,5 @@
+import { notificationRoutes } from "./modules/notifications/routes";
+import { dashboardRoutes } from "./modules/dashboard/routes";
 import { fitnessRoutes } from "./modules/fitness/routes";
 import { taskRoutes } from "./modules/tasks/routes";
 import { sharedRoutes } from "./modules/shared/routes";
@@ -59,7 +61,7 @@ export function createApp() {
     res.status(connected ? 200 : 503).json({
       status: connected ? "ok" : "not_ready",
       database: connected ? "connected" : "disconnected",
-      phase: 7,
+      phase: 8,
     });
   });
   app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapi));
@@ -70,6 +72,8 @@ export function createApp() {
   app.use("/api", sharedRoutes());
   app.use("/api", taskRoutes());
   app.use("/api", fitnessRoutes());
+  app.use("/api", notificationRoutes());
+  app.use("/api", dashboardRoutes());
   app.use("/api", planningRoutes());
   app.use("/api", financeRoutes());
   app.use((_req, _res, next) =>

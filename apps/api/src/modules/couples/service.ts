@@ -1,3 +1,4 @@
+import { rememberInvitation } from "../notifications/models";
 import { ClientSession } from "mongoose";
 import { createHash, randomInt } from "crypto";
 import { inTransaction } from "../../utils/transaction";
@@ -317,7 +318,7 @@ export const coupleService = {
   async preview(userId: string, raw: unknown) {
     const code = schema.code.parse(raw);
     return inTransaction(async (session) => {
-      await readUser(userId, session);
+      await lockUser(userId, session);
       const invite = await repo.invitation(hash(code), new Date(), session);
       if (!invite) throw missing();
       const c = await repo.active(invite.coupleId.toString(), session);
@@ -328,6 +329,8 @@ export const coupleService = {
         _id: invite.createdBy,
         deletedAt: null,
       }).session(session);
+      if (invite.createdBy.toString() !== userId)
+        await rememberInvitation(userId, invite.id as string, session);
       return {
         name: c.name,
         inviterName: inviter?.name ?? "Người mời",

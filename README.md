@@ -1,6 +1,6 @@
 # Mầm Chung 🌱
 
-Ứng dụng quản lý tài chính, công việc và tập luyện cho cá nhân/cặp đôi theo master prompt. **Đã hoàn thành giai đoạn 0–7: nền tảng, tài khoản, tài chính cá nhân, ngân sách, mục tiêu, định kỳ, báo cáo và CSV.** Couple đã có tạo/mời/ghép đôi, ngày kỷ niệm và lưu trữ. Tài chính chung đã có quỹ, đóng góp, chia tiền, công nợ hai bước và mục tiêu. Công việc cá nhân/chung, Kanban, việc con, lặp lại, bình luận và mua sắm chung đã sẵn sàng. Fitness đã có sổ buổi tập/set, ghi nhanh, mẫu, số đo, mục tiêu tuần và biểu đồ volume/rep/1RM/PR. Tiếp theo là giai đoạn8: thông báo và dashboard. Bản này chưa đủ điều kiện production toàn diện.
+Ứng dụng quản lý tài chính, công việc và tập luyện cho cá nhân/cặp đôi theo master prompt. **Đã hoàn thành giai đoạn 0–8: nền tảng, tài khoản, tài chính cá nhân, ngân sách, mục tiêu, định kỳ, báo cáo và CSV.** Couple đã có tạo/mời/ghép đôi, ngày kỷ niệm và lưu trữ. Tài chính chung đã có quỹ, đóng góp, chia tiền, công nợ hai bước và mục tiêu. Công việc cá nhân/chung, Kanban, việc con, lặp lại, bình luận và mua sắm chung đã sẵn sàng. Fitness đã có sổ buổi tập/set, ghi nhanh, mẫu, số đo, mục tiêu tuần và biểu đồ volume/rep/1RM/PR. Dashboard tổng hợp và thông báo trong ứng dụng đã có. Tiếp theo là giai đoạn9: hoàn thiện responsive/PWA, khả năng truy cập và hiệu năng. Bản này chưa đủ điều kiện production toàn diện.
 
 ## Chạy ngay trên máy (không cần Docker)
 
@@ -57,7 +57,13 @@ Lần đầu tải MongoDB 7.0.14 từ nguồn chính thức (Windows khoảng 5
 - Cả hai sửa việc chung; revision bảo vệ khi sửa đồng thời. Lịch sử couple cũ chỉ đọc; việc cá nhân vẫn riêng.
 - Tổng quan có việc hôm nay, quá hạn và hoàn thành nhanh theo múi giờ hồ sơ.
 
-Chi tiết triển khai và kiểm tra: [Giai đoạn 5](docs/PHASE_5.md), [Giai đoạn 6](docs/PHASE_6.md), [Giai đoạn 7](docs/PHASE_7.md).
+Chi tiết triển khai và kiểm tra: [Giai đoạn 5](docs/PHASE_5.md), [Giai đoạn 6](docs/PHASE_6.md), [Giai đoạn 7](docs/PHASE_7.md), [Giai đoạn 8](docs/PHASE_8.md).
+
+## Dashboard và thông báo
+
+Trang `/` tổng hợp số dư cá nhân, thu/chi tháng, donut chi tiêu, ngân sách, việc hôm nay/quá hạn với nút Xong, nhịp tập và hành trình chung. Một yêu cầu `/api/dashboard` cấp dữ liệu các khối. Bốn nút nhanh mở ngay biểu mẫu giao dịch, chi chung, công việc hoặc buổi tập.
+
+Chuông trên thanh đầu trang hiển thị thông báo của tài khoản hiện tại: lời mời, công nợ, yêu cầu xác nhận tiền, việc được giao, hạn việc và ngân sách chạm/vượt 100%. Có đọc một/đọc tất cả, chỉ chưa đọc, phân trang và mở đúng mục liên quan. Dashboard/chuông tự làm mới 15 giây khi trang đang mở; không email/SMS/push. Những điều kiện đã xử lý sẽ tự ẩn; không lưu lại sự kiện thoáng qua nếu ứng dụng không đồng bộ khi điều kiện còn hiệu lực. Người nhận lời mời cần xem trước bằng mã hợp lệ trước khi nhận nhắc trong ứng dụng.
 
 ## Chạy qua Docker
 
@@ -113,4 +119,4 @@ CORS_ORIGIN production phải là domain HTTPS thật. TRUST_PROXY_HOPS=0 khi AP
 - `docs/API.md`: API và quy ước. OpenAPI thực tế ở `/api/openapi.json`.
 - `.github/workflows/ci.yml`: lint/test/build/format; chưa chạy trên GitHub vì chưa có remote.
 
-Tiếp theo: **Giai đoạn 5 — Tài chính chung: quỹ, nạp quỹ, chia tiền và công nợ.**
+Tiếp theo: **Giai đoạn 9 — responsive/PWA, a11y, hiệu năng, seed demo và hoàn thiện Swagger.**

@@ -53,6 +53,12 @@ export function useCoupleMutation<T>(
         context?.epoch === getSessionEpoch() &&
         context?.viewerId === useAuthStore.getState().user?.id;
       if (!current()) return;
+      void query.invalidateQueries({
+        queryKey: ["dashboard", context?.viewerId],
+      });
+      void query.invalidateQueries({
+        queryKey: ["notifications", context?.viewerId],
+      });
       done?.(v);
       notify(message);
       // The write has committed. Refresh failures must not hide its result.

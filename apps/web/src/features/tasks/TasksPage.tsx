@@ -276,7 +276,7 @@ function TaskCard({
   );
 }
 export function TasksPage() {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const cid = params.get("coupleId") ?? "";
   const [scope, setScope] = useState("all"),
     [status, setStatus] = useState(""),
@@ -294,6 +294,14 @@ export function TasksPage() {
     [comments, setComments] = useState<Task | null>(null),
     [removing, setRemoving] = useState<Task | null>(null),
     [confirm, setConfirm] = useState(false);
+  useEffect(() => {
+    if (params.get("add") === "1" && !cid) {
+      setEditing(true);
+      const next = new URLSearchParams(params);
+      next.delete("add");
+      setParams(next, { replace: true });
+    }
+  }, [params, setParams, cid]);
   const user = useAuthStore((s) => s.user)!;
   const context: Record<string, string> = cid ? { coupleId: cid } : {};
   const members = useTasksQuery<Members>("/tasks/members", context);
@@ -634,9 +642,32 @@ export function TasksPage() {
     </>
   );
 }
-export function TasksPreview() {
-  const a = useTasksQuery<TaskPage>("/tasks", { due: "today", limit: 5 }),
-    b = useTasksQuery<TaskPage>("/tasks", { due: "overdue", limit: 5 });
+export function TasksPreview({
+  provided,
+}: {
+  provided?: { today: TaskPage; overdue: TaskPage };
+}) {
+  const aq = useTasksQuery<TaskPage>(
+      "/tasks",
+      { due: "today", limit: 5 },
+      !provided,
+    ),
+    bq = useTasksQuery<TaskPage>(
+      "/tasks",
+      { due: "overdue", limit: 5 },
+      !provided,
+    );
+  const a = provided
+      ? { data: provided.today, isPending: false, isError: false, error: null }
+      : aq,
+    b = provided
+      ? {
+          data: provided.overdue,
+          isPending: false,
+          isError: false,
+          error: null,
+        }
+      : bq;
   const change = useTaskMutation(async (t: Task) =>
     apiClient.patch("/tasks/" + t.id + "/status", {
       status: "DONE",
@@ -656,8 +687,8 @@ export function TasksPreview() {
       ) : (
         <>
           {[
-            { title: `Hôm nay (${a.data.total})`, items: a.data.items },
-            { title: `Quá hạn (${b.data.total})`, items: b.data.items },
+            { title: `Hôm nay (${a.data!.total})`, items: a.data!.items },
+            { title: `Quá hạn (${b.data!.total})`, items: b.data!.items },
           ].map((g) => (
             <div key={g.title}>
               <h3>{g.title}</h3>

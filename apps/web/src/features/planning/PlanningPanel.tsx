@@ -80,9 +80,9 @@ function QueryState({
     </Card>
   ) : null;
 }
-export function BudgetPreview() {
-  const query = useBudgets();
-  const items = query.data?.items ?? [];
+export function BudgetPreview({ provided }: { provided?: Budget[] }) {
+  const query = useBudgets(undefined, !provided);
+  const items = provided ?? query.data?.items ?? [];
   return (
     <Card className="budget-preview">
       <div className="section-heading">
@@ -94,9 +94,9 @@ export function BudgetPreview() {
           Quản lý ngân sách
         </Link>
       </div>
-      {query.isPending ? (
+      {!provided && query.isPending ? (
         <Skeleton />
-      ) : query.isError ? (
+      ) : !provided && query.isError ? (
         <p className="muted">
           Chưa tải được tiến độ.{" "}
           <button className="text-button" onClick={() => void query.refetch()}>
@@ -129,7 +129,8 @@ export function BudgetPreview() {
         </div>
       ) : (
         <EmptyState title="Chi tiêu có một nhịp riêng">
-          Đặt ngân sách theo danh mục để nhận nhắc nhở khi dùng 80% và 100%.
+          Đặt ngân sách theo danh mục để theo dõi mức 80% và nhận thông báo khi
+          chạm 100%.
         </EmptyState>
       )}
     </Card>

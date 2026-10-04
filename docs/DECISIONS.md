@@ -96,3 +96,13 @@
 - UI gợi ý kg/rep từ set hoàn thành cuối của bài trong buổi gần nhất; request đến muộn không ghi đè trường người dùng đã nhập. Khi lưu buổi mới/mẫu, mở ngay chi tiết ghi set. Các bài gần nhất hiện trong khối Tiếp tục khi có set done.
 - Body metric mỗi người một bản/ngày, trùng báo409 để sửa chủ động. PUT thay thế đủ trường, bỏ trống là null. Cân nặng của buổi và nhật ký số đo là hai bản ghi khác nhau. Không tự đồng bộ giữa hai nơi.
 - Đã sửa một kiểm thử công nợ dùng ngày giao dịch cố định để lọc createdAt hiện tại; đổi sang ngày tạo thật theo timezone. Logic production công nợ không thay đổi.
+
+## Giai đoạn 8 — Tổng quan và thông báo
+
+- Dashboard gộp dịch vụ phân quyền có sẵn thành một HTTP response. Không thay đổi giao dịch tiền, không gộp báo cáo Fitness của partner. Quỹ chung hiển thị riêng số dư cá nhân. Hạn/ngân sách/Fitness theo timezone hồ sơ; nhóm việc5 dòng, feed5 dòng. Kiểm tra lại cặp active sau đọc chung để không giữ ngữ cảnh đã rời.
+- Các khối preview nhận dữ liệu được cung cấp và tắt query riêng; chuông lấy danh sách độc lập. Cả Dashboard và thông báo poll15 giây khi trang đang mở, focus làm mới. Các ghi tiền/ngân sách/cặp/việc/tập và đổi timezone invalidation theo user; phản hồi mutation phiên cũ không điều hướng hay đổi hồ sơ.
+- Thông báo là nhắc những điều kiện còn hiệu lực, được tính/lưu khi API được đọc, không chạy nền. Transaction khóa user, unique(userId,eventKey) và trạng thái active/readAt chống trùng, giữ đã đọc, rollback toàn bộ khi ghi thất bại. Kết thúc điều kiện làm inactive; sự kiện thoáng qua giữa hai lần đồng bộ không được giữ. Đây không phải audit feed hoặc bảo đảm push giao mọi sự kiện.
+- AssignmentVersion là trường nội bộ tăng khi đổi người được giao, không nhận từ client/không trả DTO. Hạn dùng ID+deadline; payment dùng ID+markedAt; budget dùng ID+month. Reactivation sau đồng bộ trạng thái không còn hiệu lực tạo lại unread; không nhân bản document.
+- Không có địa chỉ người nhận mã mời. Receipt được tạo chỉ sau preview mã hợp lệ; lưu ID thay plaintext code. Thông báo mở trang Couple, người dùng nhập lại mã đã nhận. Không tự gửi mã hoặc chấp nhận lời mời.
+- Nhắc ngân sách khi đạt/vượt100%; mức80% có cảnh báo ngay trong thẻ ngân sách. Chỉ số chi từ ledger của chính người gọi. Nhắc task chỉ phụ trách, bỏ terminal/deleted. Công nợ theo active membership, creditor mới nhận yêu cầu xác nhận. Khi archive/rời, nhắc chung tự ẩn nhưng lịch sử sổ chung không bị xóa.
+- Link thông báo chỉ điều hướng các route nội bộ cho phép sau khi API đọc thành công; lỗi không đóng modal. Đọc tất cả không ảnh hưởng người kia. Bộ lọc/pagination thu hẹp được đưa về trang hợp lệ. Màn hình390px có kiểm tra thực và chặn tooltip Fitness làm tràn trang khi đổi viewport.

@@ -28,6 +28,8 @@ export function useSharedMutation(
     }),
     onSuccess: (_v, _variables, c) => {
       if (c?.epoch !== getSessionEpoch()) return;
+      void query.invalidateQueries({ queryKey: ["dashboard", c?.id] });
+      void query.invalidateQueries({ queryKey: ["notifications", c?.id] });
       done();
       notify(message);
       void query.invalidateQueries({ queryKey: ["shared", c?.id] });

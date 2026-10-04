@@ -8,18 +8,21 @@ export function usePlanningQuery<T>(
   name: string,
   path: string,
   params: Record<string, string | number> = {},
+  enabled = true,
 ) {
   const id = useAuthStore((s) => s.user!.id);
   return useQuery({
+    enabled,
     queryKey: ["finance", id, name, params],
     queryFn: async () => (await apiClient.get<T>(path, { params })).data,
   });
 }
-export function useBudgets(month?: string) {
+export function useBudgets(month?: string, enabled = true) {
   return usePlanningQuery<{ month: string; items: Budget[] }>(
     "budgets",
     "/budgets",
     month ? { month } : {},
+    enabled,
   );
 }
 export function useGoals() {

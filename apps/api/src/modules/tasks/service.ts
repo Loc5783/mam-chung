@@ -333,11 +333,14 @@ export const taskService = {
       const { t, u } = await task(id, key, s, true);
       revision(t, input.revision);
       const previous = t.deadline;
+      const oldAssignee = t.assignedTo?.toString() ?? null;
       const { revision: _, ...fields } = input;
       void _;
       Object.assign(t, fields);
       validateRecurrence(t);
       await validateAssignment(t, id, s);
+      if ((t.assignedTo?.toString() ?? null) !== oldAssignee)
+        t.assignmentVersion = (t.assignmentVersion ?? 0) + 1;
       if (t.deadline !== previous)
         t.anchorDay = t.deadline ? Number(t.deadline.slice(8)) : null;
       t.revision++;

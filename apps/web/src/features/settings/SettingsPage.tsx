@@ -5,7 +5,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserRound, ShieldCheck, LogOut, Trash2 } from "lucide-react";
-import { apiClient, clearSession, errorMessage } from "../../lib/apiClient";
+import {
+  apiClient,
+  clearSession,
+  errorMessage,
+  getSessionEpoch,
+} from "../../lib/apiClient";
 import { useAuthStore, Profile } from "../auth/store";
 import { useUiStore } from "../../app/store";
 import { Button, Card, Skeleton } from "../../components/ui";
@@ -70,10 +75,20 @@ function ProfileForm({ user }: { user: Profile }) {
           avatar: values.avatar || null,
         })
       ).data,
-    onSuccess: async (data) => {
+    onMutate: () => ({ epoch: getSessionEpoch(), id: user.id }),
+    onSuccess: async (data, _v, context) => {
+      if (
+        context?.epoch !== getSessionEpoch() ||
+        context.id !== useAuthStore.getState().user?.id
+      )
+        return;
       useAuthStore.getState().updateUser(data);
       client.setQueryData(["profile", user.id], data);
       if (data.timezone !== user.timezone) {
+        await client.invalidateQueries({ queryKey: ["dashboard", user.id] });
+        await client.invalidateQueries({
+          queryKey: ["notifications", user.id],
+        });
         await client.invalidateQueries({ queryKey: ["finance", user.id] });
         await client.invalidateQueries({ queryKey: ["couple", user.id] });
         await client.invalidateQueries({ queryKey: ["shared", user.id] });

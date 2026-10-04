@@ -1,3 +1,4 @@
+import { NotificationBell } from "../features/notifications/NotificationBell";
 import { FitnessPage } from "../features/fitness/FitnessPage";
 import { TasksPage } from "../features/tasks/TasksPage";
 import { SharedFinancePage } from "../features/shared/SharedFinancePage";
@@ -104,6 +105,7 @@ function Layout({ preview = false }: { preview?: boolean }) {
                   location.pathname.startsWith("/shared")
                 ? "Không gian chung"
                 : "Không gian cá nhân"}{" "}
+            {user && !preview && <NotificationBell />}
             <Avatar user={user} small />
           </span>
         </header>

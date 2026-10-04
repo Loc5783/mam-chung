@@ -86,13 +86,32 @@ export function SharedFinancePage() {
   );
 }
 function SharedContent({ funds }: { funds: SharedFunds }) {
-  const [tab, setTab] = useState("funds"),
+  const [linkParams, setLinkParams] = useSearchParams();
+  const [tab, setTab] = useState(
+      ["funds", "transactions", "settlements", "goals"].includes(
+        linkParams.get("tab") ?? "",
+      )
+        ? linkParams.get("tab")!
+        : "funds",
+    ),
     [dialog, setDialog] = useState<Dialog | null>(null),
     [history, setHistory] = useState<{
       kind: "wallet" | "goal";
       id: string;
       name: string;
     } | null>(null);
+  useEffect(() => {
+    const t = linkParams.get("tab");
+    if (t && ["funds", "transactions", "settlements", "goals"].includes(t))
+      setTab(t);
+    if (linkParams.get("add") === "1" && !funds.readOnly) {
+      setTab("transactions");
+      setDialog({ kind: "expense" });
+      const next = new URLSearchParams(linkParams);
+      next.delete("add");
+      setLinkParams(next, { replace: true });
+    }
+  }, [linkParams, setLinkParams, funds.readOnly]);
   const params: Record<string, string> = funds.readOnly
     ? { coupleId: funds.coupleId }
     : {};

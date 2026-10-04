@@ -219,3 +219,22 @@ Buổi: duration>0 đến1440 phút; nếu đủ ISO giờ start/end, server tí
 Revision cũ trả409 FITNESS_CHANGED; mở lại biểu mẫu trước khi sửa. Các ghi sử dụng transaction và khóa người dùng để set không được tạo sau khi buổi xóa; rollback giữ nguyên cả buổi/set. Tên bài trên set là snapshot. Cân nặng trong buổi không tự tạo body metric. API không cung cấp chương trình tập hoặc tư vấn sức khỏe.
 
 `continueFrom` trả buổi gần nhất có set hoàn thành đến hôm nay để gợi ý bài/kg/rep; `latest` vẫn là buổi ghi gần nhất kể cả chưa hoàn thành.
+
+## Giai đoạn 8 — Dashboard và thông báo
+
+| Method/path                   | Nội dung                                                                                                                                                                                                |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET /dashboard                | Một response gồm generatedAt, finance, budgets, tasks.today/overdue (5 việc mỗi nhóm), fitness (7 ngày), couple/shared/activity (5 hoạt động) hoặc null khi không có cặp active. Không nhận query.      |
+| GET /notifications            | page/limit mặc định1/20, limit≤100; unread=true/false, type theo enum. items/total/unreadCount/page/limit. unreadCount là tổng chưa đọc còn hiệu lực của người dùng, không phụ thuộc bộ lọc hoặc trang. |
+| PATCH /notifications/:id/read | Body `{}` và query trống. Chỉ thông báo còn hiệu lực của chính người gọi; gọi lại giữ readAt. ID không thuộc tài khoản hoặc đã hết hiệu lực trả404.                                                     |
+| POST /notifications/read-all  | Body `{}` và query trống. Trả `{updated}`; chỉ đánh dấu những thông báo active chưa đọc của người gọi.                                                                                                  |
+
+Các đường dẫn trên có tiền tố `/api`, cần bearer token. JSON/query Zod strict; ID ObjectId; không nhận userId/coupleId/readAt từ client. OpenAPI0.9.0 có schema đầy đủ và security. Payload thông báo chỉ sourceId; không trả eventKey, owner ID khác, hash hoặc mã mời.
+
+Bảy type: COUPLE_INVITE, INVITE_ACCEPTED, DEBT_NEW, PAYMENT_CONFIRM, TASK_ASSIGNED, TASK_DUE, BUDGET_EXCEEDED. Thông báo đồng bộ khi đọc danh sách/đọc một/đọc tất cả, trong transaction khóa tài khoản. Unique(userId,eventKey) chống bản sao; readAt giữ khi nội dung sửa cùng điều kiện. Việc giao lại dùng assignmentVersion nội bộ, hạn thay đổi dùng deadline, yêu cầu thanh toán lại dùng markedAt để phân biệt lượt mới. Nhắc hạn tính ngày hồ sơ: quá hạn, hôm nay và ngày mai; chỉ người phụ trách (assignedTo hoặc creator khi chưa giao), không gồm DONE/CANCELLED. Ngân sách so chi cá nhân tháng hiện tại với amount, đạt100% trở lên; thu/chuyển tiền/số dư ban đầu không tính chi.
+
+Công nợ pending/pending_confirm nhắc hai bên; PAYMENT_CONFIRM chỉ người nhận tiền. Thanh toán xong/xóa nguồn, hoàn thành/xóa việc, điều chỉnh chi xuống dưới ngân sách, thu hồi/hết hạn mời hoặc lưu trữ Couple làm nhắc cũ inactive và ẩn. Nếu điều kiện trở lại sau một lần đồng bộ đã thấy nó ngừng, thông báo được kích hoạt lại và chưa đọc. Không có worker/push/email/SMS: điều kiện xuất hiện rồi kết thúc giữa các lần đồng bộ không được ghi như lịch sử thông báo.
+
+Mã mời không có email người nhận: creator có nhắc đang chờ; người khác chỉ có COUPLE_INVITE sau GET /couples/invite/:code hợp lệ. Lưu receipt gồm userId/inviteId trong transaction; không plaintext code, không tự chấp nhận. Link thông báo mở `/couple`, người nhận nhập lại mã đã được người mời chia sẻ. Khi chấp nhận, hai bên có INVITE_ACCEPTED.
+
+Dashboard dùng các dịch vụ phân quyền hiện có, không chuyển dữ liệu cá nhân partner sang người gọi. Các phần được đọc tuần tự, không phải snapshot nguyên tử xuyên mô-đun. Kiểm tra lại cặp active trước trả phần chung; lỗi thật được trả cho client, không thay bằng số0 giả. Cache UI theo user; mutation làm mới Dashboard/thông báo, poll15 giây và focus. Đổi timezone làm mới cả hai để hạn việc và tháng đúng hồ sơ.

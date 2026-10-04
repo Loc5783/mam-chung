@@ -1,3 +1,4 @@
+import { dashboardSchemas, dashboardPaths } from "../modules/dashboard/openapi";
 import { fitnessSchemas, fitnessPaths } from "../modules/fitness/openapi";
 import { taskSchemas, taskPaths } from "../modules/tasks/openapi";
 import { sharedSchemas, sharedPaths } from "../modules/shared/openapi";
@@ -28,15 +29,16 @@ export const openapi = {
   openapi: "3.0.3",
   info: {
     title: "Mầm Chung API",
-    version: "0.8.0",
+    version: "0.9.0",
     description:
-      "Giai đoạn 7 — tài khoản, tài chính cá nhân, kế hoạch, Couple, tài chính chung, công việc và tập luyện riêng tư. Refresh token chỉ được đặt trong cookie httpOnly; không trả qua JSON.",
+      "Giai đoạn 8 — Dashboard, thông báo trong ứng dụng; tài khoản, tài chính cá nhân, kế hoạch, Couple, tài chính chung, công việc và tập luyện riêng tư. Refresh token chỉ được đặt trong cookie httpOnly; không trả qua JSON.",
   },
   components: {
     securitySchemes: {
       bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
     },
     schemas: {
+      ...dashboardSchemas,
       ...fitnessSchemas,
       ...taskSchemas,
       ...sharedSchemas,
@@ -130,6 +132,7 @@ export const openapi = {
     },
   },
   paths: {
+    ...dashboardPaths,
     ...fitnessPaths,
     ...taskPaths,
     ...financePaths,

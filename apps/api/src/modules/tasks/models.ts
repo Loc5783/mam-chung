@@ -17,6 +17,7 @@ const taskSchema = new Schema(
     createdBy: { type: Schema.Types.ObjectId, required: true, index: true },
     coupleId: { type: Schema.Types.ObjectId, default: null, index: true },
     assignedTo: { type: Schema.Types.ObjectId, default: null },
+    assignmentVersion: { type: Number, default: 0 },
     creatorName: { type: String, required: true },
     kind: { type: String, enum: ["task", "shopping"], default: "task" },
     labels: { type: [String], default: [] },

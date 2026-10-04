@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   LineChart,
   Line,
@@ -568,6 +568,7 @@ function SessionDetail({
   );
 }
 export function FitnessPage() {
+  const [paramsLink, setParamsLink] = useSearchParams();
   const [tab, setTab] = useState("overview"),
     [range, setRange] = useState("30d"),
     [exerciseId, setExerciseId] = useState(""),
@@ -578,6 +579,14 @@ export function FitnessPage() {
     [dialog, setDialog] = useState<FitnessDialog | null>(null),
     [deleting, setDeleting] = useState<DeleteTarget | null>(null),
     [confirmed, setConfirmed] = useState(false);
+  useEffect(() => {
+    if (paramsLink.get("add") === "1") {
+      setDialog({ kind: "session" });
+      const next = new URLSearchParams(paramsLink);
+      next.delete("add");
+      setParamsLink(next, { replace: true });
+    }
+  }, [paramsLink, setParamsLink]);
   const exercises = useFitnessQuery<{ items: Exercise[] }>("/exercises");
   const params = Object.fromEntries(
     Object.entries({ range, exerciseId, from, to }).filter(([, v]) => v),
@@ -1054,34 +1063,39 @@ export function FitnessPage() {
     </>
   );
 }
-export function FitnessPreview() {
-  const q = useFitnessQuery<Report>("/fitness/stats", { range: "7d" });
+export function FitnessPreview({ provided }: { provided?: Report }) {
+  const q = useFitnessQuery<Report>(
+    "/fitness/stats",
+    { range: "7d" },
+    !provided,
+  );
+  const data = provided ?? q.data;
   return (
     <Card>
       <div className="section-heading">
         <h2>Nhịp tập luyện</h2>
         <Dumbbell size={23} />
       </div>
-      {q.isPending ? (
+      {!provided && q.isPending ? (
         <Skeleton />
-      ) : q.isError ? (
+      ) : !provided && q.isError ? (
         <ErrorBox error={q.error} />
       ) : (
         <>
           <p>
-            {q.data.stats.weekSessions} buổi tuần này · Volume tuần{" "}
-            {fmt(q.data.comparison.current.volume)}
+            {data!.stats.weekSessions} buổi tuần này · Volume tuần{" "}
+            {fmt(data!.comparison.current.volume)}
           </p>
-          {q.data.latest ? (
+          {data!.latest ? (
             <p>
-              Gần nhất: {q.data.latest.date} · {q.data.latest.durationMinutes}{" "}
-              phút · Volume {fmt(q.data.latest.volume)}
+              Gần nhất: {data!.latest.date} · {data!.latest.durationMinutes}{" "}
+              phút · Volume {fmt(data!.latest.volume)}
             </p>
           ) : (
             <p>Chưa có buổi tập. Ghi buổi đầu tiên để bắt đầu.</p>
           )}
           <Chart
-            rows={q.data.volume}
+            rows={data!.volume}
             keys={[{ key: "volume", name: "Volume", color: "#7e9b57" }]}
           />
         </>

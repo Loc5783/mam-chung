@@ -14,7 +14,8 @@ import { Card, EmptyState, Skeleton, Button } from "../../components/ui";
 import { errorMessage } from "../../lib/apiClient";
 import { formatMoney } from "../../lib/format";
 import { useFinanceDashboard, displayDate } from "./api";
-import { Entry } from "./types";
+import { Budget } from "../planning/types";
+import { FinanceDashboard, Entry } from "./types";
 const colors = [
   "#7E9B57",
   "#E38FA9",
@@ -71,12 +72,16 @@ function Change({ value }: { value: number | null }) {
 export function FinanceOverview({
   onAdd,
   onWallet,
+  overview,
+  budgets,
 }: {
   onAdd: () => void;
   onWallet: () => void;
+  overview?: FinanceDashboard;
+  budgets?: Budget[];
 }) {
-  const query = useFinanceDashboard();
-  if (query.isPending)
+  const query = useFinanceDashboard(!overview);
+  if (!overview && query.isPending)
     return (
       <div className="finance-loading">
         <Skeleton />
@@ -84,7 +89,7 @@ export function FinanceOverview({
         <Skeleton />
       </div>
     );
-  if (query.isError)
+  if (!overview && query.isError)
     return (
       <Card>
         <div className="finance-error">
@@ -94,7 +99,7 @@ export function FinanceOverview({
         </div>
       </Card>
     );
-  const data = query.data;
+  const data = overview ?? query.data!;
   const label = `Tháng ${data.month.slice(5)}/${data.month.slice(0, 4)}`;
   const activeWallets = data.wallets.filter((w) => !w.archived);
   return (
@@ -259,7 +264,7 @@ export function FinanceOverview({
           </Link>
         </Card>
       </div>
-      <BudgetPreview />
+      <BudgetPreview provided={budgets} />
       <Card className="recent-card">
         <div className="section-heading">
           <div>

@@ -1,3 +1,4 @@
+import { notificationModels } from "../modules/notifications/models";
 import { fitnessModels } from "../modules/fitness/models";
 import { seedExercises } from "../modules/fitness/seed";
 import { taskModels } from "../modules/tasks/models";
@@ -17,6 +18,7 @@ import { seedCategories } from "../seeds/categories";
 export async function connectDatabase() {
   await mongoose.connect(env.MONGODB_URI);
   await Promise.all([
+    ...notificationModels.map((model) => model.init()),
     ...fitnessModels.map((model) => model.init()),
     ...taskModels.map((model) => model.init()),
     ...sharedModels.map((model) => model.init()),
