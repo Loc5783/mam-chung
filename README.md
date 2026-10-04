@@ -1,6 +1,6 @@
 # Mầm Chung 🌱
 
-Ứng dụng quản lý tài chính, công việc và tập luyện cho cá nhân/cặp đôi theo master prompt. **Đã hoàn thành giai đoạn 0–6: nền tảng, tài khoản, tài chính cá nhân, ngân sách, mục tiêu, định kỳ, báo cáo và CSV.** Couple đã có tạo/mời/ghép đôi, ngày kỷ niệm và lưu trữ. Tài chính chung đã có quỹ, đóng góp, chia tiền, công nợ hai bước và mục tiêu. Công việc cá nhân/chung, Kanban, việc con, lặp lại, bình luận và mua sắm chung đã sẵn sàng. Fitness thuộc giai đoạn tiếp theo. Bản này chưa đủ điều kiện production toàn diện.
+Ứng dụng quản lý tài chính, công việc và tập luyện cho cá nhân/cặp đôi theo master prompt. **Đã hoàn thành giai đoạn 0–7: nền tảng, tài khoản, tài chính cá nhân, ngân sách, mục tiêu, định kỳ, báo cáo và CSV.** Couple đã có tạo/mời/ghép đôi, ngày kỷ niệm và lưu trữ. Tài chính chung đã có quỹ, đóng góp, chia tiền, công nợ hai bước và mục tiêu. Công việc cá nhân/chung, Kanban, việc con, lặp lại, bình luận và mua sắm chung đã sẵn sàng. Fitness đã có sổ buổi tập/set, ghi nhanh, mẫu, số đo, mục tiêu tuần và biểu đồ volume/rep/1RM/PR. Tiếp theo là giai đoạn8: thông báo và dashboard. Bản này chưa đủ điều kiện production toàn diện.
 
 ## Chạy ngay trên máy (không cần Docker)
 
@@ -57,7 +57,7 @@ Lần đầu tải MongoDB 7.0.14 từ nguồn chính thức (Windows khoảng 5
 - Cả hai sửa việc chung; revision bảo vệ khi sửa đồng thời. Lịch sử couple cũ chỉ đọc; việc cá nhân vẫn riêng.
 - Tổng quan có việc hôm nay, quá hạn và hoàn thành nhanh theo múi giờ hồ sơ.
 
-Chi tiết triển khai và kiểm tra: [Giai đoạn 5](docs/PHASE_5.md), [Giai đoạn 6](docs/PHASE_6.md).
+Chi tiết triển khai và kiểm tra: [Giai đoạn 5](docs/PHASE_5.md), [Giai đoạn 6](docs/PHASE_6.md), [Giai đoạn 7](docs/PHASE_7.md).
 
 ## Chạy qua Docker
 

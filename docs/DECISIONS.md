@@ -84,3 +84,15 @@
 - Bình luận text thuần tối đa500 ký tự, authorName snapshot, không HTML; chỉ shared active ghi. Activity feed chỉ ghi hành động chung, không lộ title/description của việc riêng.
 - Search escape literal; due/today/overdue là ngày lịch theo timezone user và loại terminal statuses. Đổi timezone làm mới cache tasks/shared để tổng quan không còn ngày/tháng cũ.
 - List/Kanban cùng dữ liệu và phân trang20; Kanban bốn cột của trang hiện tại, chọn status thay cho kéo-thả. Query scoped theo user/context, poll15 giây khi mở; thông báo đầy đủ thuộc giai đoạn8.
+
+## Giai đoạn7 — Fitness
+
+- Fitness hoàn toàn cá nhân: hệ thống chỉ đọc/ghi userId từ phiên, kể cả hai tài khoản Couple active. Bài hệ thống chỉ đọc; bài riêng có thể sửa và chỉ xóa khi chưa dùng. Lưu snapshot tên/nhóm cơ trên set.
+- MongoDB replica set transaction + user securityVersion lock bảo vệ mọi ghi; revision riêng cho buổi/set/mẫu/số đo tránh ghi đè. Xóa buổi và set cùng transaction. Set đánh số riêng mỗi bài/buổi; retry transaction cấp số không trùng.
+- Lịch buổi/số đo dùng date-only. Analytics dùng timezone hồ sơ, 7/30/90 ngày inclusive. Số buổi/thời gian tính tất cả buổi đã ghi kể cả buổi chưa có set; volume/rep chỉ done. Warmup tính volume/rep, bỏ khỏi PR/progress/1RM. Mẫu tạo done=false, không tính như đã tập.
+- PR kg, volume bài-buổi và Epley1RM được tính lại từ lịch sử theo ngày/thời điểm tạo, ID làm tie-break; baseline đầu không gọi là phá kỷ lục. Lịch sử trước khoảng được giữ để so, bests chỉ đến to. Ngày tương lai không dùng gợi ý gần nhất hoặc tuần/tháng hiện tại.
+- `lastVolume` độc lập khoảng, theo buổi gần nhất đến hôm nay và bài đang chọn. Week comparison so tuần này đến hôm nay với cả tuần trước; UI dùng chữ Tuần này/Tuần trước, không cam kết hai khoảng có số ngày bằng nhau.
+- Rest timer dựa deadline Date.now thay vì trừ mỗi tick, dừng/tiếp tục/đặt lại; không giữ timer khi rời trang/chuyển buổi. Không có chuông/push chạy nền ở giai đoạn7. Các query poll15s, cache theo user; mutation kiểm tra epoch trước thay đổi UI/cache.
+- UI gợi ý kg/rep từ set hoàn thành cuối của bài trong buổi gần nhất; request đến muộn không ghi đè trường người dùng đã nhập. Khi lưu buổi mới/mẫu, mở ngay chi tiết ghi set. Các bài gần nhất hiện trong khối Tiếp tục khi có set done.
+- Body metric mỗi người một bản/ngày, trùng báo409 để sửa chủ động. PUT thay thế đủ trường, bỏ trống là null. Cân nặng của buổi và nhật ký số đo là hai bản ghi khác nhau. Không tự đồng bộ giữa hai nơi.
+- Đã sửa một kiểm thử công nợ dùng ngày giao dịch cố định để lọc createdAt hiện tại; đổi sang ngày tạo thật theo timezone. Logic production công nợ không thay đổi.

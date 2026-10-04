@@ -1,4 +1,4 @@
-# API giai đoạn 1–2
+# API giai đoạn 1–7
 
 Swagger: GET /api/docs. OpenAPI JSON: GET /api/openapi.json.
 
@@ -24,7 +24,7 @@ Lỗi: `{ "error": { "code": "VALIDATION_ERROR", "message": "Dữ liệu không 
 
 Status: 400 input/mật khẩu xác nhận sai; 401 phiên/đăng nhập không hợp lệ; 403 Origin ngoài whitelist; 409 email trùng/couple chưa rời; 423 tài khoản tạm khóa; 429 giới hạn request.
 
-Các API tài chính/couple/todo/fitness chưa tồn tại. Các tiện ích health/docs/OpenAPI được công khai để vận hành.
+Các API nghiệp vụ đã triển khai được mô tả trong các mục bên dưới. Các tiện ích health/docs/OpenAPI được công khai để vận hành.
 
 ## Tài chính cá nhân (giai đoạn 2)
 
@@ -173,3 +173,49 @@ Mọi endpoint có tiền tố `/api` và cần đăng nhập. Task cá nhân ch
 List: `page=1`, `limit=20` (tối đa100), `status`, `priority`, `kind`, `label`, `search` (tiêu đề/mô tả/nhãn, literal không phải regex), `from`, `to` (bao gồm hai ngày), `due=today|overdue`, `sort=deadline|priority|newest|oldest`. Hôm nay/quá hạn theo timezone hồ sơ, bỏ DONE/CANCELLED và việc không hạn. `coupleId` trong list chỉ dành cho người từng tham gia; tách toàn bộ việc riêng và hành trình mới. Trả `{items,total,page,limit,readOnly}`.
 
 Revision cũ trả 409 TASK_CHANGED; cần tải lại trước khi sửa, không tự ghi đè. Đổi sang DONE sinh một bản TODO kế tiếp cùng phạm vi/người được giao/nhãn, checklist bỏ tick, không sao chép bình luận. Ngày kế tiếp dựa trên deadline cũ, không nhảy theo ngày bấm; tháng ngắn clamp và giữ anchor để trở lại ngày gốc. Mở lại/hoàn thành lại việc cũ không sinh trùng, kể cả bản kế tiếp đã bị xóa. Xóa việc gốc không xóa bản kế tiếp. Sửa ngày/chu kỳ việc gốc sau khi đã tạo kế tiếp không tự sửa bản đã tạo.
+
+## Fitness cá nhân (giai đoạn 7)
+
+Toàn bộ endpoint dưới đây có prefix `/api`, cần access token. Các tài nguyên tập luyện luôn theo userId từ phiên đăng nhập, không nhận quyền qua Couple hoặc userId/coupleId trong body. ID không thuộc bạn trả404. Tất cả body/query strict Zod; ngày YYYY-MM-DD có kiểm tra ngày lịch thật.
+
+| Endpoint                          | Dữ liệu / kết quả                                                                                                                 |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| GET /exercises                    | `{items}` gồm 11 bài hệ thống và bài riêng; `search`, `muscleGroup`                                                               |
+| POST /exercises                   | `{name,muscleGroup}`; tạo bài riêng,201                                                                                           |
+| PUT /exercises/:id                | Tên/nhóm cơ optional; chỉ bài riêng                                                                                               |
+| DELETE /exercises/:id             | Chỉ bài riêng chưa được set/mẫu sử dụng;204; bài đã dùng409                                                                       |
+| GET /workout-sessions             | `{items,total,page,limit}`; `page=1,limit=20`, tối đa100; `from,to` inclusive                                                     |
+| POST /workout-sessions            | `{date,durationMinutes,notes?,startTime?,endTime?,mood?,bodyWeight?}`;201                                                         |
+| GET /workout-sessions/:id         | Buổi và các set chưa xóa, tổng volume                                                                                             |
+| PUT /workout-sessions/:id         | Các trường buổi optional + `revision` bắt buộc                                                                                    |
+| DELETE /workout-sessions/:id      | `{revision}`; xóa mềm buổi và set atomic;204                                                                                      |
+| POST /workout-sets                | `{sessionId,exerciseId,weight,reps,setNumber?,done?,setType?,rpe?}`;201                                                           |
+| PUT /workout-sets/:id             | Trường set optional + `revision`; không chuyển sang buổi khác                                                                     |
+| DELETE /workout-sets/:id          | `{revision}`;204                                                                                                                  |
+| GET /workout-templates            | `{items}` mẫu riêng                                                                                                               |
+| POST /workout-templates           | `{name,notes?,items:[{exerciseId,weight,reps,setType?,rpe?}]}`;1–100 set;201                                                      |
+| PUT /workout-templates/:id        | Toàn bộ mẫu + `revision`                                                                                                          |
+| DELETE /workout-templates/:id     | `{revision}`; giữ buổi đã tạo từ mẫu;204                                                                                          |
+| POST /workout-templates/:id/start | Body như tạo buổi; tạo buổi+set atomic, mọi set `done=false`;201                                                                  |
+| GET /body-metrics                 | Phân trang như buổi, `from,to` inclusive                                                                                          |
+| POST /body-metrics                | `{date,weight?,waist?,chest?,hips?,arm?,thigh?,notes?}`; ít nhất một số đo khác null;201                                          |
+| PUT /body-metrics/:id             | Thay thế số đo với `date` + `revision`; không merge số đo bỏ trống                                                                |
+| DELETE /body-metrics/:id          | `{revision}`;204                                                                                                                  |
+| GET /fitness/goal                 | `{sessionsPerWeek}` mặc định4                                                                                                     |
+| PUT /fitness/goal                 | `{sessionsPerWeek:1..14}`                                                                                                         |
+| GET /fitness/last/:exerciseId     | `{date,sessionId,sets}` của buổi gần nhất có set hoàn thành bài này đến hôm nay; không có thì null/null/[]                        |
+| GET /fitness/stats                | Báo cáo đầy đủ: stats, volume, repDistribution, progress, prs, bests, comparison, weeklyGoal, body, latest, continueFrom, from/to |
+| GET /fitness/volume               | `{items,from,to}` với `{sessionId,date,volume}`                                                                                   |
+| GET /fitness/rep-distribution     | `{items,from,to}` với name,range,count,percent                                                                                    |
+| GET /fitness/progress/:exerciseId | `{items,from,to}` với maxWeight,oneRM theo buổi; null nếu không có set đủ điều kiện                                               |
+| GET /fitness/prs                  | `{items,from,to}` với baseline,flags.weight/volume/oneRM                                                                          |
+
+Các endpoint báo cáo nhận `range=7d|30d|90d` (mặc định30d), `exerciseId?`, `from?,to?`. Ngày mặc định theo timezone hồ sơ và gồm hôm nay; from/to riêng override biên tương ứng. Bộ lọc bài chỉ áp dụng volume/rep/PR/progress; số buổi/thời gian vẫn đếm tất cả buổi trong khoảng. `lastVolume` là volume của buổi gần nhất đến hôm nay, áp dụng bộ lọc bài, độc lập khoảng chọn. Week/month, so sánh và mục tiêu theo tuần lịch hiện tại, tuần bắt đầu thứ Hai; không đếm buổi ngày tương lai vào tuần/tháng hiện tại. Frequency = số buổi trong khoảng / số ngày inclusive ×7.
+
+Chỉ set done tính volume, rep và PR. Warmup vẫn tính volume/rep, loại khỏi PR/1RM. PR volume là tổng các set không khởi động đã hoàn thành của một bài trong một buổi. Epley = kg ×(1+rep/30), chỉ là ước tính. PR được so theo lịch sử trước khoảng, bản đầu là baseline; chỉnh/xóa sẽ tính lại. bests lấy lịch sử đến `to`, không để ngày tương lai ngoài khoảng ảnh hưởng kỷ lục. Không gộp tiến triển của nhiều bài lên một đường kg trong UI.
+
+Buổi: duration>0 đến1440 phút; nếu đủ ISO giờ start/end, server tính duration (2 chữ số thập phân), end phải sau start, tối đa24h và không cho kết quả làm tròn0. Mood1–5; bodyWeight>0 đến500kg. Set: weight0–1000kg (0 cho bài không tải ngoài), reps nguyên1–1000, done mặc địnhtrue, setType warmup/working/dropset/failure, RPE1–10 bước0,5 hoặc null. Số set tự cấp theo bài/buổi, không trùng; setNumber tối đa10000. Số đo body: weight>0 đến500kg, các số đo>0 đến300cm; một bản chưa xóa/ngày/người, trùng trả409.
+
+Revision cũ trả409 FITNESS_CHANGED; mở lại biểu mẫu trước khi sửa. Các ghi sử dụng transaction và khóa người dùng để set không được tạo sau khi buổi xóa; rollback giữ nguyên cả buổi/set. Tên bài trên set là snapshot. Cân nặng trong buổi không tự tạo body metric. API không cung cấp chương trình tập hoặc tư vấn sức khỏe.
+
+`continueFrom` trả buổi gần nhất có set hoàn thành đến hôm nay để gợi ý bài/kg/rep; `latest` vẫn là buổi ghi gần nhất kể cả chưa hoàn thành.

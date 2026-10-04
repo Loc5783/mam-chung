@@ -1,3 +1,4 @@
+import { FitnessPage } from "../features/fitness/FitnessPage";
 import { TasksPage } from "../features/tasks/TasksPage";
 import { SharedFinancePage } from "../features/shared/SharedFinancePage";
 import { CouplePage, InvitePage } from "../features/couples/CouplePage";
@@ -173,13 +174,7 @@ export function App() {
             <Route path="/shared" element={<SharedFinancePage />} />
             <Route path="/tasks" element={<TasksPage />} />
             <Route path="/invite/:code" element={<InvitePage />} />
-            {[["fitness", "Tập luyện"]].map(([path, title]) => (
-              <Route
-                key={path}
-                path={path}
-                element={<FeaturePage title={title} />}
-              />
-            ))}
+            <Route path="/fitness" element={<FitnessPage />} />
             <Route
               path="*"
               element={<FeaturePage title="Không tìm thấy trang" />}

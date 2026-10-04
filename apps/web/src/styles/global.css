@@ -2903,3 +2903,174 @@ svg {
     grid-template-columns: 1fr;
   }
 }
+/* Phase 7: fitness */
+.fitness-form fieldset {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.fitness-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 24px 0;
+}
+.fitness-tabs button {
+  padding: 12px 17px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+}
+.fitness-tabs [aria-selected="true"] {
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-weight: 700;
+}
+.fitness-filters {
+  margin-top: 0;
+}
+.fitness-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+.fitness-stats .card {
+  padding: 22px;
+}
+.fitness-stats span {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.fitness-two-columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin: 24px 0;
+}
+.fitness-chart {
+  width: 100%;
+  min-width: 0;
+  margin: 20px 0;
+}
+.fitness-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.fitness-table th,
+.fitness-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.fitness-session {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+}
+.fitness-session p {
+  color: var(--ink-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.fitness-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.fitness-actions .button {
+  font-size: 12px;
+  padding: 10px 13px;
+}
+.fitness-timer {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 22px 0;
+  padding: 16px;
+  background: var(--primary-lighter);
+  border-radius: 12px;
+}
+.fitness-timer label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+}
+.fitness-timer input {
+  width: 100px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: white;
+}
+.fitness-timer b {
+  font-size: 27px;
+  font-variant-numeric: tabular-nums;
+}
+.fitness-sets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.fitness-sets article {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.fitness-sets .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.fitness-sets input[type="checkbox"] {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--primary);
+}
+.fitness-template-item,
+.fitness-pr {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+.fitness-pr span {
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+@media (max-width: 1000px) {
+  .fitness-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .fitness-two-columns,
+  .fitness-sets {
+    grid-template-columns: 1fr;
+  }
+  .fitness-session {
+    flex-direction: column;
+    align-items: start;
+  }
+  .fitness-form .form-two-columns {
+    grid-template-columns: 1fr;
+  }
+  .fitness-stats .card {
+    padding: 16px;
+  }
+  .fitness-table th,
+  .fitness-table td {
+    padding: 8px;
+    font-size: 12px;
+  }
+}

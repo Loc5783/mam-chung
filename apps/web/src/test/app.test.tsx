@@ -55,6 +55,10 @@ beforeEach(() => {
       recent: [],
       items: [],
       total: 0,
+      stats: { weekSessions: 0 },
+      comparison: { current: { volume: 0 } },
+      latest: null,
+      volume: [],
     },
   });
   useAuthStore.getState().clear();

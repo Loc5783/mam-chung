@@ -78,6 +78,7 @@ function ProfileForm({ user }: { user: Profile }) {
         await client.invalidateQueries({ queryKey: ["couple", user.id] });
         await client.invalidateQueries({ queryKey: ["shared", user.id] });
         await client.invalidateQueries({ queryKey: ["tasks", user.id] });
+        await client.invalidateQueries({ queryKey: ["fitness", user.id] });
       }
       notify("Đã cập nhật hồ sơ.");
     },

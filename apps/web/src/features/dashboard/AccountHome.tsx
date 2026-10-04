@@ -1,11 +1,11 @@
+import { FitnessPreview } from "../fitness/FitnessPage";
 import { TasksPreview } from "../tasks/TasksPage";
 import { SharedPreview } from "../shared/SharedFinancePage";
 import { CouplePreview } from "../couples/CouplePage";
 import { FinanceOverview } from "../finance/FinanceOverview";
 import { Link, useNavigate } from "react-router-dom";
-import { Dumbbell, ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, ShieldCheck } from "lucide-react";
 import { useAuthStore } from "../auth/store";
-import { Card, EmptyState } from "../../components/ui";
 export function AccountHome() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user)!;
@@ -28,8 +28,8 @@ export function AccountHome() {
       <div className="account-note">
         <ShieldCheck size={20} />
         <span>
-          Tài chính cá nhân và không gian chung đã sẵn sàng. Tập luyện sẽ được
-          mở ở các giai đoạn tiếp theo.
+          Tài chính, công việc và sổ tập luyện đã sẵn sàng. Dữ liệu riêng chỉ
+          bạn xem được.
         </span>
       </div>
       <FinanceOverview
@@ -39,27 +39,7 @@ export function AccountHome() {
       <CouplePreview />
       <SharedPreview />
       <TasksPreview />
-      <div className="account-grid">
-        {[
-          {
-            title: "Tập luyện",
-            icon: Dumbbell,
-            to: "/fitness",
-            description: "Ghi nhận mỗi bước tiến của sức khỏe.",
-          },
-        ].map(({ title, icon: Icon, to, description }) => (
-          <Card key={to}>
-            <div className="section-heading">
-              <h2>{title}</h2>
-              <Icon size={24} />
-            </div>
-            <EmptyState title="Sắp được vun đắp">{description}</EmptyState>
-            <Link className="card-link" to={to}>
-              Xem trạng thái <ArrowRight size={16} />
-            </Link>
-          </Card>
-        ))}
-      </div>
+      <FitnessPreview />
       <p className="account-preview-link">
         Muốn xem trước thiết kế tổng quan?{" "}
         <Link to="/preview">Mở giao diện minh họa</Link>

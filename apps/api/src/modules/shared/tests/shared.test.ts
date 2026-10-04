@@ -369,8 +369,20 @@ describe("Công nợ, thanh toán và archive", () => {
     });
     expect(paid.paidAt).not.toBeNull();
     expect((await s.summary(b, {})).amount).toBe(0);
+    const createdDay = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(row.createdAt));
     expect(
-      (await s.settlements(a, { status: "paid", from: date, to: date })).total,
+      (
+        await s.settlements(a, {
+          status: "paid",
+          from: createdDay,
+          to: createdDay,
+        })
+      ).total,
     ).toBe(1);
     await expect(
       s.deleteTransaction(a, row.sourceTransactionId),
