@@ -1,6 +1,6 @@
 # Mầm Chung 🌱
 
-Ứng dụng quản lý tài chính, công việc và tập luyện cho cá nhân/cặp đôi theo master prompt. **Đã hoàn thành giai đoạn 0–9: nền tảng, tài khoản, tài chính cá nhân, ngân sách, mục tiêu, định kỳ, báo cáo và CSV.** Couple đã có tạo/mời/ghép đôi, ngày kỷ niệm và lưu trữ. Tài chính chung đã có quỹ, đóng góp, chia tiền, công nợ hai bước và mục tiêu. Công việc cá nhân/chung, Kanban, việc con, lặp lại, bình luận và mua sắm chung đã sẵn sàng. Fitness đã có sổ buổi tập/set, ghi nhanh, mẫu, số đo, mục tiêu tuần và biểu đồ volume/rep/1RM/PR. Dashboard tổng hợp và thông báo trong ứng dụng đã có. Giai đoạn9 đã thêm PWA, cải thiện responsive/khả năng truy cập, chia gói theo trang, dữ liệu demo và Swagger. Tiếp theo là kiểm thử toàn diện ở giai đoạn10. Bản này chưa đủ điều kiện production toàn diện.
+Ứng dụng quản lý tài chính, công việc và tập luyện cho cá nhân/cặp đôi theo master prompt. **Đã hoàn thành giai đoạn 0–10: nền tảng, tài khoản, tài chính cá nhân, ngân sách, mục tiêu, định kỳ, báo cáo và CSV.** Couple đã có tạo/mời/ghép đôi, ngày kỷ niệm và lưu trữ. Tài chính chung đã có quỹ, đóng góp, chia tiền, công nợ hai bước và mục tiêu. Công việc cá nhân/chung, Kanban, việc con, lặp lại, bình luận và mua sắm chung đã sẵn sàng. Fitness đã có sổ buổi tập/set, ghi nhanh, mẫu, số đo, mục tiêu tuần và biểu đồ volume/rep/1RM/PR. Dashboard tổng hợp và thông báo trong ứng dụng đã có. Giai đoạn9 đã thêm PWA, cải thiện responsive/khả năng truy cập, chia gói theo trang, dữ liệu demo và Swagger. Giai đoạn 10 đã bổ sung kiểm thử luồng tích hợp và kiểm chứng trình duyệt với dữ liệu QA tách riêng. Bản này chưa đủ điều kiện production toàn diện.
 
 ## Chạy ngay trên máy (không cần Docker)
 
@@ -57,7 +57,7 @@ Lần đầu tải MongoDB 7.0.14 từ nguồn chính thức (Windows khoảng 5
 - Cả hai sửa việc chung; revision bảo vệ khi sửa đồng thời. Lịch sử couple cũ chỉ đọc; việc cá nhân vẫn riêng.
 - Tổng quan có việc hôm nay, quá hạn và hoàn thành nhanh theo múi giờ hồ sơ.
 
-Chi tiết triển khai và kiểm tra: [Giai đoạn 5](docs/PHASE_5.md), [Giai đoạn 6](docs/PHASE_6.md), [Giai đoạn 7](docs/PHASE_7.md), [Giai đoạn 8](docs/PHASE_8.md), [Giai đoạn 9](docs/PHASE_9.md).
+Chi tiết triển khai và kiểm tra: [Giai đoạn 5](docs/PHASE_5.md), [Giai đoạn 6](docs/PHASE_6.md), [Giai đoạn 7](docs/PHASE_7.md), [Giai đoạn 8](docs/PHASE_8.md), [Giai đoạn 9](docs/PHASE_9.md), [Giai đoạn 10](docs/PHASE_10.md).
 
 ## Dashboard và thông báo
 
@@ -118,6 +118,17 @@ npm run format:check
 
 Backend Jest/Supertest chạy MongoDB replica set riêng, yêu cầu tải binary lần đầu. Coverage service tự thu thập và bắt buộc statements/branches/functions/lines ≥80%. Frontend dùng Vitest/Testing Library để kiểm tra các form, guard và interceptor.
 
+## Kiểm tra luồng người dùng trong môi trường riêng
+
+```powershell
+npm run build
+npm run qa:local
+```
+
+Mở http://localhost:5174/register và tạo tài khoản QA giả mới. Web dùng bản build/PWA, API 4001, MongoDB 27119; database tạm riêng, không dùng `.local/data` hoặc các tài khoản demo. Giữ đúng hostname localhost để cookie/CORS đồng nhất. Nhập `q` rồi Enter để dừng QA và dọn database tạm do launcher tạo (cũng hỗ trợ `Ctrl+C`). Các cổng phải trống; không chạy hai launcher QA đồng thời. MongoDB binary đã tải được dùng lại, chưa có thì tải từ nguồn chính thức.
+
+`npm run test:workflows` chạy 5 luồng HTTP tích hợp tự động với database riêng; chúng cũng nằm trong `npm test`. Đây là kiểm thử API, không phải chương trình E2E trình duyệt độc lập. Kịch bản trình duyệt và kết quả thực tế: [PHASE_10.md](docs/PHASE_10.md).
+
 ## HTTPS và proxy (giai đoạn 11)
 
 Cấu hình Caddy được chuẩn bị sẵn. Đặt DOMAIN và secret trong `.env`, DNS trỏ tới máy chủ, mở cổng 80/443:
@@ -138,4 +149,4 @@ CORS_ORIGIN production phải là domain HTTPS thật. TRUST_PROXY_HOPS=0 khi AP
 - `docs/API.md`: API và quy ước. OpenAPI thực tế ở `/api/openapi.json`.
 - `.github/workflows/ci.yml`: lint/test/build/format; chưa chạy trên GitHub vì chưa có remote.
 
-Tiếp theo: **Giai đoạn 10 — kiểm thử toàn diện các luồng chính.**
+Tiếp theo: **Giai đoạn 11 — triển khai production, HTTPS, backup và kiểm tra vận hành.**

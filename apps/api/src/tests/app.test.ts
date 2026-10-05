@@ -37,7 +37,7 @@ describe("Nền tảng API", () => {
     const res = await request(app).get("/api/health");
     expect(res.status).toBe(503);
     expect(res.body.database).toBe("disconnected");
-    expect(res.body.phase).toBe(9);
+    expect(res.body.phase).toBe(10);
     expect(res.body.development).toBe(false);
   });
   test("lỗi 404 thống nhất", async () => {

@@ -61,7 +61,7 @@ export function createApp() {
     res.status(connected ? 200 : 503).json({
       status: connected ? "ok" : "not_ready",
       database: connected ? "connected" : "disconnected",
-      phase: 9,
+      phase: 10,
       development: env.NODE_ENV === "development",
     });
   });

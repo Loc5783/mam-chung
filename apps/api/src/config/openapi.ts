@@ -37,9 +37,9 @@ export const openapi = {
   openapi: "3.0.3",
   info: {
     title: "Mầm Chung API",
-    version: "1.0.0",
+    version: "1.1.0",
     description:
-      "Giai đoạn 9 — Dashboard, thông báo trong ứng dụng; tài khoản, tài chính cá nhân, kế hoạch, Couple, tài chính chung, công việc và tập luyện riêng tư. Refresh token chỉ được đặt trong cookie httpOnly; không trả qua JSON.",
+      "Giai đoạn 10 — Dashboard, thông báo trong ứng dụng; tài khoản, tài chính cá nhân, kế hoạch, Couple, tài chính chung, công việc và tập luyện riêng tư. Refresh token chỉ được đặt trong cookie httpOnly; không trả qua JSON.",
   },
   components: {
     securitySchemes: {
@@ -52,7 +52,7 @@ export const openapi = {
         properties: {
           status: { type: "string", enum: ["ok", "not_ready"] },
           database: { type: "string", enum: ["connected", "disconnected"] },
-          phase: { type: "integer", example: 9 },
+          phase: { type: "integer", example: 10 },
           development: {
             type: "boolean",
             description:

@@ -115,3 +115,10 @@
 - Mobile320px ẩn dòng ngữ cảnh thừa trên topbar, giữ tên trang; input16px và nút tối thiểu44px; giới hạn modal theo viewport. Kiểm tra tràn bằng DOM và ảnh, không tự động suy ra mọi thiết bị đã qua.
 - Seed chỉ hai tài khoản giả được đánh dấu tên/email, chỉ API development loopback. Không thay tài khoản demo có sẵn hay xóa dữ liệu; giữ tài nguyên tồn tại theo tên/ghi chú. Báo đã trả tiền chỉ lúc tạo khoản chi cá nhân mẫu mới; chạy lại không tự ghi lại trạng thái người dùng đã đổi. Không hỗ trợ seed chạy song song hoặc migration production.
 - `check:pwa` kiểm tra bản build, icon PNG/kích thước, placeholder/allowlist và từng chunk<500KB trong CI. GitHub CI/production/cài OS chưa chạy, tách biệt với kiểm chứng local.
+
+## Giai đoạn 10 — Kiểm thử luồng đầy đủ
+
+- Bổ sung kiểm thử HTTP qua Express và MongoDB replica set tạm: đăng ký/refresh/logout, ví/ngân sách/mục tiêu/CSV, ghép đôi/chia tiền/công nợ, việc chung/revision/lặp/bình luận, buổi tập/mẫu/thống kê. Không thay cơ chế phân quyền hoặc cho phép âm số dư để phục vụ kiểm thử.
+- `qa:local` dùng API4001/web5174/Mongo27119 và database tự sinh; tuyệt đối không dùng `.local/data`. CORS localhost riêng tránh cookie của website chính127.0.0.1. Giữ rate limit, JWT ngẫu nhiên, NODE_ENV=test để seed demo không hoạt động. Dừng chỉ dọn thư mục tạm do MongoMemoryReplSet tạo.
+- Kiểm chứng trình duyệt được thực hiện bằng CUA với locator Playwright trên bản build, hai tài khoản giả. Các thao tác trên sổ tiền chỉ ghi dữ liệu thử, không thực hiện chuyển tiền. Chưa có job Playwright CLI/browser E2E trong CI; CI hiện tại tự chạy bộ HTTP mới thông qua npm test.
+- Sửa nhãn `/invite/:code` thành Lời mời/Không gian chung; route không tồn tại hiển thị đúng thông báo thay vì hứa triển khai chức năng. Health/OpenAPI cập nhật mốc10, version tài liệu API1.1.0.

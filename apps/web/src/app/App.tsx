@@ -85,8 +85,12 @@ function Layout({ preview = false }: { preview?: boolean }) {
       ? "Tổng quan mẫu"
       : location.pathname === "/shared"
         ? "Tài chính chung"
-        : navigation.find((n) => n.to === location.pathname)?.label ||
-          "Cài đặt";
+        : location.pathname.startsWith("/invite/")
+          ? "Lời mời"
+          : navigation.find((n) => n.to === location.pathname)?.label ||
+            (location.pathname === "/settings"
+              ? "Cài đặt"
+              : "Không tìm thấy trang");
   return (
     <div className="app-layout">
       <aside className="sidebar">
@@ -141,7 +145,8 @@ function Layout({ preview = false }: { preview?: boolean }) {
               {preview
                 ? "Giao diện mẫu"
                 : location.pathname.startsWith("/couple") ||
-                    location.pathname.startsWith("/shared")
+                    location.pathname.startsWith("/shared") ||
+                    location.pathname.startsWith("/invite/")
                   ? "Không gian chung"
                   : "Không gian cá nhân"}
             </span>{" "}
@@ -191,8 +196,8 @@ function FeaturePage({ title }: { title: string }) {
         </div>
       </div>
       <Card>
-        <EmptyState title={`${title} đang chờ được vun đắp`}>
-          Chức năng này sẽ được triển khai ở giai đoạn tiếp theo của tài liệu.
+        <EmptyState title="Đường dẫn không tồn tại">
+          Trở về tổng quan để tiếp tục sử dụng Mầm Chung.
         </EmptyState>
         <Link className="button empty-action" to="/">
           Về tổng quan
