@@ -1,0 +1,47 @@
+# A separate project/DB for rehearsals; no production network or published ports.
+name: mam-chung-restore-check
+services:
+  mongo-restore:
+    image: mongo:7.0
+    command: ["mongod", "--replSet", "restore-rs", "--bind_ip_all"]
+    volumes: ["restore_data:/data/db"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--eval",
+          "quit(db.adminCommand({ping:1}).ok ? 0 : 1)",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    networks: [restore]
+  restore-init:
+    image: mongo:7.0
+    entrypoint:
+      [
+        "mongosh",
+        "--host",
+        "mongo-restore",
+        "--quiet",
+        "--eval",
+        "rs.initiate({_id:'restore-rs',members:[{_id:0,host:'mongo-restore:27017'}]}); while(!db.hello().isWritablePrimary) sleep(1000)",
+      ]
+    depends_on:
+      mongo-restore: { condition: service_healthy }
+    networks: [restore]
+  restore:
+    build: { context: .., dockerfile: infra/Dockerfile.tools }
+    command: ["node", "/ops/restore-check.cjs"]
+    environment:
+      RESTORE_FILE: ${RESTORE_FILE:?Set generated archive basename}
+    volumes: ["../backups:/backups:ro"]
+    depends_on:
+      restore-init: { condition: service_completed_successfully }
+    networks: [restore]
+networks:
+  restore: { internal: true }
+volumes:
+  restore_data:

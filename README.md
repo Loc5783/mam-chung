@@ -1,10 +1,10 @@
 # Mầm Chung 🌱
 
-Ứng dụng quản lý tài chính, công việc và tập luyện cho cá nhân/cặp đôi theo master prompt. **Đã hoàn thành giai đoạn 0–10: nền tảng, tài khoản, tài chính cá nhân, ngân sách, mục tiêu, định kỳ, báo cáo và CSV.** Couple đã có tạo/mời/ghép đôi, ngày kỷ niệm và lưu trữ. Tài chính chung đã có quỹ, đóng góp, chia tiền, công nợ hai bước và mục tiêu. Công việc cá nhân/chung, Kanban, việc con, lặp lại, bình luận và mua sắm chung đã sẵn sàng. Fitness đã có sổ buổi tập/set, ghi nhanh, mẫu, số đo, mục tiêu tuần và biểu đồ volume/rep/1RM/PR. Dashboard tổng hợp và thông báo trong ứng dụng đã có. Giai đoạn9 đã thêm PWA, cải thiện responsive/khả năng truy cập, chia gói theo trang, dữ liệu demo và Swagger. Giai đoạn 10 đã bổ sung kiểm thử luồng tích hợp và kiểm chứng trình duyệt với dữ liệu QA tách riêng. Bản này chưa đủ điều kiện production toàn diện.
+Ứng dụng quản lý tài chính, công việc và tập luyện cho cá nhân/cặp đôi theo master prompt. **Đã hoàn thành giai đoạn 0–10: nền tảng, tài khoản, tài chính cá nhân, ngân sách, mục tiêu, định kỳ, báo cáo và CSV.** Couple đã có tạo/mời/ghép đôi, ngày kỷ niệm và lưu trữ. Tài chính chung đã có quỹ, đóng góp, chia tiền, công nợ hai bước và mục tiêu. Công việc cá nhân/chung, Kanban, việc con, lặp lại, bình luận và mua sắm chung đã sẵn sàng. Fitness đã có sổ buổi tập/set, ghi nhanh, mẫu, số đo, mục tiêu tuần và biểu đồ volume/rep/1RM/PR. Dashboard tổng hợp và thông báo trong ứng dụng đã có. Giai đoạn9 đã thêm PWA, cải thiện responsive/khả năng truy cập, chia gói theo trang, dữ liệu demo và Swagger. Giai đoạn 10 đã bổ sung kiểm thử luồng tích hợp và kiểm chứng trình duyệt với dữ liệu QA tách riêng. Giai đoạn11 đã chuẩn bị cấu hình triển khai và sao lưu/khôi phục; chưa đưa lên máy chủ vì chưa có máy chủ/tên miền.
 
 ## Chạy ngay trên máy (không cần Docker)
 
-Yêu cầu Node.js 20 trở lên và npm.
+Dùng Node.js 24 LTS và npm cho bản triển khai mới.
 
 ```powershell
 npm ci
@@ -129,15 +129,19 @@ Mở http://localhost:5174/register và tạo tài khoản QA giả mới. Web d
 
 `npm run test:workflows` chạy 5 luồng HTTP tích hợp tự động với database riêng; chúng cũng nằm trong `npm test`. Đây là kiểm thử API, không phải chương trình E2E trình duyệt độc lập. Kịch bản trình duyệt và kết quả thực tế: [PHASE_10.md](docs/PHASE_10.md).
 
-## HTTPS và proxy (giai đoạn 11)
+## Bản chuẩn bị triển khai (giai đoạn 11)
 
-Cấu hình Caddy được chuẩn bị sẵn. Đặt DOMAIN và secret trong `.env`, DNS trỏ tới máy chủ, mở cổng 80/443:
+Dùng `docker-compose.prod.yml` **độc lập**, Node24 LTS, HTTPS qua Caddy, MongoDB xác thực/volume riêng và backup có oplog/checksum. API/Mongo không mở port công khai. Đã kiểm chứng công cụ sao lưu/khôi phục thực bằng database giả; Docker Engine/container/HTTPS trên server chưa được chạy.
 
-```powershell
-docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
+```sh
+node scripts/prepare-production.cjs app.tenmiencuaban.vn quantri@tenmiencuaban.vn
+docker compose --env-file .env.production -f docker-compose.prod.yml config --quiet
+docker compose --env-file .env.production -f docker-compose.prod.yml up --build -d
 ```
 
-CORS_ORIGIN production phải là domain HTTPS thật. TRUST_PROXY_HOPS=0 khi API chạy trực tiếp, 1 khi sau nginx trong Docker dev, 2 khi sau Caddy và nginx production. Không mở API trực tiếp ra Internet với cấu hình tin proxy này. Cần kiểm thử triển khai, bảo vệ MongoDB, backup và hoàn thiện nghiệp vụ trước khi sử dụng production.
+Thay hostname/email bằng thông tin thực và làm các bước DNS/máy chủ trong [DEPLOYMENT.md](docs/DEPLOYMENT.md). Trình tạo không in secret hoặc ghi đè file. Không dùng `.env.example` development cho production, không ghép hai Compose file. Script restore chỉ vào database thử cách ly. Cách chạy kiểm thử: `npm run test:ops`; diễn tập thật với MongoDB Tools: `npm run check:backup -- <thư-mục-chứa-mongodump-mongorestore>`.
+
+Bằng chứng và giới hạn: [PHASE_11.md](docs/PHASE_11.md). File backup mặc định nằm trên máy chủ và chưa mã hóa; cần bảo vệ/chuyển bản sao ngoài máy theo hướng dẫn trước khi phục vụ dữ liệu thật.
 
 ## Cấu trúc và tài liệu
 
@@ -149,4 +153,4 @@ CORS_ORIGIN production phải là domain HTTPS thật. TRUST_PROXY_HOPS=0 khi AP
 - `docs/API.md`: API và quy ước. OpenAPI thực tế ở `/api/openapi.json`.
 - `.github/workflows/ci.yml`: lint/test/build/format; chưa chạy trên GitHub vì chưa có remote.
 
-Tiếp theo: **Giai đoạn 11 — triển khai production, HTTPS, backup và kiểm tra vận hành.**
+Tiếp theo: **Chọn máy chủ và tên miền, chạy container/HTTPS, nghiệm thu trên server để hoàn thành phần triển khai thực tế của giai đoạn11.**

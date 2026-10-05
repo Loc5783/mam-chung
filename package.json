@@ -20,7 +20,10 @@
     "seed:demo:local": "node scripts/seed-demo-local.cjs",
     "check:pwa": "node scripts/check-pwa.cjs",
     "qa:local": "node scripts/qa-local.cjs",
-    "test:workflows": "npm run test -w @mam-chung/api -- --runTestsByPath src/tests/workflows.test.ts --coverage=false"
+    "test:workflows": "npm run test -w @mam-chung/api -- --runTestsByPath src/tests/workflows.test.ts --coverage=false",
+    "test:ops": "node --test scripts/tests/*.test.cjs",
+    "prepare:production": "node scripts/prepare-production.cjs",
+    "check:backup": "node scripts/check-backup-local.cjs"
   },
   "devDependencies": {
     "prettier": "^3.3.3"

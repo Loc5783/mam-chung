@@ -1,0 +1,6 @@
+FROM mongo:7.0 AS mongo-tools
+FROM node:24-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates libssl3 libgssapi-krb5-2 && rm -rf /var/lib/apt/lists/*
+COPY --from=mongo-tools /usr/bin/mongodump /usr/bin/mongorestore /usr/local/bin/
+COPY scripts/ops /ops
+CMD ["node", "/ops/backup.cjs", "--loop"]

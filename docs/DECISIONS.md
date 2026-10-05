@@ -122,3 +122,12 @@
 - `qa:local` dùng API4001/web5174/Mongo27119 và database tự sinh; tuyệt đối không dùng `.local/data`. CORS localhost riêng tránh cookie của website chính127.0.0.1. Giữ rate limit, JWT ngẫu nhiên, NODE_ENV=test để seed demo không hoạt động. Dừng chỉ dọn thư mục tạm do MongoMemoryReplSet tạo.
 - Kiểm chứng trình duyệt được thực hiện bằng CUA với locator Playwright trên bản build, hai tài khoản giả. Các thao tác trên sổ tiền chỉ ghi dữ liệu thử, không thực hiện chuyển tiền. Chưa có job Playwright CLI/browser E2E trong CI; CI hiện tại tự chạy bộ HTTP mới thông qua npm test.
 - Sửa nhãn `/invite/:code` thành Lời mời/Không gian chung; route không tồn tại hiển thị đúng thông báo thay vì hứa triển khai chức năng. Health/OpenAPI cập nhật mốc10, version tài liệu API1.1.0.
+
+## Giai đoạn11 — Chuẩn bị triển khai
+
+- Người dùng chưa có máy chủ/tên miền và chọn chuẩn bị trước. Không mua dịch vụ, công bố website hoặc chuyển dữ liệu thật. Health giữphase10, tránh đồng nhất chuẩn bị với production đã chạy.
+- Compose production độc lập để không kế thừa port/env/volume development. Mongo có root/app/backup users và keyfile volume; database/app networks internal, chỉ Caddy publish80/443. Một node/keyfile là mức tự quản nhỏ, chưa có HA/X.509/TLS nội bộ hoặc cloud database; đánh giá lại khi có máy chủ và phạm vi dữ liệu thật.
+- Runtime chuyểnNode24 LTS vìNode20 đã EOL; API dùng multi-stage/omit dev/non-root. .dockerignore loại .local, env và backups, không đưa dữ liệu máy cá nhân vào build.
+- Backup full replica set/oplog, gzip, SHA256, credential config tạm và báo sức khỏe theo last-success. Không tự upload/xóa bản cũ. Gzip không mã hóa; checksum không thay thế bảo vệ archive, backup ngoài máy và diễn tập khôi phục.
+- Restore tool cố định dịch vụmongo-restore trong project/mạng/volume riêng; không nhận URI production. Đợt kiểm chứng Windows dùng hai replica set tự sinh, tài khoảnbackup có xác thực và ghi transaction đồng thời; tool adapter chỉ đổi hostname test, không thay flags full/oplog/gzip/replay.
+- Compose CLI portable5.6.0 và MongoDB Tools100.19.1 lấy từ nguồn chính thức, đối chiếuSHA256 và lưu .local; không cài Docker Engine vào hệ thống. config/syntax invariants được kiểm tra; buildcontainer/nginx/Caddy trong CI mới thêm chưa chạy vì chưa córemote/Engine.

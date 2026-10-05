@@ -1,26 +1,145 @@
+# Standalone production file. Do not merge with the development Compose file.
+name: mam-chung-prod
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
 services:
+  mongo-key:
+    image: node:24-bookworm-slim
+    user: "0:0"
+    entrypoint: ["node", "/ops/mongo-key.cjs"]
+    volumes: ["mongo_key:/key", "./scripts/ops:/ops:ro"]
+    network_mode: none
+    logging: *logging
   mongo:
-    ports: !reset []
+    image: mongo:7.0
+    command:
+      [
+        "mongod",
+        "--replSet",
+        "rs0",
+        "--bind_ip_all",
+        "--keyFile",
+        "/key/keyfile",
+      ]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: mam_admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Generate production configuration first}
+    volumes: ["mongo_data:/data/db", "mongo_key:/key:ro"]
+    depends_on:
+      mongo-key: { condition: service_completed_successfully }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--eval",
+          "quit(db.adminCommand({ping:1}).ok ? 0 : 1)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+    networks: [database]
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging: *logging
+  mongo-init:
+    image: mongo:7.0
+    entrypoint: ["mongosh", "--nodb", "--quiet", "/ops/mongo-init.js"]
+    environment:
+      MONGO_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?Required}
+      MONGO_APP_PASSWORD: ${MONGO_APP_PASSWORD:?Required}
+      MONGO_BACKUP_PASSWORD: ${MONGO_BACKUP_PASSWORD:?Required}
+    volumes: ["./scripts/ops:/ops:ro"]
+    depends_on:
+      mongo: { condition: service_healthy }
+    networks: [database]
+    restart: on-failure
+    logging: *logging
   api:
-    ports: !reset []
+    build: { context: ., dockerfile: apps/api/Dockerfile }
     environment:
       NODE_ENV: production
+      PORT: 4000
+      JWT_SECRET: ${JWT_SECRET:?Generate production configuration first}
+      MONGODB_URI: mongodb://mam_app:${MONGO_APP_PASSWORD:?Required}@mongo:27017/mam_chung?authSource=mam_chung&replicaSet=rs0
+      CORS_ORIGIN: https://${DOMAIN:?Set real domain}
       TRUST_PROXY_HOPS: 2
-      CORS_ORIGIN: https://${DOMAIN}
+    depends_on:
+      mongo-init: { condition: service_completed_successfully }
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    networks: [database, app]
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    logging: *logging
   web:
-    ports: !reset []
+    build: { context: ., dockerfile: apps/web/Dockerfile }
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [app, edge]
+    restart: unless-stopped
+    logging: *logging
   caddy:
     image: caddy:2-alpine
-    ports: ["80:80", "443:443"]
+    ports: ["80:80", "443:443", "443:443/udp"]
     environment:
-      DOMAIN: ${DOMAIN}
+      DOMAIN: ${DOMAIN:?Set real domain}
+      ACME_EMAIL: ${ACME_EMAIL:?Set certificate contact}
     volumes:
       [
         "./Caddyfile:/etc/caddy/Caddyfile:ro",
         "caddy_data:/data",
         "caddy_config:/config",
       ]
-    depends_on: [web]
+    depends_on:
+      web: { condition: service_healthy }
+    networks: [edge]
+    restart: unless-stopped
+    logging: *logging
+  backup:
+    build: { context: ., dockerfile: infra/Dockerfile.tools }
+    environment:
+      MONGO_BACKUP_PASSWORD: ${MONGO_BACKUP_PASSWORD:?Required}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+    volumes: ["./backups:/backups"]
+    depends_on:
+      mongo-init: { condition: service_completed_successfully }
+    networks: [database]
+    healthcheck:
+      test: ["CMD", "node", "/ops/backup-health.cjs"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 5m
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 60s
+    logging: *logging
+networks:
+  database: { internal: true }
+  app: { internal: true }
+  edge: {}
 volumes:
+  mongo_data:
+  mongo_key:
   caddy_data:
   caddy_config:

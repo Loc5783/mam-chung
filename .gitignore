@@ -6,3 +6,6 @@ coverage/
 !.env.example
 *.log
 .local/
+
+backups/
+!.env.production.example

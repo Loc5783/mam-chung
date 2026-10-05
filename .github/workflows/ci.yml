@@ -7,11 +7,30 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
       - run: npm ci
       - run: npm run lint
       - run: npm test
       - run: npm run build
       - run: npm run check:pwa
+      - run: npm run test:ops
       - run: npm run format:check
+
+  deployment-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Generate disposable CI credentials
+        run: node scripts/prepare-production.cjs ci.example.org ci@example.org
+      - name: Validate standalone production Compose
+        run: docker compose --env-file .env.production -f docker-compose.prod.yml config --quiet
+      - name: Build application and database-tools images
+        run: docker compose --env-file .env.production -f docker-compose.prod.yml build
+      - name: Validate nginx and Caddy configuration
+        run: |
+          docker compose --env-file .env.production -f docker-compose.prod.yml -f .github/compose-syntax.yml run --rm --no-deps web nginx -t
+          docker compose --env-file .env.production -f docker-compose.prod.yml -f .github/compose-syntax.yml run --rm --no-deps caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile

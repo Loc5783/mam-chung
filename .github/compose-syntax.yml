@@ -1,0 +1,6 @@
+# Syntax-only CI: names resolve without starting dependencies. Never deploy with this override.
+services:
+  web:
+    extra_hosts: ["api:127.0.0.1"]
+  caddy:
+    extra_hosts: ["web:127.0.0.1"]
