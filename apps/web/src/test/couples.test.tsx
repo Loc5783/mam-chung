@@ -11,6 +11,8 @@ import {
   CouplePreview,
 } from "../features/couples/CouplePage";
 import { CoupleData } from "../features/couples/types";
+const futureInviteExpiry = () =>
+  new Date(Date.now() + 48 * 3600000).toISOString();
 const profile = {
   id: "qa",
   name: "Minh",
@@ -105,7 +107,7 @@ beforeEach(() => {
               : {
                   name: "Chúng mình",
                   inviterName: "Lan",
-                  expiresAt: "2026-10-05T00:00:00Z",
+                  expiresAt: futureInviteExpiry(),
                   isSelf: false,
                 },
   }));
@@ -117,14 +119,14 @@ beforeEach(() => {
     if (url === "/couples/invite") {
       active = {
         ...active!,
-        invite: { id: "invite", expiresAt: "2026-10-05T00:00:00Z" },
+        invite: { id: "invite", expiresAt: futureInviteExpiry() },
       };
       return {
         data: {
           id: "invite",
           code: "ABCD2345",
           path: "/invite/ABCD2345",
-          expiresAt: "2026-10-05T00:00:00Z",
+          expiresAt: futureInviteExpiry(),
         },
       };
     }
@@ -214,7 +216,7 @@ it("owner sees anniversary and creates code with copy buttons", async () => {
 it("invitation revocation requires confirmation", async () => {
   active = {
     ...structuredClone(solo),
-    invite: { id: "invite", expiresAt: "2026-10-05T00:00:00Z" },
+    invite: { id: "invite", expiresAt: futureInviteExpiry() },
   };
   wrap(<CouplePage />);
   await userEvent.click(

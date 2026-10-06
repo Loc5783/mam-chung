@@ -1,3 +1,5 @@
+import { useId, useState } from "react";
+import { moveTabFocus } from "../../components/ui/tabs";
 import { BudgetPreview } from "../planning/PlanningPanel";
 import { FinanceIcon } from "./FinanceIcon";
 import {
@@ -80,6 +82,8 @@ export function FinanceOverview({
   overview?: FinanceDashboard;
   budgets?: Budget[];
 }) {
+  const [chartType, setChartType] = useState<"income" | "expense">("expense");
+  const chartId = useId();
   const query = useFinanceDashboard(!overview);
   if (!overview && query.isPending)
     return (
@@ -102,6 +106,11 @@ export function FinanceOverview({
   const data = overview ?? query.data!;
   const label = `Tháng ${data.month.slice(5)}/${data.month.slice(0, 4)}`;
   const activeWallets = data.wallets.filter((w) => !w.archived);
+  const showingIncome = chartType === "income";
+  const chartTotal = showingIncome ? data.income : data.expense;
+  const chartGroups =
+    (showingIncome ? data.incomeByCategory : data.spending) ?? [];
+  const chartLabel = showingIncome ? "Khoản thu" : "Khoản chi";
   return (
     <>
       <div className="summary-grid real-summary">
@@ -143,81 +152,116 @@ export function FinanceOverview({
           <div className="section-heading">
             <div>
               <span className="eyebrow">NHÌN LẠI THÁNG NÀY</span>
-              <h2>Tiền đã đi đâu?</h2>
+              <h2>{showingIncome ? "Tiền đến từ đâu?" : "Tiền đã đi đâu?"}</h2>
             </div>
             <span className="subtle-chip">{label}</span>
           </div>
-          {data.spending.length === 0 ? (
-            <>
-              <EmptyState title="Chưa có khoản chi nào">
-                Ghi lại khoản chi đầu tiên để hiểu hơn về thói quen của bạn.
-              </EmptyState>
-              <Button
-                className="empty-action"
-                onClick={activeWallets.length ? onAdd : onWallet}
+          <div
+            className="finance-tabs finance-chart-tabs"
+            role="tablist"
+            aria-label="Biểu đồ thu và chi"
+            onKeyDown={moveTabFocus}
+          >
+            {(["income", "expense"] as const).map((type) => (
+              <button
+                key={type}
+                id={`${chartId}-${type}`}
+                role="tab"
+                aria-selected={chartType === type}
+                aria-controls={`${chartId}-panel`}
+                tabIndex={chartType === type ? 0 : -1}
+                className={chartType === type ? "active" : ""}
+                onClick={() => setChartType(type)}
               >
-                <Plus size={16} />
-                {activeWallets.length ? "Ghi giao dịch" : "Tạo ví đầu tiên"}
-              </Button>
-            </>
-          ) : (
-            <div className="real-spending">
-              <div
-                className="real-donut"
-                role="img"
-                aria-label={`Chi tiêu tháng này ${formatMoney(data.expense)}`}
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={data.spending}
-                      dataKey="amount"
-                      nameKey="name"
-                      innerRadius={62}
-                      outerRadius={86}
-                      paddingAngle={3}
-                      isAnimationActive={false}
-                      stroke="white"
-                    >
-                      {data.spending.map((item, i) => (
-                        <Cell key={item.categoryId} fill={colors[i]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      formatter={(value) => [
-                        formatMoney(Number(value)),
-                        "Số tiền",
-                      ]}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="donut-center">
-                  <small>Tổng chi</small>
-                  <b>{formatMoney(data.expense)}</b>
+                {type === "income" ? "Khoản thu" : "Khoản chi"}
+              </button>
+            ))}
+          </div>
+          <div
+            id={`${chartId}-panel`}
+            role="tabpanel"
+            aria-labelledby={`${chartId}-${chartType}`}
+          >
+            {chartGroups.length === 0 ? (
+              <>
+                <EmptyState
+                  title={
+                    showingIncome
+                      ? "Chưa có khoản thu nào"
+                      : "Chưa có khoản chi nào"
+                  }
+                >
+                  {showingIncome
+                    ? "Ghi giao dịch loại Khoản thu để xem nguồn thu nhập trong tháng."
+                    : "Ghi lại khoản chi đầu tiên để hiểu hơn về thói quen của bạn."}
+                </EmptyState>
+                <Button
+                  className="empty-action"
+                  onClick={activeWallets.length ? onAdd : onWallet}
+                >
+                  <Plus size={16} />
+                  {activeWallets.length ? "Ghi giao dịch" : "Tạo ví đầu tiên"}
+                </Button>
+              </>
+            ) : (
+              <div className="real-spending">
+                <div
+                  className="real-donut"
+                  role="img"
+                  aria-label={`${chartLabel} tháng này ${formatMoney(chartTotal)}`}
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={chartGroups}
+                        dataKey="amount"
+                        nameKey="name"
+                        innerRadius={62}
+                        outerRadius={86}
+                        paddingAngle={chartGroups.length > 1 ? 3 : 0}
+                        isAnimationActive={false}
+                        stroke="white"
+                      >
+                        {chartGroups.map((item, i) => (
+                          <Cell key={item.categoryId} fill={colors[i]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value) => [
+                          formatMoney(Number(value)),
+                          "Số tiền",
+                        ]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="donut-center">
+                    <small>{showingIncome ? "Tổng thu" : "Tổng chi"}</small>
+                    <b>{formatMoney(chartTotal)}</b>
+                  </div>
+                </div>
+                <div className="real-legend">
+                  {chartGroups.map((item, i) => (
+                    <div key={item.categoryId}>
+                      <span
+                        className="legend-dot"
+                        style={{ background: colors[i] }}
+                      />
+                      <div>
+                        <b>{item.name}</b>
+                        <small>{formatMoney(item.amount)}</small>
+                      </div>
+                      <strong>
+                        {chartTotal
+                          ? Math.round((item.amount / chartTotal) * 100)
+                          : 0}
+                        %
+                      </strong>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div className="real-legend">
-                {data.spending.map((item, i) => (
-                  <div key={item.categoryId}>
-                    <span
-                      className="legend-dot"
-                      style={{ background: colors[i] }}
-                    />
-                    <div>
-                      <b>{item.name}</b>
-                      <small>{formatMoney(item.amount)}</small>
-                    </div>
-                    <strong>
-                      {data.expense
-                        ? Math.round((item.amount / data.expense) * 100)
-                        : 0}
-                      %
-                    </strong>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
         </Card>
         <Card>
           <div className="section-heading">

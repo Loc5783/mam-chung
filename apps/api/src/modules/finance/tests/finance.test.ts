@@ -888,6 +888,7 @@ describe("Dashboard và múi giờ", () => {
     expect(data.expense).toBe(0);
     expect(data.incomeChange).toBeNull();
     expect(data.spending).toEqual([]);
+    expect(data.incomeByCategory).toEqual([]);
     expect(data.recent).toEqual([]);
   });
   test("tổng ví, tháng hiện tại, so sánh và top5+Khác tính đúng", async () => {
@@ -1025,5 +1026,79 @@ describe("Hồi quy kiểm toán logic", () => {
   });
   test("không âm thầm đổi ngày không tồn tại trong múi giờ", () => {
     expect(() => parseFinancialDate("2011-12-30", "Pacific/Apia")).toThrow();
+  });
+});
+
+describe("Biểu đồ khoản thu", () => {
+  test("chỉ tính thu thật trong tháng của người gọi, bỏ mở ví/chuyển tiền/xóa/tháng khác", async () => {
+    const bounds = monthBounds(new Date(), "Asia/Ho_Chi_Minh");
+    const currentDate = new Date(
+      bounds.start.getTime() + 3600000,
+    ).toISOString();
+    const from = await wallet(100000),
+      to = await wallet();
+    await entry(from.id, "income", 20000, { date: currentDate });
+    await entry(from.id, "expense", 40000, { date: currentDate });
+    const removed = await entry(from.id, "income", 5000, { date: currentDate });
+    await service.deleteTransaction(userId, removed.id);
+    await entry(from.id, "income", 6000, {
+      date: new Date(bounds.previous.getTime() + 3600000).toISOString(),
+    });
+    await entry(from.id, "income", 7000, {
+      date: new Date(bounds.end.getTime() + 3600000).toISOString(),
+    });
+    await service.transfer(userId, {
+      fromWalletId: from.id,
+      toWalletId: to.id,
+      amount: 1000,
+      date: currentDate,
+    });
+    const otherWallet = await service.createWallet(otherId, {
+      name: "Other",
+      type: "cash",
+    });
+    await service.createTransaction(otherId, {
+      walletId: otherWallet.id,
+      categoryId: incomeId,
+      type: "income",
+      amount: 90000,
+      date: currentDate,
+      description: "Other user income",
+    });
+    const data = await service.dashboard(userId);
+    expect(data.income).toBe(20000);
+    expect(data.expense).toBe(40000);
+    expect(data.incomeByCategory).toEqual([
+      { categoryId: incomeId, name: "Lương", amount: 20000 },
+    ]);
+    expect(data.spending).toEqual([
+      { categoryId: expenseId, name: "Ăn uống", amount: 40000 },
+    ]);
+  });
+  test("top5 và nhóm còn lại của khoản thu giữ đúng tổng tiền", async () => {
+    const bounds = monthBounds(new Date(), "Asia/Ho_Chi_Minh");
+    const w = await wallet();
+    for (let i = 1; i <= 7; i++) {
+      const category = await service.createCategory(userId, {
+        name: `Nguồn thu ${i}`,
+        type: "income",
+      });
+      await entry(w.id, "income", i * 10, {
+        categoryId: category.id,
+        date: new Date(bounds.start.getTime() + 3600000).toISOString(),
+      });
+    }
+    const data = await service.dashboard(userId);
+    expect(data.income).toBe(280);
+    expect(data.incomeByCategory).toHaveLength(6);
+    expect(data.incomeByCategory[5]).toEqual({
+      categoryId: "other",
+      name: "Khác (các danh mục còn lại)",
+      amount: 30,
+    });
+    expect(
+      data.incomeByCategory.reduce((sum, item) => sum + item.amount, 0),
+    ).toBe(data.income);
+    expect(data.spending).toEqual([]);
   });
 });

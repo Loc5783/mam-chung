@@ -212,6 +212,14 @@ export const financeSchemas = {
         amount: money,
       }),
     },
+    incomeByCategory: {
+      type: "array",
+      items: object({
+        categoryId: { type: "string" },
+        name: { type: "string" },
+        amount: money,
+      }),
+    },
     recent: { type: "array", maxItems: 5, items: ref("FinancialEntry") },
   }),
 };

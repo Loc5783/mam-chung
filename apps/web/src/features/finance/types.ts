@@ -55,6 +55,7 @@ export type FinanceDashboard = {
   expenseChange: number | null;
   wallets: Wallet[];
   spending: { categoryId: string; name: string; amount: number }[];
+  incomeByCategory: { categoryId: string; name: string; amount: number }[];
   recent: Entry[];
 };
 export type Reconcile = {

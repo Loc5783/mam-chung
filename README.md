@@ -33,7 +33,7 @@ Lần đầu tải MongoDB 7.0.14 từ nguồn chính thức (Windows khoảng 5
 - Thu/chi: tạo/sửa/xóa/nhân bản, ghi chú/nhãn, lọc ngày/ví/danh mục/loại, tìm kiếm, sắp xếp và phân trang.
 - Chuyển tiền hai ví bằng một transaction, hai dòng liên kết, không tính vào tổng thu/chi.
 - Danh mục mặc định và riêng; xóa danh mục riêng có lịch sử cần danh mục thay thế.
-- Tổng quan thực: số dư mọi ví, thu/chi theo tháng và múi giờ hồ sơ, so sánh tháng trước, biểu đồ chi và giao dịch gần đây.
+- Tổng quan thực: số dư mọi ví, thu/chi theo tháng và múi giờ hồ sơ, so sánh tháng trước, biểu đồ thu/chi theo danh mục với hai tab và giao dịch gần đây.
 
 - Ngân sách theo danh mục chi và tháng, tiến độ thực theo sổ, nhắc 80%/100%.
 - Mục tiêu tiết kiệm: hạn, màu, dành dụm, lịch sử và hoàn tác khoản ghi nhận. Tiền dành dụm là theo dõi riêng, không tự trừ ví.
@@ -61,7 +61,7 @@ Chi tiết triển khai và kiểm tra: [Giai đoạn 5](docs/PHASE_5.md), [Giai
 
 ## Dashboard và thông báo
 
-Trang `/` tổng hợp số dư cá nhân, thu/chi tháng, donut chi tiêu, ngân sách, việc hôm nay/quá hạn với nút Xong, nhịp tập và hành trình chung. Một yêu cầu `/api/dashboard` cấp dữ liệu các khối. Bốn nút nhanh mở ngay biểu mẫu giao dịch, chi chung, công việc hoặc buổi tập.
+Trang `/` tổng hợp số dư cá nhân, thu/chi tháng, donut thu/chi theo danh mục, ngân sách, việc hôm nay/quá hạn với nút Xong, nhịp tập và hành trình chung. Một yêu cầu `/api/dashboard` cấp dữ liệu các khối. Bốn nút nhanh mở ngay biểu mẫu giao dịch, chi chung, công việc hoặc buổi tập.
 
 Chuông trên thanh đầu trang hiển thị thông báo của tài khoản hiện tại: lời mời, công nợ, yêu cầu xác nhận tiền, việc được giao, hạn việc và ngân sách chạm/vượt 100%. Có đọc một/đọc tất cả, chỉ chưa đọc, phân trang và mở đúng mục liên quan. Dashboard/chuông tự làm mới 15 giây khi trang đang mở; không email/SMS/push. Những điều kiện đã xử lý sẽ tự ẩn; không lưu lại sự kiện thoáng qua nếu ứng dụng không đồng bộ khi điều kiện còn hiệu lực. Người nhận lời mời cần xem trước bằng mã hợp lệ trước khi nhận nhắc trong ứng dụng.
 

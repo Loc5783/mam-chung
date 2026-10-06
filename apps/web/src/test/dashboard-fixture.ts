@@ -13,6 +13,7 @@ export function emptyHome(): HomeData {
       expenseChange: null,
       wallets: [],
       spending: [],
+      incomeByCategory: [],
       recent: [],
     },
     budgets: { month: "2026-10", items: [] },

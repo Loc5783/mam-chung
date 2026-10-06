@@ -56,6 +56,7 @@ beforeEach(() => {
             expenseChange: null,
             wallets: [],
             spending: [],
+            incomeByCategory: [],
             recent: [],
             items: [],
             total: 0,

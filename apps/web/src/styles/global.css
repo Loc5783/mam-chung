@@ -3296,3 +3296,7 @@ main:focus {
     flex: 1;
   }
 }
+
+.finance-chart-tabs {
+  margin-bottom: 18px;
+}

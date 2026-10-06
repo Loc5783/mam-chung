@@ -246,3 +246,7 @@ OpenAPI3.0.3, phiên bản1.0.0; 84 đường dẫn và118 schemas ở bản loc
 `GET /api/health` trả `{status,database,phase,development}`; phase9, development chỉ true khi NODE_ENV=development. HTTP200 khi MongoDB kết nối;503 khi chưa sẵn sàng. Seed local kiểm tra trường development trước đăng nhập/tạo dữ liệu để từ chối API test/production. Health không tiết lộ URI hoặc secret.
 
 PWA không thay đổi contract API và không cache response API. Mọi mutation vẫn cần mạng và kiểm tra quyền/revision/transaction như các giai đoạn trước. Logout trả204 không có JSON body.
+
+## Biểu đồ thu/chi theo danh mục
+
+`GET /api/finance/dashboard` và `finance` trong `GET /api/dashboard` trả `spending` cho chi và `incomeByCategory` cho thu. Mỗi mảng gồm `{ categoryId, name, amount }`, lấy tối đa5 danh mục lớn nhất và một nhóm các danh mục còn lại, tổng khớp tổng thu/chi tháng. Chỉ giao dịch thường chưa xóa trong tháng/múi giờ của người gọi được tính; không gồm số dư ban đầu, chuyển tiền giữa ví hoặc giao dịch của người khác. Hai tab Khoản thu/Khoản chi dùng riêng tổng tương ứng để tính phần trăm; không gộp thu và chi thành cùng mẫu số.

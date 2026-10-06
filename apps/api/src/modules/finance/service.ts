@@ -807,7 +807,7 @@ export const financeService = {
         session,
       );
       const groups = await FinancialTransaction.aggregate<{
-        _id: Types.ObjectId;
+        _id: { type: "income" | "expense"; categoryId: Types.ObjectId | null };
         amount: unknown;
       }>([
         {
@@ -815,30 +815,40 @@ export const financeService = {
             userId: new Types.ObjectId(userId),
             deletedAt: null,
             kind: "transaction",
-            type: "expense",
+            type: { $in: ["income", "expense"] },
             date: { $gte: bounds.start, $lt: bounds.end },
           },
         },
         {
           $group: {
-            _id: "$categoryId",
+            _id: { type: "$type", categoryId: "$categoryId" },
             amount: { $sum: { $toDecimal: { $toLong: "$amount" } } },
           },
         },
-        { $sort: { amount: -1, _id: 1 } },
+        { $sort: { amount: -1, "_id.categoryId": 1 } },
       ]).session(session);
-      const spending = groups.slice(0, 5).map((item) => ({
-        categoryId: item._id.toString(),
-        name:
-          categories.find((c) => c.id === item._id.toString())?.name ?? "Khác",
-        amount: decimalMoney(item.amount),
-      }));
-      if (groups.length > 5)
-        spending.push({
-          categoryId: "other",
-          name: "Khác (các danh mục còn lại)",
-          amount: sumMoney(groups.slice(5).map((g) => decimalMoney(g.amount))),
+      const categoryBreakdown = (type: "income" | "expense") => {
+        const selected = groups.filter((item) => item._id.type === type);
+        const result = selected.slice(0, 5).map((item) => {
+          const categoryId = item._id.categoryId?.toString() ?? "uncategorized";
+          return {
+            categoryId,
+            name: categories.find((c) => c.id === categoryId)?.name ?? "Khác",
+            amount: decimalMoney(item.amount),
+          };
         });
+        if (selected.length > 5)
+          result.push({
+            categoryId: "other",
+            name: "Khác (các danh mục còn lại)",
+            amount: sumMoney(
+              selected.slice(5).map((g) => decimalMoney(g.amount)),
+            ),
+          });
+        return result;
+      };
+      const spending = categoryBreakdown("expense");
+      const incomeByCategory = categoryBreakdown("income");
       const recent = await repo
         .entries({ userId, deletedAt: null }, session)
         .sort({ date: -1, _id: -1 })
@@ -855,6 +865,7 @@ export const financeService = {
         expenseChange: change(current.expense, previous.expense),
         wallets: wallets.map(publicWallet),
         spending,
+        incomeByCategory,
         recent: recent.map((e) => publicEntry(e, wallets, categories)),
       };
     });

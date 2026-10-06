@@ -1,8 +1,8 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   WalletForm,
   TransactionForm,
@@ -99,6 +99,7 @@ const dashboard = {
   expenseChange: 10,
   wallets,
   spending: [],
+  incomeByCategory: [],
   recent: [entry],
 };
 function wrap(node: React.ReactNode, path = "/finance") {
@@ -117,6 +118,25 @@ function wrap(node: React.ReactNode, path = "/finance") {
   );
 }
 beforeEach(() => {
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(target: Element) {
+        this.callback(
+          [
+            {
+              target,
+              contentRect: { width: 320, height: 240 },
+            } as ResizeObserverEntry,
+          ],
+          this as unknown as ResizeObserver,
+        );
+      }
+      unobserve() {}
+      disconnect() {}
+    },
+  );
   vi.restoreAllMocks();
   useAuthStore.getState().setSession("token", {
     id: "qa",
@@ -144,6 +164,7 @@ beforeEach(() => {
             : dashboard,
   }));
 });
+afterEach(() => vi.unstubAllGlobals());
 it("ví mới kiểm tra tên và số dư trước khi gửi", async () => {
   const post = vi.spyOn(apiClient, "post");
   wrap(<WalletForm onClose={vi.fn()} />);
@@ -446,4 +467,74 @@ it("hai ví hoạt động mở biểu mẫu chuyển tiền và gửi đúng v�
       amount: 10000,
     }),
   );
+});
+
+it("biểu đồ chuyển giữa thu 20.000 và chi 40.000 bằng chuột hoặc bàn phím", async () => {
+  const overview = {
+    ...dashboard,
+    income: 20000,
+    expense: 40000,
+    spending: [{ categoryId: "food", name: "Ăn uống", amount: 40000 }],
+    incomeByCategory: [{ categoryId: "salary", name: "Lương", amount: 20000 }],
+  };
+  wrap(
+    <FinanceOverview
+      onAdd={vi.fn()}
+      onWallet={vi.fn()}
+      overview={overview}
+      budgets={[]}
+    />,
+  );
+  expect(
+    screen.getByRole("img", { name: /Khoản chi tháng này 40.000/ }),
+  ).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("tab", { name: "Khoản thu" }));
+  const incomePanel = screen.getByRole("tabpanel", { name: "Khoản thu" });
+  expect(
+    within(incomePanel).getByRole("img", {
+      name: /Khoản thu tháng này 20.000/,
+    }),
+  ).toBeInTheDocument();
+  expect(within(incomePanel).getByText("Lương")).toBeInTheDocument();
+  expect(within(incomePanel).getByText(/100\s*%/)).toBeInTheDocument();
+  expect(within(incomePanel).queryByText("Ăn uống")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { name: "Tiền đến từ đâu?" }),
+  ).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("tab", { name: "Khoản chi" }));
+  expect(
+    screen.getByRole("img", { name: /Khoản chi tháng này 40.000/ }),
+  ).toBeInTheDocument();
+  await userEvent.keyboard("{ArrowLeft}");
+  expect(screen.getByRole("tab", { name: "Khoản thu" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+});
+it("tab thu trống không mượn số liệu từ chi và vẫn trở lại biểu đồ chi", async () => {
+  wrap(
+    <FinanceOverview
+      onAdd={vi.fn()}
+      onWallet={vi.fn()}
+      overview={{
+        ...dashboard,
+        income: 0,
+        spending: [{ categoryId: "food", name: "Ăn uống", amount: 50000 }],
+      }}
+      budgets={[]}
+    />,
+  );
+  await userEvent.click(screen.getByRole("tab", { name: "Khoản thu" }));
+  expect(
+    screen.getByRole("heading", { name: "Chưa có khoản thu nào" }),
+  ).toBeInTheDocument();
+  expect(
+    within(screen.getByRole("tabpanel", { name: "Khoản thu" })).queryByRole(
+      "img",
+    ),
+  ).not.toBeInTheDocument();
+  await userEvent.click(screen.getByRole("tab", { name: "Khoản chi" }));
+  expect(
+    screen.getByRole("img", { name: /Khoản chi tháng này 50.000/ }),
+  ).toBeInTheDocument();
 });
