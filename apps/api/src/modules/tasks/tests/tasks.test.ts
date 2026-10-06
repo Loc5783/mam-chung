@@ -509,3 +509,13 @@ it("schema chặn trường lạ, danh sách quá giới hạn, mã việc con t
     s.status(a, t.id, { revision: 0, status: "WRONG" }),
   ).rejects.toBeDefined();
 });
+
+it("completedBy records the actor and clears on reopening", async () => {
+  const t = await create({ scope: "shared" });
+  expect(
+    (await s.status(b, t.id, { revision: 0, status: "DONE" })).completedBy,
+  ).toBe(b);
+  expect(
+    (await s.status(a, t.id, { revision: 1, status: "TODO" })).completedBy,
+  ).toBeNull();
+});

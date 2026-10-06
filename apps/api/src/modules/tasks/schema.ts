@@ -14,7 +14,29 @@ const item = z
     done: z.boolean().default(false),
   })
   .strict();
-const fields = {
+export const timezone = z
+  .string()
+  .max(80)
+  .refine((zone) => {
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: zone });
+      return true;
+    } catch {
+      return false;
+    }
+  }, "Múi giờ không hợp lệ.");
+export const fields = {
+  listId: objectId.nullable().default(null),
+  startDate: day.nullable().default(null),
+  deadlineHasTime: z.boolean().default(false),
+  deadlineTime: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+    .nullable()
+    .default(null),
+  deadlineTimezone: timezone.nullable().default(null),
+  reminderAt: z.string().datetime({ offset: true }).nullable().default(null),
+  estimateMinutes: z.number().int().min(1).max(525600).nullable().default(null),
   title: z.string().trim().min(1, "Nhập tiêu đề công việc.").max(160),
   description: z.string().trim().max(2000).default(""),
   deadline: day.nullable().default(null),
@@ -56,6 +78,22 @@ export const remove = z
   .strict();
 export const query = pagination
   .extend({
+    list: objectId.optional(),
+    smart: z
+      .enum([
+        "today",
+        "upcoming",
+        "overdue",
+        "mine",
+        "partner",
+        "shared",
+        "nodate",
+        "done",
+      ])
+      .optional(),
+    assignee: objectId.optional(),
+    q: z.string().trim().max(160).optional(),
+    groupBy: z.enum(["deadline", "list", "priority", "assignee"]).optional(),
     scope: z.enum(["all", "personal", "shared", "mine"]).default("all"),
     coupleId: objectId.optional(),
     status: status.optional(),
@@ -67,7 +105,7 @@ export const query = pagination
     to: day.optional(),
     due: z.enum(["today", "overdue"]).optional(),
     sort: z
-      .enum(["deadline", "priority", "newest", "oldest"])
+      .enum(["manual", "deadline", "priority", "newest", "oldest"])
       .default("deadline"),
   })
   .strict()

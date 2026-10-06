@@ -154,3 +154,17 @@ Bằng chứng và giới hạn: [PHASE_11.md](docs/PHASE_11.md). File backup m�
 - `.github/workflows/ci.yml`: lint/test/build/format; chưa chạy trên GitHub vì chưa có remote.
 
 Tiếp theo: **Chọn máy chủ và tên miền, chạy container/HTTPS, nghiệm thu trên server để hoàn thành phần triển khai thực tế của giai đoạn11.**
+
+### To-do List — Giai đoạn B
+
+Nền tảng danh sách cá nhân/chung, Inbox, lọc thông minh, reorder và bulk đã được bổ sung, giữ giao diện/API cũ. Giao diện mới bắt đầu ở C. Chi tiết: [TASKS_PHASE_B.md](docs/TASKS_PHASE_B.md).
+
+Trong thư mục dự án, cấu hình MONGODB_URI đúng database replica set cần chuyển đổi rồi chạy:
+
+```sh
+npm run migrate:tasks -w @mam-chung/api -- --dry-run
+npm run migrate:tasks -w @mam-chung/api -- --apply
+npm run migrate:tasks -w @mam-chung/api -- --dry-run
+```
+
+Apply tự sao lưu tasks/task_lists dưới `.local/task-migration-backups`. Nên thực hiện khi người dùng không đang sửa việc; form cũ được phát hiện bằng revision và cần tải lại. Không dùng database thật khi chạy Jest; các test tự tạo replica set riêng.

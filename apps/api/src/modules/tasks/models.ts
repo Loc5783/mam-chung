@@ -1,6 +1,16 @@
 import { Schema, model } from "mongoose";
 const taskSchema = new Schema(
   {
+    listId: { type: Schema.Types.ObjectId, default: null },
+    position: { type: String, default: null },
+    startDate: { type: String, default: null },
+    deadlineHasTime: { type: Boolean, default: false },
+    deadlineTime: { type: String, default: null },
+    deadlineTimezone: { type: String, default: null },
+    reminderAt: { type: Date, default: null },
+    estimateMinutes: { type: Number, default: null },
+    timeSpentSeconds: { type: Number, default: 0 },
+    completedBy: { type: Schema.Types.ObjectId, default: null },
     title: { type: String, required: true },
     description: { type: String, default: "" },
     deadline: { type: String, default: null },
@@ -39,6 +49,17 @@ const taskSchema = new Schema(
       enum: ["none", "daily", "weekly", "monthly"],
       default: "none",
     },
+    recurrenceRule: {
+      type: new Schema(
+        {
+          frequency: { type: String, enum: ["daily", "weekly", "monthly"] },
+          interval: { type: Number, default: 1 },
+          weekdays: { type: [Number], default: [] },
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
     anchorDay: { type: Number, default: null },
     completedAt: { type: Date, default: null },
     sourceTaskId: { type: Schema.Types.ObjectId, default: null },
@@ -55,6 +76,13 @@ taskSchema.index(
   },
 );
 taskSchema.index({ coupleId: 1, deletedAt: 1, deadline: 1 });
+taskSchema.index({ coupleId: 1, listId: 1, position: 1 });
+taskSchema.index({ createdBy: 1, listId: 1, position: 1 });
+taskSchema.index({ assignedTo: 1, status: 1, deadline: 1 });
+taskSchema.index(
+  { reminderAt: 1 },
+  { partialFilterExpression: { reminderAt: { $type: "date" } } },
+);
 export const Task = model("Task", taskSchema, "tasks");
 export const TaskComment = model(
   "TaskComment",
@@ -70,4 +98,31 @@ export const TaskComment = model(
   ),
   "task_comments",
 );
-export const taskModels = [Task, TaskComment];
+const listSchema = new Schema(
+  {
+    name: { type: String, required: true },
+    color: { type: String, default: "#7E9B57" },
+    icon: { type: String, default: "ListTodo" },
+    type: { type: String, enum: ["normal", "shopping"], default: "normal" },
+    ownerId: { type: Schema.Types.ObjectId, default: null },
+    coupleId: { type: Schema.Types.ObjectId, default: null },
+    position: { type: String, required: true },
+    systemKey: { type: String, default: null },
+    archivedAt: { type: Date, default: null },
+    deletedAt: { type: Date, default: null },
+    revision: { type: Number, default: 0 },
+  },
+  { timestamps: true },
+);
+listSchema.pre("validate", function () {
+  if (!!this.ownerId === !!this.coupleId)
+    this.invalidate("ownerId", "Danh sách cần đúng một chủ sở hữu.");
+});
+listSchema.index({ ownerId: 1, position: 1 });
+listSchema.index({ coupleId: 1, position: 1 });
+listSchema.index(
+  { systemKey: 1 },
+  { unique: true, partialFilterExpression: { systemKey: { $type: "string" } } },
+);
+export const TaskList = model("TaskList", listSchema, "task_lists");
+export const taskModels = [Task, TaskComment, TaskList];

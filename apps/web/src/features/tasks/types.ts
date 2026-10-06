@@ -3,6 +3,16 @@ export type Priority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 export type ChecklistItem = { id: string; text: string; done: boolean };
 export type Task = {
   id: string;
+  listId?: string | null;
+  position?: string | null;
+  startDate?: string | null;
+  deadlineHasTime?: boolean;
+  deadlineTime?: string | null;
+  deadlineTimezone?: string | null;
+  reminderAt?: string | null;
+  estimateMinutes?: number | null;
+  timeSpentSeconds?: number;
+  completedBy?: string | null;
   title: string;
   description: string;
   deadline: string | null;
@@ -44,4 +54,26 @@ export const priorities: Record<Priority, string> = {
   MEDIUM: "Vừa",
   HIGH: "Cao",
   URGENT: "Khẩn cấp",
+};
+
+export type TaskList = {
+  id: string;
+  name: string;
+  color: string;
+  icon: string;
+  type: "normal" | "shopping";
+  ownerId: string | null;
+  coupleId: string | null;
+  position: string;
+  archivedAt: string | null;
+  revision: number;
+  isDefault: boolean;
+  readOnly: boolean;
+};
+export type TaskListPage = {
+  items: TaskList[];
+  total: number;
+  page: number;
+  limit: number;
+  readOnly: boolean;
 };

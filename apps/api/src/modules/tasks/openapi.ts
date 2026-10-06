@@ -11,6 +11,33 @@ const revision = {
   description: "Revision đang thấy, bắt buộc khi sửa/xóa; bản cũ trả409.",
 };
 const fields = {
+  listId: { ...id, nullable: true },
+  startDate: date,
+  deadlineHasTime: { type: "boolean", default: false },
+  deadlineTime: {
+    type: "string",
+    pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+    nullable: true,
+  },
+  deadlineTimezone: {
+    type: "string",
+    nullable: true,
+    description:
+      "IANA timezone; defaults to user timezone for timed deadlines.",
+  },
+  reminderAt: {
+    type: "string",
+    format: "date-time",
+    nullable: true,
+    description:
+      "Stored configuration; reminder worker is scheduled for phase E.",
+  },
+  estimateMinutes: {
+    type: "integer",
+    minimum: 1,
+    maximum: 525600,
+    nullable: true,
+  },
   title: { type: "string", minLength: 1, maxLength: 160 },
   description: { type: "string", maxLength: 2000 },
   deadline: date,
@@ -36,6 +63,140 @@ const obj = (
   ...(strict ? { additionalProperties: false } : {}),
 });
 export const taskSchemas = {
+  TaskListInput: obj(
+    {
+      name: { type: "string", minLength: 1, maxLength: 80 },
+      color: {
+        type: "string",
+        enum: ["#7E9B57", "#57713A", "#E38FA9", "#B3577A", "#75806B"],
+      },
+      icon: {
+        type: "string",
+        enum: [
+          "ListTodo",
+          "Heart",
+          "ShoppingBag",
+          "House",
+          "Briefcase",
+          "Plane",
+          "Sprout",
+          "BookOpen",
+        ],
+      },
+      type: { type: "string", enum: ["normal", "shopping"] },
+      scope: { type: "string", enum: ["personal", "shared"] },
+    },
+    ["name"],
+    true,
+  ),
+  TaskListUpdate: obj(
+    {
+      name: { type: "string", minLength: 1, maxLength: 80 },
+      color: {
+        type: "string",
+        enum: ["#7E9B57", "#57713A", "#E38FA9", "#B3577A", "#75806B"],
+      },
+      icon: {
+        type: "string",
+        enum: [
+          "ListTodo",
+          "Heart",
+          "ShoppingBag",
+          "House",
+          "Briefcase",
+          "Plane",
+          "Sprout",
+          "BookOpen",
+        ],
+      },
+      type: { type: "string", enum: ["normal", "shopping"] },
+      archived: { type: "boolean" },
+      revision,
+    },
+    ["revision"],
+    true,
+  ),
+  TaskList: obj({
+    id,
+    name: { type: "string" },
+    color: { type: "string" },
+    icon: { type: "string" },
+    type: { type: "string", enum: ["normal", "shopping"] },
+    ownerId: { ...id, nullable: true },
+    coupleId: { ...id, nullable: true },
+    position: { type: "string" },
+    archivedAt: { type: "string", format: "date-time", nullable: true },
+    revision,
+    isDefault: { type: "boolean" },
+    readOnly: { type: "boolean" },
+  }),
+  TaskListPage: obj({
+    items: { type: "array", items: ref("TaskList") },
+    total: { type: "integer" },
+    page: { type: "integer" },
+    limit: { type: "integer" },
+    readOnly: { type: "boolean" },
+  }),
+  TaskReorder: obj(
+    {
+      id,
+      revision,
+      beforeId: { ...id, nullable: true },
+      afterId: { ...id, nullable: true },
+    },
+    ["id", "revision"],
+    true,
+  ),
+  TaskListDelete: {
+    oneOf: [
+      obj(
+        {
+          mode: { type: "string", enum: ["move"] },
+          targetListId: id,
+          revision,
+        },
+        ["mode", "targetListId", "revision"],
+        true,
+      ),
+      obj(
+        { mode: { type: "string", enum: ["delete"] }, revision },
+        ["mode", "revision"],
+        true,
+      ),
+    ],
+  },
+  TaskBulk: {
+    oneOf: [
+      obj(
+        {
+          action: { type: "string", enum: ["update"] },
+          items: {
+            type: "array",
+            minItems: 1,
+            maxItems: 100,
+            items: obj({ id, revision }, ["id", "revision"], true),
+          },
+          changes: obj({ ...fields, status }, [], true),
+        },
+        ["action", "items", "changes"],
+        true,
+      ),
+      obj(
+        {
+          action: { type: "string", enum: ["delete"] },
+          items: {
+            type: "array",
+            minItems: 1,
+            maxItems: 100,
+            items: obj({ id, revision }, ["id", "revision"], true),
+          },
+        },
+        ["action", "items"],
+        true,
+      ),
+    ],
+  },
+  TaskBulkResult: obj({ items: { type: "array", items: ref("Task") } }),
   TaskChecklist: obj(
     {
       id: {
@@ -72,6 +233,9 @@ export const taskSchemas = {
     createdBy: id,
     creatorName: { type: "string" },
     coupleId: { ...id, nullable: true },
+    position: { type: "string", nullable: true },
+    timeSpentSeconds: { type: "integer", minimum: 0 },
+    completedBy: { ...id, nullable: true },
     completedAt: { type: "string", format: "date-time", nullable: true },
     sourceTaskId: { ...id, nullable: true },
     readOnly: { type: "boolean" },
@@ -83,6 +247,14 @@ export const taskSchemas = {
     page: { type: "integer" },
     limit: { type: "integer" },
     readOnly: { type: "boolean" },
+    groups: {
+      type: "array",
+      description: "Groups for the current page only",
+      items: obj({
+        key: { type: "string" },
+        taskIds: { type: "array", items: id },
+      }),
+    },
   }),
   TaskCommentInput: obj(
     { text: { type: "string", minLength: 1, maxLength: 500 } },
@@ -135,6 +307,26 @@ const paging = [
 ];
 const filters = [
   ...paging,
+  query("list", id),
+  query("smart", {
+    type: "string",
+    enum: [
+      "today",
+      "upcoming",
+      "overdue",
+      "mine",
+      "partner",
+      "shared",
+      "nodate",
+      "done",
+    ],
+  }),
+  query("assignee", id),
+  query("q", { type: "string", maxLength: 160 }),
+  query("groupBy", {
+    type: "string",
+    enum: ["deadline", "list", "priority", "assignee"],
+  }),
   query("coupleId", id),
   query("scope", {
     type: "string",
@@ -151,7 +343,7 @@ const filters = [
   query("due", { type: "string", enum: ["today", "overdue"] }),
   query("sort", {
     type: "string",
-    enum: ["deadline", "priority", "newest", "oldest"],
+    enum: ["manual", "deadline", "priority", "newest", "oldest"],
   }),
 ];
 const op = (
@@ -172,6 +364,60 @@ const op = (
   },
 });
 export const taskPaths = {
+  "/task-lists": {
+    get: op("Danh sách cá nhân/chung theo quyền", "TaskListPage", [
+      ...paging,
+      query("scope", { type: "string", enum: ["all", "personal", "shared"] }),
+      query("archived", { type: "string", enum: ["true", "false"] }),
+      query("coupleId", id),
+    ]),
+    post: op(
+      "Tạo danh sách; chủ sở hữu lấy từ phiên đăng nhập",
+      "TaskList",
+      [],
+      "TaskListInput",
+      201,
+    ),
+  },
+  "/task-lists/{id}": {
+    put: op(
+      "Sửa/lưu trữ/mở lại danh sách",
+      "TaskList",
+      [pathId],
+      "TaskListUpdate",
+    ),
+    delete: op(
+      "Xóa danh sách; chọn chuyển việc cùng phạm vi hoặc xóa mềm các việc",
+      "",
+      [pathId],
+      "TaskListDelete",
+      204,
+    ),
+  },
+  "/task-lists/reorder": {
+    patch: op(
+      "Sắp xếp danh sách; beforeId đứng sau, afterId đứng trước vị trí chèn",
+      "TaskList",
+      [],
+      "TaskReorder",
+    ),
+  },
+  "/tasks/reorder": {
+    patch: op(
+      "Sắp xếp một việc trong danh sách; kiểm tra hai hàng lân cận",
+      "Task",
+      [],
+      "TaskReorder",
+    ),
+  },
+  "/tasks/bulk": {
+    patch: op(
+      "Cập nhật/xóa 1–100 việc nguyên tử; sai quyền/phiên bản trả details với các ID lỗi",
+      "TaskBulkResult",
+      [],
+      "TaskBulk",
+    ),
+  },
   "/tasks": {
     get: op(
       "Danh sách công việc cá nhân/chung, lọc và phân trang",

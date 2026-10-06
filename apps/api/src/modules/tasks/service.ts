@@ -1,44 +1,16 @@
+import { user, shared, missing } from "./access";
+import { ensureInbox, listAccess, appendTaskPosition } from "./lists";
 import { ClientSession } from "mongoose";
 import { inTransaction } from "../../utils/transaction";
 import { AppError } from "../../utils/AppError";
 import { localDateParts, validDateOnly } from "../../utils/dates";
 import { calendarDate, nextOccurrence } from "../planning/service";
-import { userRepository } from "../users/repository";
 import { User } from "../users/model";
-import { Couple, CoupleMember, CoupleActivity } from "../couples/models";
-import { coupleRepository } from "../couples/repository";
+import { CoupleMember, CoupleActivity } from "../couples/models";
 import { objectId } from "../finance/schema";
-import { Task, TaskComment } from "./models";
+import { Task, TaskComment, TaskList } from "./models";
 import * as schema from "./schema";
-const missing = () =>
-  new AppError(
-    404,
-    "NOT_FOUND",
-    "Không tìm thấy công việc hoặc bạn không có quyền truy cập.",
-  );
-async function user(id: string, s: ClientSession, write = false) {
-  const u = await userRepository.byId(id, s);
-  if (!u) throw missing();
-  if (write && !(await userRepository.touch(id, u.securityVersion, s)))
-    throw missing();
-  return u;
-}
-async function shared(
-  userId: string,
-  id: string,
-  s: ClientSession,
-  write = false,
-) {
-  const m = await coupleRepository.member(userId, id, s);
-  if (!m) throw missing();
-  const c = write
-    ? await coupleRepository.lock(id, s)
-    : await Couple.findOne({ _id: id, deletedAt: null }).session(s);
-  if (!c || (c.status === "active" && !m.active) || (write && !m.active))
-    throw missing();
-  return c;
-}
-async function task(
+export async function task(
   userId: string,
   id: string,
   s: ClientSession,
@@ -53,11 +25,25 @@ async function task(
     if (write && u.coupleId?.toString() !== c.id) throw missing();
     readOnly = c.status !== "active";
   } else if (t.createdBy.toString() !== userId) throw missing();
+  if (t.listId) {
+    const container = await listAccess(userId, t.listId.toString(), s, write);
+    readOnly = readOnly || container.readOnly;
+  }
   return { u, t, readOnly };
 }
 type RecordTask = InstanceType<typeof Task>;
-const dto = (t: RecordTask, readOnly = false) => ({
+export const dto = (t: RecordTask, readOnly = false) => ({
   id: t.id as string,
+  listId: t.listId?.toString() ?? null,
+  position: t.position ?? null,
+  startDate: t.startDate ?? null,
+  deadlineHasTime: t.deadlineHasTime ?? false,
+  deadlineTime: t.deadlineTime ?? null,
+  deadlineTimezone: t.deadlineTimezone ?? null,
+  reminderAt: t.reminderAt ?? null,
+  estimateMinutes: t.estimateMinutes ?? null,
+  timeSpentSeconds: t.timeSpentSeconds ?? 0,
+  completedBy: t.completedBy?.toString() ?? null,
   title: t.title,
   description: t.description,
   deadline: t.deadline,
@@ -77,7 +63,7 @@ const dto = (t: RecordTask, readOnly = false) => ({
   createdAt: t.createdAt,
   readOnly,
 });
-async function event(
+export async function event(
   t: RecordTask,
   u: Awaited<ReturnType<typeof user>>,
   message: string,
@@ -97,7 +83,7 @@ async function event(
       { session: s },
     );
 }
-async function validateAssignment(
+export async function validateAssignment(
   t: { coupleId?: unknown; assignedTo?: unknown },
   id: string,
   s: ClientSession,
@@ -125,7 +111,7 @@ async function validateAssignment(
       );
   }
 }
-function revision(t: RecordTask, value: number) {
+export function revision(t: RecordTask, value: number) {
   if (t.revision !== value)
     throw new AppError(
       409,
@@ -133,25 +119,28 @@ function revision(t: RecordTask, value: number) {
       "Công việc đã được người khác cập nhật. Tải lại trước khi sửa.",
     );
 }
-function validateRecurrence(t: {
+export function validateRecurrence(t: {
   recurrence: string;
   deadline?: string | null;
 }) {
   if (t.recurrence !== "none" && !t.deadline)
     throw new AppError(400, "DEADLINE_REQUIRED", "Việc lặp lại cần hạn chót.");
 }
-async function change(
+export async function change(
   t: RecordTask,
   value: RecordTask["status"],
   s: ClientSession,
+  actorId: string,
 ) {
   if (t.status === value) return;
   t.status = value;
   if (value !== "DONE") {
     t.completedAt = null;
+    t.completedBy = null;
     return;
   }
   t.completedAt = new Date();
+  t.set("completedBy", actorId);
   if (t.recurrence === "none") return;
   validateRecurrence(t);
   if (await Task.exists({ sourceTaskId: t._id }).session(s)) return;
@@ -168,6 +157,13 @@ async function change(
   await Task.create(
     [
       {
+        listId: t.listId,
+        position: await appendTaskPosition(t.listId?.toString() ?? null, s),
+        startDate: null,
+        deadlineHasTime: t.deadlineHasTime,
+        deadlineTime: t.deadlineTime,
+        deadlineTimezone: t.deadlineTimezone,
+        estimateMinutes: t.estimateMinutes,
         title: t.title,
         description: t.description,
         deadline: next,
@@ -192,6 +188,36 @@ async function change(
     { session: s },
   );
 }
+export function validateTaskDates(t: {
+  startDate?: string | null;
+  deadline?: string | null;
+  deadlineHasTime?: boolean;
+  deadlineTime?: string | null;
+  deadlineTimezone?: string | null;
+  reminderAt?: unknown;
+}) {
+  if (t.startDate && t.deadline && t.startDate > t.deadline)
+    throw new AppError(
+      400,
+      "INVALID_DATES",
+      "Ngày bắt đầu phải trước hoặc bằng hạn chót.",
+    );
+  if (
+    t.deadlineHasTime &&
+    (!t.deadline || !t.deadlineTime || !t.deadlineTimezone)
+  )
+    throw new AppError(
+      400,
+      "DEADLINE_TIME_REQUIRED",
+      "Hạn có giờ cần ngày, giờ và múi giờ.",
+    );
+  if (!t.deadlineHasTime && t.deadlineTime)
+    throw new AppError(
+      400,
+      "INVALID_DEADLINE_TIME",
+      "Bật hạn có giờ để lưu giờ hạn.",
+    );
+}
 export const taskService = {
   async create(id: string, raw: unknown) {
     const input = schema.create.parse(raw);
@@ -205,12 +231,25 @@ export const taskService = {
       }
       const { scope: _, ...fields } = input;
       void _;
+      const list = fields.listId
+        ? (await listAccess(id, fields.listId, s, true)).list
+        : await ensureInbox(coupleId ? { coupleId } : { ownerId: id }, s);
+      if ((list.coupleId?.toString() ?? null) !== coupleId) throw missing();
+      validateTaskDates({
+        ...fields,
+        deadlineTimezone: fields.deadlineTimezone ?? u.timezone,
+      });
       validateRecurrence(fields);
       await validateAssignment({ ...fields, coupleId }, id, s);
       const [t] = await Task.create(
         [
           {
             ...fields,
+            listId: list._id,
+            position: await appendTaskPosition(list.id, s),
+            deadlineTimezone: fields.deadlineHasTime
+              ? (fields.deadlineTimezone ?? u.timezone)
+              : null,
             coupleId,
             createdBy: id,
             creatorName: u.name,
@@ -252,6 +291,38 @@ export const taskService = {
         });
       }
       if (q.scope === "mine") clauses.push({ assignedTo: id });
+      if (q.list) {
+        const container = await listAccess(id, q.list, s);
+        readOnly = readOnly || container.readOnly;
+        clauses.push({ listId: q.list });
+      }
+      if (q.assignee) clauses.push({ assignedTo: q.assignee });
+      if (q.smart) {
+        const p = localDateParts(new Date(), u.timezone);
+        const today = calendarDate(p.year, p.month, p.day)
+          .toISOString()
+          .slice(0, 10);
+        const week = calendarDate(p.year, p.month, p.day + 7)
+          .toISOString()
+          .slice(0, 10);
+        if (q.smart === "today") clauses.push({ deadline: today });
+        if (q.smart === "upcoming")
+          clauses.push({ deadline: { $gt: today, $lte: week } });
+        if (q.smart === "overdue")
+          clauses.push({ deadline: { $ne: null, $lt: today } });
+        if (q.smart === "mine") clauses.push({ assignedTo: id });
+        if (q.smart === "partner")
+          clauses.push({
+            coupleId: sharedId ?? null,
+            assignedTo: { $ne: id, $exists: true, $nin: [null] },
+          });
+        if (q.smart === "shared")
+          clauses.push({ coupleId: sharedId ?? { $exists: false } });
+        if (q.smart === "nodate") clauses.push({ deadline: null });
+        clauses.push({
+          status: q.smart === "done" ? "DONE" : { $nin: ["DONE", "CANCELLED"] },
+        });
+      }
       if (q.status) clauses.push({ status: q.status });
       if (q.priority) clauses.push({ priority: q.priority });
       if (q.kind) clauses.push({ kind: q.kind });
@@ -273,8 +344,9 @@ export const taskService = {
           status: { $nin: ["DONE", "CANCELLED"] },
         });
       }
-      if (q.search) {
-        const pattern = [...q.search]
+      const search = q.q ?? q.search;
+      if (search) {
+        const pattern = [...search]
           .map((char) =>
             ".*+?^${}()|[]\\".includes(char) ? "\\" + char : char,
           )
@@ -288,34 +360,65 @@ export const taskService = {
         });
       }
       const filter = { deletedAt: null, $and: clauses };
-      let rows = await Task.find(filter).session(s);
-      const ranks: Record<string, number> = {
-        URGENT: 0,
-        HIGH: 1,
-        MEDIUM: 2,
-        LOW: 3,
-      };
-      rows = rows.sort((a, b) => {
-        let delta = 0;
-        if (q.sort === "deadline")
-          delta = (a.deadline ?? "9999-99-99").localeCompare(
-            b.deadline ?? "9999-99-99",
-          );
-        if (q.sort === "priority")
-          delta = ranks[a.priority] - ranks[b.priority];
-        if (q.sort === "oldest")
-          delta = a.createdAt.getTime() - b.createdAt.getTime();
-        else if (!delta) delta = b.createdAt.getTime() - a.createdAt.getTime();
-        return delta || a.id.localeCompare(b.id);
-      });
+      const sort: Record<string, 1 | -1> =
+        q.sort === "oldest"
+          ? { createdAt: 1, _id: 1 }
+          : q.sort === "newest"
+            ? { createdAt: -1, _id: 1 }
+            : q.sort === "manual"
+              ? { listId: 1, position: 1, _id: 1 }
+              : q.sort === "priority"
+                ? { priorityRank: 1, createdAt: -1, _id: 1 }
+                : { noDeadline: 1, deadline: 1, createdAt: -1, _id: 1 };
+      const total = await Task.countDocuments(filter).session(s);
+      const rows = await Task.aggregate([
+        { $match: Task.find(filter).cast(Task) },
+        {
+          $addFields: {
+            noDeadline: {
+              $cond: [{ $eq: [{ $ifNull: ["$deadline", null] }, null] }, 1, 0],
+            },
+            priorityRank: {
+              $indexOfArray: [["URGENT", "HIGH", "MEDIUM", "LOW"], "$priority"],
+            },
+          },
+        },
+        { $sort: sort },
+        { $skip: (q.page - 1) * q.limit },
+        { $limit: q.limit },
+      ]).session(s);
+      const listIds = rows.flatMap((r) => (r.listId ? [r.listId] : []));
+      const archived = await TaskList.find({
+        _id: { $in: listIds },
+        archivedAt: { $ne: null },
+      }).session(s);
+      const archiveIds = new Set(archived.map((l) => l.id));
+      const items = rows.map((row) =>
+        dto(Task.hydrate(row), readOnly || archiveIds.has(String(row.listId))),
+      );
+      const groups = q.groupBy
+        ? Object.entries(
+            items.reduce<Record<string, string[]>>((acc, t) => {
+              const key =
+                q.groupBy === "list"
+                  ? (t.listId ?? "inbox")
+                  : q.groupBy === "priority"
+                    ? t.priority
+                    : q.groupBy === "assignee"
+                      ? (t.assignedTo ?? "unassigned")
+                      : (t.deadline ?? "nodate");
+              (acc[key] ??= []).push(t.id);
+              return acc;
+            }, {}),
+          ).map(([key, taskIds]) => ({ key, taskIds }))
+        : undefined;
       return {
-        items: rows
-          .slice((q.page - 1) * q.limit, q.page * q.limit)
-          .map((t) => dto(t, readOnly)),
-        total: rows.length,
+        items,
+        total,
         page: q.page,
         limit: q.limit,
         readOnly,
+        ...(groups ? { groups } : {}),
       };
     });
   },
@@ -336,7 +439,28 @@ export const taskService = {
       const oldAssignee = t.assignedTo?.toString() ?? null;
       const { revision: _, ...fields } = input;
       void _;
+      if (fields.listId !== undefined) {
+        const target = fields.listId
+          ? (await listAccess(id, fields.listId, s, true)).list
+          : await ensureInbox(
+              t.coupleId
+                ? { coupleId: t.coupleId.toString() }
+                : { ownerId: id },
+              s,
+            );
+        if (
+          (target.coupleId?.toString() ?? null) !==
+          (t.coupleId?.toString() ?? null)
+        )
+          throw missing();
+        if (target.id !== t.listId?.toString())
+          t.position = await appendTaskPosition(target.id, s);
+        fields.listId = target.id;
+      }
       Object.assign(t, fields);
+      if (t.deadlineHasTime && !t.deadlineTimezone)
+        t.deadlineTimezone = u.timezone;
+      validateTaskDates(t);
       validateRecurrence(t);
       await validateAssignment(t, id, s);
       if ((t.assignedTo?.toString() ?? null) !== oldAssignee)
@@ -356,7 +480,7 @@ export const taskService = {
       const { t, u } = await task(id, key, s, true);
       revision(t, input.revision);
       if (t.status !== input.status) {
-        await change(t, input.status, s);
+        await change(t, input.status, s, id);
         t.revision++;
         await t.save({ session: s });
         await event(t, u, "đã đổi trạng thái công việc chung.", s);

@@ -1,3 +1,12 @@
+import {
+  taskListService as lists,
+  listCreate,
+  listUpdate,
+  listQuery,
+  listDelete,
+  reorderInput,
+} from "./lists";
+import { taskOperations, bulkInput } from "./operations";
 import { Router } from "express";
 import { auth } from "../../middlewares/auth";
 import { asyncHandler } from "../../utils/asyncHandler";
@@ -11,7 +20,59 @@ import * as z from "./schema";
 import { taskService as s } from "./service";
 export function taskRoutes() {
   const r = Router();
-  r.use("/tasks", auth);
+  r.use(["/tasks", "/task-lists"], auth);
+  r.get(
+    "/task-lists",
+    validateQuery(listQuery),
+    asyncHandler(async (req, res) =>
+      res.json(await lists.list(req.user!.id, req.query)),
+    ),
+  );
+  r.post(
+    "/task-lists",
+    validate(listCreate),
+    asyncHandler(async (req, res) =>
+      res.status(201).json(await lists.create(req.user!.id, req.body)),
+    ),
+  );
+  r.patch(
+    "/task-lists/reorder",
+    validate(reorderInput),
+    asyncHandler(async (req, res) =>
+      res.json(await lists.reorder(req.user!.id, req.body)),
+    ),
+  );
+  r.put(
+    "/task-lists/:id",
+    validateParams(idParams),
+    validate(listUpdate),
+    asyncHandler(async (req, res) =>
+      res.json(await lists.update(req.user!.id, req.params.id, req.body)),
+    ),
+  );
+  r.delete(
+    "/task-lists/:id",
+    validateParams(idParams),
+    validate(listDelete),
+    asyncHandler(async (req, res) => {
+      await lists.remove(req.user!.id, req.params.id, req.body);
+      res.sendStatus(204);
+    }),
+  );
+  r.patch(
+    "/tasks/reorder",
+    validate(reorderInput),
+    asyncHandler(async (req, res) =>
+      res.json(await taskOperations.reorder(req.user!.id, req.body)),
+    ),
+  );
+  r.patch(
+    "/tasks/bulk",
+    validate(bulkInput),
+    asyncHandler(async (req, res) =>
+      res.json(await taskOperations.bulk(req.user!.id, req.body)),
+    ),
+  );
   r.get(
     "/tasks/members",
     validateQuery(z.readQuery),
