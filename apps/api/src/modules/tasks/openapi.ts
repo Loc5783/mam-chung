@@ -176,7 +176,20 @@ export const taskSchemas = {
             maxItems: 100,
             items: obj({ id, revision }, ["id", "revision"], true),
           },
-          changes: obj({ ...fields, status }, [], true),
+          changes: obj(
+            {
+              ...fields,
+              status,
+              addLabels: {
+                type: "array",
+                minItems: 1,
+                maxItems: 10,
+                items: { type: "string", minLength: 1, maxLength: 30 },
+              },
+            },
+            [],
+            true,
+          ),
         },
         ["action", "items", "changes"],
         true,
@@ -196,6 +209,50 @@ export const taskSchemas = {
       ),
     ],
   },
+  TaskQuickAdd: obj(
+    {
+      items: {
+        type: "array",
+        minItems: 1,
+        maxItems: 100,
+        items: ref("TaskInput"),
+      },
+    },
+    ["items"],
+    true,
+  ),
+  TaskBulkUndo: obj(
+    {
+      items: {
+        type: "array",
+        minItems: 1,
+        maxItems: 100,
+        items: obj(
+          {
+            id,
+            revision,
+            restore: { type: "boolean" },
+            changes: obj(
+              {
+                status,
+                listId: fields.listId,
+                deadline: fields.deadline,
+                priority: fields.priority,
+                assignedTo: fields.assignedTo,
+                labels: fields.labels,
+              },
+              [],
+              true,
+            ),
+          },
+          ["id", "revision"],
+          true,
+        ),
+      },
+    },
+    ["items"],
+    true,
+  ),
   TaskBulkResult: obj({ items: { type: "array", items: ref("Task") } }),
   TaskSummary: obj({
     counts: { type: "object", additionalProperties: { type: "integer" } },
@@ -436,6 +493,23 @@ export const taskPaths = {
       "TaskBulkResult",
       [],
       "TaskBulk",
+    ),
+  },
+  "/tasks/quick-add": {
+    post: op(
+      "Tạo 1–100 công việc đã nhận diện; kiểm tra toàn bộ và lưu nguyên tử",
+      "TaskBulkResult",
+      [],
+      "TaskQuickAdd",
+      201,
+    ),
+  },
+  "/tasks/bulk-undo": {
+    patch: op(
+      "Hoàn tác nhóm theo revision mới; toàn bộ hoặc không có việc nào; khôi phục tối đa 30 ngày",
+      "TaskBulkResult",
+      [],
+      "TaskBulkUndo",
     ),
   },
   "/tasks": {

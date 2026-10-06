@@ -154,3 +154,12 @@
 - Drawer tự lưu sau650ms, giữ revision mới, không hạ revision theo cache cũ. Khi lỗi giữ draft và yêu cầu retry Lưu ngay; không tự retry ghi vô hạn. Esc/nút đóng chỉ khi sạch; Bỏ thay đổi và đóng là lựa chọn rõ. Bình luận/trạng thái bị khóa lúc có draft chưa lưu để không làm mất dữ liệu. Undo có nút trong drawer để sử dụng được bằng bàn phím trong focus trap.
 - Chặn ghi khi navigator.onLine=false bằng networkMode always + kiểm tra trước request; không xếp hàng chờ online. Giữ dữ liệu đang nhập khi request thất bại. Connection thật có thể mất dù navigator báo online, API lỗi vẫn giữ draft/rollback.
 - Drawer C có tiêu đề/mô tả plain text, trạng thái, ưu tiên, ngày bắt đầu/hạn/giờ, ước lượng, lặp cơ bản, danh sách, nhãn, giao việc và checklist. Rich text, reminder, activity riêng, chuyển scope/duplicate/nudge/templates/Focus/calendar thuộc E. D kéo thả/bulk/phím tắt/swipe/quick parser; F tối ưu và QA/a11y toàn diện.
+
+
+## 2026-10-06 — Tasks phase D
+
+Quick add parses Vietnamese deterministically in the user timezone and always previews recognized chips. Ambiguous member/list instructions block submission; a literal mode preserves the original title. A single item keeps the existing create API, multiline batches share the create service in one transaction (max 100). Weekly weekday recurrence reuses the existing weekly service and an explicit start deadline.
+
+Manual sorting is enabled inside one selected list with manual sort; the client reads all container pages to obtain real adjacent anchors and the server checks revisions/adjacency. Filters never imply permission. Selection ranges remain local to the visible page. dnd-kit provides keyboard sensors; move buttons provide an alternative.
+
+Bulk addLabels merges labels rather than replacing them and rejects any resulting count over ten atomically. Bulk undo uses returned server revisions, per-task previous values and one transaction; stale revisions, foreign tasks or expired restores reject the entire operation. Restore remains limited to 30 days. Calendar, Kanban cross-status dragging, Focus, reminders and templates remain phase E; virtualization and complete device/browser verification remain F.

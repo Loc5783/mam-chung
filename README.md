@@ -172,3 +172,10 @@ Apply tự sao lưu tasks/task_lists dưới `.local/task-migration-backups`. N�
 ### To-do List — Giai đoạn C
 
 Trang `/tasks` có sidebar danh sách thông minh, tiến độ hôm nay, nhóm việc, checkbox/hoàn tác5 giây, drawer tự lưu và tạo/lưu trữ/mở lại danh sách. Chặn ghi ngoại tuyến, rollback khi API lỗi. Natural-language quick add và kéo thả thuộc D; lịch/Focus/nhắc nhẹ thuộc E. Báo cáo và kiểm tra tay: [TASKS_PHASE_C.md](docs/TASKS_PHASE_C.md).
+
+
+### Công việc — thêm nhanh và tương tác
+
+Gõ `Đóng tiền nhà mai 9h !khẩn #hóa-đơn @tôi` để xem trước ngày, giờ, ưu tiên và nhãn trước khi lưu. Sửa/gỡ chip hoặc chọn giữ nguyên văn; dán nhiều dòng có xác nhận và lưu nguyên tử. Chọn một danh sách, đặt Thứ tự thủ công để kéo thả hoặc dùng nút lên/xuống. Checkbox chọn nhiều mở thanh thao tác hàng loạt; hoàn tác nhóm trong 5 giây kiểm tra đúng phiên bản dữ liệu. `?` mở hướng dẫn phím tắt. Trên điện thoại, vuốt phải để hoàn thành, trái mở dời hạn/xóa.
+
+Chi tiết và phạm vi kiểm chứng: [Giai đoạn D](docs/TASKS_PHASE_D.md).

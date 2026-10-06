@@ -1,3 +1,6 @@
+import { BulkActionBar } from "./components/BulkActionBar";
+import { SortableTaskList } from "./components/SortableTaskList";
+import { QuickAddBar } from "./components/QuickAddBar";
 import { SmartListSidebar, smartLists } from "./components/SmartListSidebar";
 import { TaskRow } from "./components/TaskRow";
 import { TaskHeader } from "./components/TaskHeader";
@@ -194,7 +197,6 @@ export function TasksPage() {
     [comments, setComments] = useState<Task | null>(null),
     [removing, setRemoving] = useState<Task | null>(null),
     [confirm, setConfirm] = useState(false),
-    [quickText, setQuickText] = useState(""),
     [creatingList, setCreatingList] = useState(false),
     [listName, setListName] = useState(""),
     [listScope, setListScope] = useState("personal"),
@@ -206,6 +208,24 @@ export function TasksPage() {
     } | null>(null),
     [selected, setSelected] = useState<Task | null>(null);
   const { selectedId, select } = useTaskUiStore();
+  const [chosen, setChosen] = useState<string[]>([]);
+  const [bulkUndo, setBulkUndo] = useState<{
+    items: {
+      id: string;
+      revision: number;
+      restore?: boolean;
+      changes?: Record<string, unknown>;
+    }[];
+  } | null>(null);
+  const undoBulk = useTaskMutation(
+    async () => apiClient.patch("/tasks/bulk-undo", bulkUndo),
+    () => setBulkUndo(null),
+  );
+  useEffect(() => {
+    if (!bulkUndo) return;
+    const timer = setTimeout(() => setBulkUndo(null), 5000);
+    return () => clearTimeout(timer);
+  }, [bulkUndo]);
   const online = useOnline();
   const archivedLists = params.get("archivedLists") === "1";
   useEffect(() => {
@@ -265,29 +285,18 @@ export function TasksPage() {
       archived: !list.archivedAt,
     }),
   );
-  const quick = useTaskMutation(
-    async () => {
-      if (!navigator.onLine) throw new globalThis.Error("Mất kết nối.");
-      return apiClient.post("/tasks", {
-        title: quickText.trim(),
-        scope:
-          activeList?.coupleId || scope === "shared" ? "shared" : "personal",
-        assignedTo: user.id,
-        ...(listId ? { listId } : {}),
-        ...(smart === "today"
-          ? { deadline: localInputDate(new Date(), user.timezone) }
-          : {}),
-      });
-    },
-    () => setQuickText(""),
-  );
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 250);
+    return () => clearTimeout(timer);
+  }, [search]);
   const filters = {
     scope,
     ...(smart !== "all" ? { smart } : {}),
     ...(listId ? { list: listId } : {}),
     status,
     priority,
-    search,
+    search: debouncedSearch,
     due,
     from,
     to,
@@ -350,36 +359,298 @@ export function TasksPage() {
       if (removing) write.mutate({ task: removing, remove: true });
     },
   };
+  useEffect(
+    () => setChosen([]),
+    [
+      page,
+      scope,
+      status,
+      priority,
+      search,
+      due,
+      from,
+      to,
+      sort,
+      kind,
+      label,
+      smart,
+      listId,
+    ],
+  );
+  const [mobileQuick, setMobileQuick] = useState(false),
+    [quickBusy, setQuickBusy] = useState(false);
+  const [shortcuts, setShortcuts] = useState(false);
+  const reschedule = useTaskMutation(
+    async ({ task, deadline }: { task: Task; deadline: string }) => ({
+      task,
+      saved: (
+        await apiClient.put<Task>(`/tasks/${task.id}`, {
+          revision: task.revision,
+          deadline,
+        })
+      ).data,
+    }),
+    (result) => {
+      const { task, saved } = result as { task: Task; saved: Task };
+      setUndo(null);
+      setBulkUndo({
+        items: [
+          {
+            id: saved.id,
+            revision: saved.revision,
+            changes: { deadline: task.deadline },
+          },
+        ],
+      });
+    },
+  );
   const readOnly = (q.data?.readOnly ?? !!cid) || !!activeList?.readOnly;
-  const render = (task: Task) => (
-    <TaskRow
-      key={task.id}
-      task={task}
-      members={members.data ?? { items: [], readOnly: false }}
-      listName={lists.find((l) => l.id === task.listId)?.name}
-      busy={write.isPending || !online}
-      onStatus={(status) => write.mutate({ task, status })}
-      onEdit={() => {
-        setSelected(task);
-        select(task.id);
-      }}
-      onComments={() => setComments(task)}
-      onDelete={() => {
-        setRemoving(task);
-        setConfirm(false);
-      }}
-      onCheck={(id, done) =>
+  useEffect(() => {
+    const handle = (event: KeyboardEvent) => {
+      const target =
+        event.target instanceof Element ? event.target : document.activeElement;
+      if (
+        target?.closest(
+          "input,textarea,select,[contenteditable=true],[data-drag-controls]",
+        ) ||
+        document.querySelector('[role="dialog"]') ||
+        event.altKey
+      )
+        return;
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toLowerCase() === "z" &&
+        bulkUndo
+      ) {
+        event.preventDefault();
+        if (!undoBulk.isPending) undoBulk.mutate();
+        return;
+      }
+      if (
+        (event.ctrlKey || event.metaKey) &&
+        event.key.toLowerCase() === "z" &&
+        undo
+      ) {
+        event.preventDefault();
+        undoAction();
+        return;
+      }
+      if (event.ctrlKey || event.metaKey) return;
+      const key = event.key.toLowerCase();
+      if (key === "?") {
+        event.preventDefault();
+        setShortcuts(true);
+        return;
+      }
+      if (key === "n" && !readOnly && online && listReady) {
+        event.preventDefault();
+        document
+          .querySelector<HTMLTextAreaElement>(
+            'textarea[aria-label="Thêm nhanh công việc"]',
+          )
+          ?.focus();
+        return;
+      }
+      if (key === "/") {
+        event.preventDefault();
+        const input = document.querySelector<HTMLInputElement>(
+          'input[aria-label="Tìm công việc"]',
+        );
+        const details = input?.closest("details");
+        if (details) details.open = true;
+        input?.focus();
+        return;
+      }
+      const rows = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-task-id]"),
+      );
+      const index = rows.findIndex((row) =>
+        row.contains(document.activeElement),
+      );
+      if (key === "j" || key === "k") {
+        event.preventDefault();
+        rows[
+          Math.max(0, Math.min(rows.length - 1, index + (key === "j" ? 1 : -1)))
+        ]
+          ?.querySelector<HTMLButtonElement>(".todo-title-button")
+          ?.focus();
+        return;
+      }
+      const task = q.data?.items.find(
+        (t) => t.id === rows[index]?.dataset.taskId,
+      );
+      if (!task || task.readOnly || write.isPending || !online) return;
+      if (key === "x") {
+        event.preventDefault();
         write.mutate({
           task,
-          checklist: task.checklist.map((i) =>
-            i.id === id ? { ...i, done } : i,
-          ),
-        })
+          status: task.status === "DONE" ? "TODO" : "DONE",
+        });
       }
-    />
+      if (key === "e") {
+        event.preventDefault();
+        setSelected(task);
+        select(task.id);
+      }
+      if (key === "t") {
+        event.preventDefault();
+        reschedule.mutate({
+          task,
+          deadline: localInputDate(new Date(), user.timezone),
+        });
+      }
+      if (key === "delete") {
+        event.preventDefault();
+        setRemoving(task);
+        setConfirm(false);
+      }
+    };
+    window.addEventListener("keydown", handle);
+    return () => window.removeEventListener("keydown", handle);
+  });
+  const render = (task: Task) => (
+    <div
+      key={task.id}
+      data-task-id={task.id}
+      onClickCapture={(e) => {
+        if (
+          (e.ctrlKey || e.metaKey || e.shiftKey) &&
+          !task.readOnly &&
+          !write.isPending &&
+          online &&
+          !(e.target as HTMLElement).closest("input")
+        ) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (e.shiftKey) {
+            const rows = q.data?.items ?? [],
+              last = rows.findIndex((t) => t.id === chosen.at(-1)),
+              current = rows.findIndex((t) => t.id === task.id);
+            if (last >= 0) {
+              setChosen((old) => [
+                ...new Set([
+                  ...old,
+                  ...rows
+                    .slice(Math.min(last, current), Math.max(last, current) + 1)
+                    .filter((t) => !t.readOnly)
+                    .map((t) => t.id),
+                ]),
+              ]);
+              return;
+            }
+          }
+          setChosen((old) =>
+            old.includes(task.id)
+              ? old.filter((id) => id !== task.id)
+              : [...old, task.id],
+          );
+        }
+      }}
+    >
+      <label className="todo-select">
+        <input
+          type="checkbox"
+          aria-label={`Chọn ${task.title}`}
+          checked={chosen.includes(task.id)}
+          onClick={(e) => {
+            if (e.shiftKey) {
+              const rows = q.data?.items ?? [];
+              const last = rows.findIndex((t) => t.id === chosen.at(-1)),
+                current = rows.findIndex((t) => t.id === task.id);
+              if (last >= 0 && current >= 0) {
+                e.preventDefault();
+                setChosen((old) => [
+                  ...new Set([
+                    ...old,
+                    ...rows
+                      .slice(
+                        Math.min(last, current),
+                        Math.max(last, current) + 1,
+                      )
+                      .filter((t) => !t.readOnly)
+                      .map((t) => t.id),
+                  ]),
+                ]);
+              }
+            }
+          }}
+          disabled={task.readOnly || write.isPending || !online}
+          onChange={(e) =>
+            setChosen((old) =>
+              e.target.checked
+                ? [...old, task.id]
+                : old.filter((id) => id !== task.id),
+            )
+          }
+        />{" "}
+        Chọn
+      </label>
+      <TaskRow
+        key={task.id}
+        task={task}
+        search={search}
+        onTomorrow={() => {
+          const now = new Date();
+          const today = localInputDate(now, user.timezone);
+          const next = new Date(today + "T12:00:00Z");
+          next.setUTCDate(next.getUTCDate() + 1);
+          reschedule.mutate({
+            task,
+            deadline: next.toISOString().slice(0, 10),
+          });
+        }}
+        members={members.data ?? { items: [], readOnly: false }}
+        listName={lists.find((l) => l.id === task.listId)?.name}
+        busy={write.isPending || !online}
+        onStatus={(status) => write.mutate({ task, status })}
+        onEdit={() => {
+          setSelected(task);
+          select(task.id);
+        }}
+        onComments={() => setComments(task)}
+        onDelete={() => {
+          setRemoving(task);
+          setConfirm(false);
+        }}
+        onCheck={(id, done) =>
+          write.mutate({
+            task,
+            checklist: task.checklist.map((i) =>
+              i.id === id ? { ...i, done } : i,
+            ),
+          })
+        }
+      />
+    </div>
   );
   return (
     <>
+      {shortcuts && (
+        <Modal title="Phím tắt công việc" onClose={() => setShortcuts(false)}>
+          <p>
+            N: thêm việc · /: tìm kiếm · J/K: lên/xuống · X: hoàn thành · E: chi
+            tiết · T: hạn hôm nay · Delete: xóa · Esc: đóng · Ctrl+Z: hoàn tác.
+          </p>
+          <p>Phím tắt không chạy khi bạn đang nhập nội dung.</p>
+        </Modal>
+      )}
+      {bulkUndo && (
+        <div className="todo-undo-toast" role="status">
+          <span>Đã cập nhật nhóm việc.</span>
+          <Button
+            disabled={!online || undoBulk.isPending}
+            onClick={() => undoBulk.mutate()}
+          >
+            Hoàn tác nhóm
+          </Button>
+          <button
+            aria-label="Đóng hoàn tác nhóm"
+            onClick={() => setBulkUndo(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
       {summary.isError && (
         <p role="alert" className="form-error">
           Chưa tải được tiến độ.{" "}
@@ -414,6 +685,7 @@ export function TasksPage() {
           }
           historyReadOnly={!!cid}
           readOnly={readOnly}
+          online={online}
           onSmart={(value) => {
             setParams(
               (previous) => {
@@ -472,32 +744,25 @@ export function TasksPage() {
             </p>
           )}
           {!readOnly && (
-            <form
-              className="todo-quick-add"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (quickText.trim() && online) quick.mutate();
+            <QuickAddBar
+              disabled={!online || !listReady || members.isPending}
+              context={{
+                timezone: user.timezone,
+                user: { id: user.id, name: user.name },
+                members: members.data?.items ?? [],
+                lists,
+                scope:
+                  activeList?.coupleId || scope === "shared"
+                    ? "shared"
+                    : "personal",
+                listId: listId || undefined,
+                deadline:
+                  smart === "today"
+                    ? localInputDate(new Date(), user.timezone)
+                    : undefined,
               }}
-            >
-              <Plus size={18} />
-              <input
-                aria-label="Thêm nhanh công việc"
-                placeholder="Thêm một việc nhỏ…"
-                value={quickText}
-                maxLength={160}
-                disabled={!online || !listReady || quick.isPending}
-                onChange={(e) => setQuickText(e.target.value)}
-              />
-              <Button
-                disabled={
-                  !online || !listReady || quick.isPending || !quickText.trim()
-                }
-              >
-                Thêm
-              </Button>
-            </form>
+            />
           )}
-          {quick.isError && <Error error={quick.error} />}{" "}
           {createList.isError && <Error error={createList.error} />}{" "}
           {archiveList.isError && <Error error={archiveList.error} />}
           {readOnly && (
@@ -505,6 +770,23 @@ export function TasksPage() {
               Đang xem công việc của hành trình đã lưu trữ · Chỉ đọc.
             </p>
           )}
+          {!!chosen.length && (
+            <BulkActionBar
+              tasks={(q.data?.items ?? []).filter((t) => chosen.includes(t.id))}
+              lists={lists}
+              members={members.data ?? { items: [], readOnly: false }}
+              disabled={!online || readOnly || write.isPending}
+              onUndo={(payload) => {
+                setUndo(null);
+                setBulkUndo(payload);
+              }}
+              onClear={() => setChosen([])}
+            />
+          )}
+          <p className="todo-swipe-hint">
+            Trên điện thoại: vuốt phải để hoàn thành, vuốt trái để dời hạn hoặc
+            xóa. Bấm ? để xem phím tắt.
+          </p>
           <div className="task-toolbar">
             <div role="tablist" onKeyDown={moveTabFocus} aria-label="Cách xem">
               <button
@@ -745,6 +1027,12 @@ export function TasksPage() {
                     ))}
                   </div>
                 </>
+              ) : sort === "manual" && listId ? (
+                <SortableTaskList
+                  tasks={q.data.items}
+                  render={render}
+                  disabled={readOnly || !online || write.isPending}
+                />
               ) : (
                 <div className="todo-groups">
                   {groupTasks(
@@ -889,10 +1177,41 @@ export function TasksPage() {
           disabled={
             !online || !listReady || members.isPending || members.isError
           }
-          onClick={() => setEditing(true)}
+          onClick={() => setMobileQuick(true)}
         >
           <Plus size={23} />
         </button>
+      )}
+      {mobileQuick && (
+        <Modal
+          title="Thêm nhanh công việc"
+          variant="drawer"
+          busy={quickBusy}
+          onClose={() => setMobileQuick(false)}
+        >
+          <div className="todo-mobile-quick-sheet">
+            <QuickAddBar
+              disabled={!online || !listReady || members.isPending}
+              onBusy={setQuickBusy}
+              onAdded={() => setMobileQuick(false)}
+              context={{
+                timezone: user.timezone,
+                user: { id: user.id, name: user.name },
+                members: members.data?.items ?? [],
+                lists,
+                scope:
+                  activeList?.coupleId || scope === "shared"
+                    ? "shared"
+                    : "personal",
+                listId: listId || undefined,
+                deadline:
+                  smart === "today"
+                    ? localInputDate(new Date(), user.timezone)
+                    : undefined,
+              }}
+            />
+          </div>
+        </Modal>
       )}
       {editing && members.data && !readOnly && listReady && (
         <TaskForm

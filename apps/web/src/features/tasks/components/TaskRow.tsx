@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useRef, useState } from "react";
 import {
   Check,
   Flag,
@@ -21,6 +21,8 @@ export const TaskRow = memo(function TaskRow({
   onDelete,
   onCheck,
   listName,
+  search = "",
+  onTomorrow,
 }: {
   task: Task;
   members: Members;
@@ -31,18 +33,74 @@ export const TaskRow = memo(function TaskRow({
   onDelete: () => void;
   onCheck: (id: string, done: boolean) => void;
   listName?: string;
+  search?: string;
+  onTomorrow?: () => void;
 }) {
   const user = useAuthStore((s) => s.user)!,
     today = localInputDate(new Date(), user.timezone),
     done = task.status === "DONE",
     disabled = task.readOnly || busy;
+  const gesture = useRef<{ x: number; y: number } | null>(null),
+    [swipeActions, setSwipeActions] = useState(false);
+  const term = search.trim(),
+    at = term
+      ? task.title.toLocaleLowerCase().indexOf(term.toLocaleLowerCase())
+      : -1;
   const name =
     task.assignedTo === user.id
       ? user.name
       : (members.items.find((m) => m.id === task.assignedTo)?.name ??
         "Chưa giao");
   return (
-    <article className={`todo-row ${done ? "is-done" : ""}`}>
+    <article
+      className={`todo-row ${done ? "is-done" : ""}`}
+      onPointerDown={(e) => {
+        if (
+          e.pointerType !== "touch" ||
+          disabled ||
+          (e.target as HTMLElement).closest("button,input,select,a,textarea")
+        )
+          return;
+        gesture.current = { x: e.clientX, y: e.clientY };
+      }}
+      onPointerCancel={() => {
+        gesture.current = null;
+      }}
+      onPointerUp={(e) => {
+        const start = gesture.current;
+        gesture.current = null;
+        if (!start || disabled) return;
+        const dx = e.clientX - start.x,
+          dy = e.clientY - start.y;
+        if (Math.abs(dx) < 80 || Math.abs(dx) < Math.abs(dy) * 2) return;
+        if (dx > 0) {
+          if (!done) onStatus("DONE");
+        } else setSwipeActions(true);
+      }}
+    >
+      {swipeActions && (
+        <div className="todo-swipe-actions">
+          <button
+            disabled={disabled}
+            onClick={() => {
+              onTomorrow?.();
+              setSwipeActions(false);
+            }}
+          >
+            Dời sang ngày mai
+          </button>
+          <button
+            disabled={disabled}
+            onClick={() => {
+              onDelete();
+              setSwipeActions(false);
+            }}
+          >
+            Xóa
+          </button>
+          <button onClick={() => setSwipeActions(false)}>Đóng</button>
+        </div>
+      )}
       <button
         role="checkbox"
         aria-checked={done}
@@ -59,7 +117,15 @@ export const TaskRow = memo(function TaskRow({
             {task.status === "IN_PROGRESS" && (
               <span className="todo-working-dot" />
             )}
-            {task.title}
+            {at < 0 ? (
+              task.title
+            ) : (
+              <>
+                {task.title.slice(0, at)}
+                <mark>{task.title.slice(at, at + term.length)}</mark>
+                {task.title.slice(at + term.length)}
+              </>
+            )}
           </h3>
         </button>
         <p className="todo-row-caption">

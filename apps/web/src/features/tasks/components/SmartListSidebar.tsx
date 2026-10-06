@@ -1,3 +1,4 @@
+import { SortableLists } from "./SortableLists";
 import { Heart, Plus, Sprout, Archive } from "lucide-react";
 import type { TaskList } from "../types";
 export const smartLists = [
@@ -12,6 +13,7 @@ export const smartLists = [
   ["done", "Đã hoàn thành"],
 ] as const;
 export function SmartListSidebar({
+  online = true,
   smart,
   listId,
   lists,
@@ -32,6 +34,7 @@ export function SmartListSidebar({
   onToggleArchive,
   historyReadOnly,
 }: {
+  online?: boolean;
   smart: string;
   listId: string;
   lists: TaskList[];
@@ -83,9 +86,10 @@ export function SmartListSidebar({
         {[false, true].map((shared) => (
           <section key={String(shared)}>
             <h3>{shared ? "Danh sách chung" : "Danh sách của tôi"}</h3>
-            {lists
-              .filter((l) => !!l.coupleId === shared)
-              .map((l) => (
+            <SortableLists
+              lists={lists.filter((l) => !!l.coupleId === shared)}
+              disabled={!online || readOnly || historyReadOnly || archived}
+              render={(l) => (
                 <div className="todo-list-link" key={l.id}>
                   <button
                     aria-current={listId === l.id ? "page" : undefined}
@@ -117,7 +121,8 @@ export function SmartListSidebar({
                       </button>
                     )}
                 </div>
-              ))}
+              )}
+            />
           </section>
         ))}
         {!readOnly && (

@@ -120,3 +120,7 @@ export const commentsQuery = pagination
 export const comment = z
   .object({ text: z.string().trim().min(1, "Nhập bình luận.").max(500) })
   .strict();
+
+export const quickAdd = z
+  .object({ items: z.array(create).min(1).max(100) })
+  .strict();

@@ -1,3 +1,4 @@
+import { SortableTaskList } from "../features/tasks/components/SortableTaskList";
 import {
   render,
   screen,
@@ -466,6 +467,199 @@ it("completion inside the focus-trapped drawer has an accessible undo action", a
     expect(apiClient.patch).toHaveBeenLastCalledWith("/tasks/task/status", {
       revision: 1,
       status: "TODO",
+    }),
+  );
+});
+
+it("natural quick add previews metadata and sends recognized fields", async () => {
+  mount(<TasksPage />);
+  await screen.findByRole("heading", { name: "Việc thử" });
+  const input = screen.getByLabelText("Thêm nhanh công việc");
+  await userEvent.type(input, "Trả tiền mai 9h !cao #nhà @tôi");
+  expect(screen.getByText("Ưu tiên: Cao")).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "Thêm" }));
+  await waitFor(() =>
+    expect(apiClient.post).toHaveBeenCalledWith(
+      "/tasks",
+      expect.objectContaining({
+        title: "Trả tiền",
+        priority: "HIGH",
+        deadlineTime: "09:00",
+        labels: ["nhà"],
+      }),
+    ),
+  );
+});
+it("removed quick-add chip becomes literal title again", async () => {
+  mount(<TasksPage />);
+  await screen.findByRole("heading", { name: "Việc thử" });
+  await userEvent.type(
+    screen.getByLabelText("Thêm nhanh công việc"),
+    "Tập !cao",
+  );
+  await userEvent.click(screen.getByLabelText("Gỡ !cao"));
+  await userEvent.click(screen.getByRole("button", { name: "Thêm" }));
+  await waitFor(() =>
+    expect(apiClient.post).toHaveBeenCalledWith(
+      "/tasks",
+      expect.objectContaining({ title: "Tập !cao", priority: "MEDIUM" }),
+    ),
+  );
+});
+it("multiline requires confirmation and retains text when server rejects batch", async () => {
+  vi.mocked(apiClient.post).mockRejectedValueOnce(
+    new Error("Không thể lưu nhóm"),
+  );
+  mount(<TasksPage />);
+  await screen.findByRole("heading", { name: "Việc thử" });
+  fireEvent.change(screen.getByLabelText("Thêm nhanh công việc"), {
+    target: { value: "Việc một\nViệc hai" },
+  });
+  await userEvent.click(screen.getByRole("button", { name: "Thêm" }));
+  expect(apiClient.post).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole("button", { name: "Xác nhận thêm" }));
+  await waitFor(() =>
+    expect(apiClient.post).toHaveBeenCalledWith(
+      "/tasks/quick-add",
+      expect.objectContaining({
+        items: expect.arrayContaining([
+          expect.objectContaining({ title: "Việc một" }),
+          expect.objectContaining({ title: "Việc hai" }),
+        ]),
+      }),
+    ),
+  );
+  await screen.findByText("Có lỗi xảy ra. Vui lòng thử lại.");
+  expect(screen.getByLabelText("Thêm nhanh công việc")).toHaveValue(
+    "Việc một\nViệc hai",
+  );
+});
+it("selecting tasks shows atomic bulk actions", async () => {
+  mount(<TasksPage />);
+  await screen.findByRole("heading", { name: "Việc thử" });
+  await userEvent.click(screen.getByLabelText("Chọn Việc thử"));
+  await userEvent.click(
+    screen.getByRole("button", { name: "Hoàn thành đã chọn" }),
+  );
+  await waitFor(() =>
+    expect(apiClient.patch).toHaveBeenCalledWith("/tasks/bulk", {
+      action: "update",
+      items: [{ id: "task", revision: 0 }],
+      changes: { status: "DONE" },
+    }),
+  );
+});
+it("keyboard shortcuts focus quick add without intercepting typed letters", async () => {
+  mount(<TasksPage />);
+  await screen.findByRole("heading", { name: "Việc thử" });
+  fireEvent.keyDown(window, { key: "n" });
+  expect(screen.getByLabelText("Thêm nhanh công việc")).toHaveFocus();
+  fireEvent.keyDown(screen.getByLabelText("Thêm nhanh công việc"), {
+    key: "?",
+  });
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  screen.getByLabelText("Thêm nhanh công việc").blur();
+  fireEvent.keyDown(window, { key: "?" });
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+});
+
+it("manual reorder resolves real neighbors outside the rendered page", async () => {
+  const second = { ...original, id: "second", title: "Thứ hai" },
+    hidden = { ...original, id: "hidden", title: "Trang trước" };
+  vi.mocked(apiClient.get).mockResolvedValue({
+    data: {
+      items: [hidden, original, second],
+      total: 3,
+      page: 1,
+      limit: 100,
+      readOnly: false,
+    },
+  });
+  mount(
+    <SortableTaskList
+      tasks={[original, second]}
+      render={(t) => <p>{t.title}</p>}
+      disabled={false}
+    />,
+  );
+  await userEvent.click(screen.getByLabelText("Đưa Thứ hai lên"));
+  await waitFor(() =>
+    expect(apiClient.patch).toHaveBeenCalledWith("/tasks/reorder", {
+      id: "second",
+      revision: 0,
+      afterId: "hidden",
+      beforeId: "task",
+    }),
+  );
+});
+it("offline manual reorder controls are disabled", () => {
+  mount(
+    <SortableTaskList
+      tasks={[original]}
+      render={(t) => <p>{t.title}</p>}
+      disabled
+    />,
+  );
+  expect(screen.getByLabelText("Kéo sắp xếp Việc thử")).toBeDisabled();
+  expect(screen.getByLabelText("Đưa Việc thử lên")).toBeDisabled();
+});
+function touch(element: HTMLElement, type: string, x: number, y: number) {
+  const event = new Event(type, { bubbles: true });
+  Object.defineProperties(event, {
+    pointerType: { value: "touch" },
+    clientX: { value: x },
+    clientY: { value: y },
+  });
+  fireEvent(element, event);
+}
+it("horizontal mobile swipe completes and vertical scrolling does not", async () => {
+  mount(<TasksPage />);
+  const row = (
+    await screen.findByRole("heading", { name: "Việc thử" })
+  ).closest("article")!;
+  touch(row, "pointerdown", 10, 10);
+  touch(row, "pointerup", 100, 200);
+  expect(apiClient.patch).not.toHaveBeenCalled();
+  touch(row, "pointerdown", 10, 10);
+  touch(row, "pointerup", 120, 12);
+  await waitFor(() =>
+    expect(apiClient.patch).toHaveBeenCalledWith("/tasks/task/status", {
+      status: "DONE",
+      revision: 0,
+    }),
+  );
+});
+it("left swipe exposes actions rather than deleting silently", async () => {
+  mount(<TasksPage />);
+  const row = (
+    await screen.findByRole("heading", { name: "Việc thử" })
+  ).closest("article")!;
+  touch(row, "pointerdown", 180, 10);
+  touch(row, "pointerup", 40, 12);
+  expect(
+    screen.getByRole("button", { name: "Dời sang ngày mai" }),
+  ).toBeInTheDocument();
+  expect(apiClient.delete).not.toHaveBeenCalled();
+});
+
+it("bulk undo uses returned revisions and original per-item state", async () => {
+  vi.mocked(apiClient.patch).mockImplementation(async (url) =>
+    url === "/tasks/bulk"
+      ? { data: { items: [{ ...task, status: "DONE", revision: 1 }] } }
+      : { data: { items: [{ ...task, revision: 2 }] } },
+  );
+  mount(<TasksPage />);
+  await screen.findByRole("heading", { name: "Việc thử" });
+  await userEvent.click(screen.getByLabelText("Chọn Việc thử"));
+  await userEvent.click(
+    screen.getByRole("button", { name: "Hoàn thành đã chọn" }),
+  );
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Hoàn tác nhóm" }),
+  );
+  await waitFor(() =>
+    expect(apiClient.patch).toHaveBeenCalledWith("/tasks/bulk-undo", {
+      items: [{ id: "task", revision: 1, changes: { status: "TODO" } }],
     }),
   );
 });

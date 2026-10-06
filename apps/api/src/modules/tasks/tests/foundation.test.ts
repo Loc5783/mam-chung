@@ -672,3 +672,135 @@ it("summary and restore HTTP routes authenticate and return the new contracts", 
     .expect(200);
   expect(restored.body.id).toBe(t.id);
 });
+
+it("quick-add creates a validated batch and uses token ownership", async () => {
+  const result = await tasks.quickAdd(a, {
+    items: [
+      { title: "Riêng", assignedTo: a },
+      { title: "Chung", scope: "shared", assignedTo: b },
+    ],
+  });
+  expect(result.items).toHaveLength(2);
+  expect(result.items[0].createdBy).toBe(a);
+  expect(result.items[1].coupleId).toBe(cid);
+  expect((await tasks.list(b, {})).items.map((t) => t.title)).toEqual([
+    "Chung",
+  ]);
+});
+it("quick-add rolls back every item and default list when any item is unauthorized", async () => {
+  await expect(
+    tasks.quickAdd(c, {
+      items: [{ title: "Hợp lệ" }, { title: "Sai", scope: "shared" }],
+    }),
+  ).rejects.toMatchObject({ status: 404 });
+  expect(await Task.countDocuments()).toBe(0);
+  expect(await TaskList.countDocuments({ ownerId: c })).toBe(0);
+});
+it("quick-add rejects forged ownership, empty and oversized batches", async () => {
+  for (const raw of [
+    { items: [] },
+    { items: Array.from({ length: 101 }, () => ({ title: "Việc" })) },
+    { items: [{ title: "X", createdBy: b }] },
+    { items: [{ title: "X", coupleId: cid }] },
+  ])
+    await expect(tasks.quickAdd(a, raw)).rejects.toBeDefined();
+  expect(await Task.countDocuments()).toBe(0);
+});
+it("quick-add HTTP endpoint authenticates and rejects the whole invalid batch", async () => {
+  await RefreshToken.create({
+    userId: a,
+    tokenHash: "a".repeat(64),
+    family: "a",
+    securityVersion: 0,
+    expiresAt: new Date(Date.now() + 86400000),
+  });
+  const app = createApp(),
+    token = jwt.sign({ version: 0, family: "a" }, process.env.JWT_SECRET!, {
+      subject: a,
+      issuer: "mam-chung",
+      audience: "mam-chung-web",
+      expiresIn: "15m",
+    });
+  await request(app)
+    .post("/api/tasks/quick-add")
+    .send({ items: [{ title: "X" }] })
+    .expect(401);
+  await request(app)
+    .post("/api/tasks/quick-add")
+    .set("Authorization", `Bearer ${token}`)
+    .send({ items: [{ title: "X" }, { title: "" }] })
+    .expect(400);
+  expect(await Task.countDocuments()).toBe(0);
+});
+
+it("bulk attaches labels without removing existing labels and rolls back on overflow", async () => {
+  const first = await create({ labels: ["cũ"] }),
+    second = await create({
+      labels: Array.from({ length: 10 }, (_, i) => `nhãn${i}`),
+    });
+  await ops.bulk(a, {
+    action: "update",
+    items: [{ id: first.id, revision: 0 }],
+    changes: { addLabels: ["mới"] },
+  });
+  expect((await tasks.get(a, first.id)).labels).toEqual(["cũ", "mới"]);
+  await expect(
+    ops.bulk(a, {
+      action: "update",
+      items: [
+        { id: first.id, revision: 1 },
+        { id: second.id, revision: 0 },
+      ],
+      changes: { addLabels: ["thêm"] },
+    }),
+  ).rejects.toMatchObject({ code: "LABEL_LIMIT" });
+  expect((await tasks.get(a, first.id)).labels).toEqual(["cũ", "mới"]);
+});
+
+it("bulk undo restores per-item state atomically and refuses stale revisions", async () => {
+  const first = await create(),
+    second = await create();
+  await tasks.status(a, second.id, { revision: 0, status: "IN_PROGRESS" });
+  const changed = await ops.bulk(a, {
+    action: "update",
+    items: [
+      { id: first.id, revision: 0 },
+      { id: second.id, revision: 1 },
+    ],
+    changes: { status: "DONE" },
+  });
+  const payload = {
+    items: changed.items.map((t) => ({
+      id: t.id,
+      revision: t.revision,
+      changes: { status: t.id === first.id ? "TODO" : "IN_PROGRESS" },
+    })),
+  };
+  await ops.undo(a, payload);
+  expect((await tasks.get(a, first.id)).status).toBe("TODO");
+  expect((await tasks.get(a, second.id)).status).toBe("IN_PROGRESS");
+  await expect(ops.undo(a, payload)).rejects.toMatchObject({ status: 409 });
+  expect((await tasks.get(a, first.id)).revision).toBe(2);
+});
+it("bulk undo restores soft-deleted tasks and rejects foreign resources", async () => {
+  const first = await create(),
+    second = await create();
+  const result = await ops.bulk(a, {
+    action: "delete",
+    items: [
+      { id: first.id, revision: 0 },
+      { id: second.id, revision: 0 },
+    ],
+  });
+  const payload = {
+    items: result.items.map((t) => ({
+      id: t.id,
+      revision: t.revision,
+      restore: true,
+    })),
+  };
+  await expect(ops.undo(c, payload)).rejects.toMatchObject({ status: 404 });
+  expect(await Task.countDocuments({ deletedAt: null })).toBe(0);
+  await ops.undo(a, payload);
+  expect(await Task.countDocuments({ deletedAt: null })).toBe(2);
+});

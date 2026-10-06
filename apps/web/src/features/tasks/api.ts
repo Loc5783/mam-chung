@@ -17,7 +17,7 @@ export function useTasksQuery<T>(
 }
 export function useTaskMutation<T>(
   run: (v: T) => Promise<unknown>,
-  done: () => void = () => {},
+  done: (result: unknown) => void = () => {},
 ) {
   const client = useQueryClient(),
     notify = useUiStore((s) => s.notify);
@@ -36,7 +36,7 @@ export function useTaskMutation<T>(
     }),
     onSuccess: (_r, _v, c) => {
       if (c?.epoch !== getSessionEpoch()) return;
-      done();
+      done(_r);
       void client.invalidateQueries({ queryKey: ["dashboard", c?.id] });
       void client.invalidateQueries({ queryKey: ["notifications", c?.id] });
       notify("Đã cập nhật công việc.");

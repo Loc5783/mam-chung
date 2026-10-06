@@ -6,7 +6,7 @@ import {
   listDelete,
   reorderInput,
 } from "./lists";
-import { taskOperations, bulkInput } from "./operations";
+import { taskOperations, bulkInput, bulkUndoInput } from "./operations";
 import { Router } from "express";
 import { auth } from "../../middlewares/auth";
 import { asyncHandler } from "../../utils/asyncHandler";
@@ -58,6 +58,20 @@ export function taskRoutes() {
       await lists.remove(req.user!.id, req.params.id, req.body);
       res.sendStatus(204);
     }),
+  );
+  r.post(
+    "/tasks/quick-add",
+    validate(z.quickAdd),
+    asyncHandler(async (req, res) =>
+      res.status(201).json(await s.quickAdd(req.user!.id, req.body)),
+    ),
+  );
+  r.patch(
+    "/tasks/bulk-undo",
+    validate(bulkUndoInput),
+    asyncHandler(async (req, res) =>
+      res.json(await taskOperations.undo(req.user!.id, req.body)),
+    ),
   );
   r.patch(
     "/tasks/reorder",

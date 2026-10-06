@@ -25,7 +25,14 @@ import { missing } from "./access";
 const bulkChanges = z
   .object(fields)
   .partial()
-  .extend({ status: status.optional() })
+  .extend({
+    status: status.optional(),
+    addLabels: z
+      .array(z.string().trim().min(1).max(30))
+      .min(1)
+      .max(10)
+      .optional(),
+  })
   .strict()
   .refine((v) => Object.keys(v).length > 0, "Chưa có thay đổi.");
 const items = z
@@ -46,7 +53,96 @@ export const bulkInput = z.discriminatedUnion("action", [
     .strict(),
   z.object({ action: z.literal("delete"), items }).strict(),
 ]);
+export const bulkUndoInput = z
+  .object({
+    items: z
+      .array(
+        z
+          .object({
+            id: objectId,
+            revision: z.number().int().nonnegative(),
+            restore: z.boolean().optional(),
+            changes: z
+              .object({
+                status: status.optional(),
+                listId: fields.listId.optional(),
+                deadline: fields.deadline.optional(),
+                priority: fields.priority.optional(),
+                assignedTo: fields.assignedTo.optional(),
+                labels: fields.labels.optional(),
+              })
+              .strict()
+              .optional(),
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(100)
+      .refine(
+        (a) => new Set(a.map((i) => i.id)).size === a.length,
+        "Mã công việc bị trùng.",
+      ),
+  })
+  .strict();
 export const taskOperations = {
+  async undo(actor: string, raw: unknown) {
+    const input = bulkUndoInput.parse(raw);
+    return inTransaction(async (s) => {
+      const result = [];
+      for (const item of [...input.items].sort((a, b) =>
+        a.id.localeCompare(b.id),
+      )) {
+        const { t, u } = await task(actor, item.id, s, true, !!item.restore);
+        revision(t, item.revision);
+        if (item.restore) {
+          if (
+            !t.deletedAt ||
+            Date.now() - t.deletedAt.getTime() > 30 * 86400000
+          )
+            throw new AppError(
+              410,
+              "RESTORE_EXPIRED",
+              "Đã quá thời hạn khôi phục 30 ngày.",
+            );
+          t.deletedAt = null;
+        }
+        const { status: next, ...updates } = item.changes ?? {};
+        if (updates.listId !== undefined) {
+          const list = updates.listId
+            ? (await listAccess(actor, updates.listId, s, true)).list
+            : await ensureInbox(
+                t.coupleId
+                  ? { coupleId: t.coupleId.toString() }
+                  : { ownerId: actor },
+                s,
+              );
+          if (
+            (list.coupleId?.toString() ?? null) !==
+            (t.coupleId?.toString() ?? null)
+          )
+            throw missing();
+          if (list.id !== t.listId?.toString())
+            t.position = await appendTaskPosition(list.id, s);
+          updates.listId = list.id;
+        }
+        const oldAssignee = t.assignedTo?.toString(),
+          oldDeadline = t.deadline;
+        Object.assign(t, updates);
+        if (oldAssignee !== t.assignedTo?.toString()) t.assignmentVersion++;
+        if (oldDeadline !== t.deadline)
+          t.anchorDay = t.deadline ? Number(t.deadline.slice(8)) : null;
+        validateTaskDates(t);
+        validateRecurrence(t);
+        await validateAssignment(t, actor, s);
+        if (next) await change(t, next, s, actor);
+        t.revision++;
+        await t.save({ session: s });
+        await event(t, u, "đã hoàn tác thay đổi công việc chung.", s);
+        result.push(dto(t));
+      }
+      return { items: result };
+    });
+  },
   async reorder(actor: string, raw: unknown) {
     const input = reorderInput.parse(raw);
     return inTransaction(async (s) => {
@@ -100,7 +196,13 @@ export const taskOperations = {
       // Validate every resulting task before applying any save/status recurrence.
       for (const { t, u } of contexts) {
         if (input.action === "delete") continue;
-        const { status: _, ...fields } = input.changes;
+        const { status: _, addLabels, ...fields } = input.changes;
+        if (addLabels) {
+          const labels = [...new Set([...t.labels, ...addLabels])];
+          if (labels.length > 10)
+            throw new AppError(400, "LABEL_LIMIT", "Tối đa 10 nhãn mỗi việc.");
+          t.labels = labels;
+        }
         void _;
         if (fields.listId !== undefined) {
           const target = fields.listId

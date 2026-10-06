@@ -222,6 +222,50 @@ export function validateTaskDates(t: {
       "Bật hạn có giờ để lưu giờ hạn.",
     );
 }
+export async function createTask(
+  id: string,
+  input: ReturnType<typeof schema.create.parse>,
+  s: ClientSession,
+) {
+  const u = await user(id, s, true);
+  let coupleId: string | null = null;
+  if (input.scope === "shared") {
+    coupleId = u.coupleId?.toString() ?? null;
+    if (!coupleId) throw missing();
+    await shared(id, coupleId, s, true);
+  }
+  const { scope: _, ...fields } = input;
+  void _;
+  const list = fields.listId
+    ? (await listAccess(id, fields.listId, s, true)).list
+    : await ensureInbox(coupleId ? { coupleId } : { ownerId: id }, s);
+  if ((list.coupleId?.toString() ?? null) !== coupleId) throw missing();
+  validateTaskDates({
+    ...fields,
+    deadlineTimezone: fields.deadlineTimezone ?? u.timezone,
+  });
+  validateRecurrence(fields);
+  await validateAssignment({ ...fields, coupleId }, id, s);
+  const [t] = await Task.create(
+    [
+      {
+        ...fields,
+        listId: list._id,
+        position: await appendTaskPosition(list.id, s),
+        deadlineTimezone: fields.deadlineHasTime
+          ? (fields.deadlineTimezone ?? u.timezone)
+          : null,
+        coupleId,
+        createdBy: id,
+        creatorName: u.name,
+        anchorDay: fields.deadline ? Number(fields.deadline.slice(8)) : null,
+      },
+    ],
+    { session: s },
+  );
+  await event(t, u, "đã tạo một công việc chung.", s);
+  return dto(t);
+}
 export const taskService = {
   async summary(id: string, raw: unknown) {
     const q = schema.readQuery.parse(raw);
@@ -374,47 +418,15 @@ export const taskService = {
   },
   async create(id: string, raw: unknown) {
     const input = schema.create.parse(raw);
+    return inTransaction((s) => createTask(id, input, s));
+  },
+  async quickAdd(id: string, raw: unknown) {
+    const input = schema.quickAdd.parse(raw);
     return inTransaction(async (s) => {
-      const u = await user(id, s, true);
-      let coupleId: string | null = null;
-      if (input.scope === "shared") {
-        coupleId = u.coupleId?.toString() ?? null;
-        if (!coupleId) throw missing();
-        await shared(id, coupleId, s, true);
-      }
-      const { scope: _, ...fields } = input;
-      void _;
-      const list = fields.listId
-        ? (await listAccess(id, fields.listId, s, true)).list
-        : await ensureInbox(coupleId ? { coupleId } : { ownerId: id }, s);
-      if ((list.coupleId?.toString() ?? null) !== coupleId) throw missing();
-      validateTaskDates({
-        ...fields,
-        deadlineTimezone: fields.deadlineTimezone ?? u.timezone,
-      });
-      validateRecurrence(fields);
-      await validateAssignment({ ...fields, coupleId }, id, s);
-      const [t] = await Task.create(
-        [
-          {
-            ...fields,
-            listId: list._id,
-            position: await appendTaskPosition(list.id, s),
-            deadlineTimezone: fields.deadlineHasTime
-              ? (fields.deadlineTimezone ?? u.timezone)
-              : null,
-            coupleId,
-            createdBy: id,
-            creatorName: u.name,
-            anchorDay: fields.deadline
-              ? Number(fields.deadline.slice(8))
-              : null,
-          },
-        ],
-        { session: s },
-      );
-      await event(t, u, "đã tạo một công việc chung.", s);
-      return dto(t);
+      const items = [];
+      for (const value of input.items)
+        items.push(await createTask(id, value, s));
+      return { items };
     });
   },
   async list(id: string, raw: unknown) {
