@@ -1,3 +1,12 @@
+import { SmartListSidebar, smartLists } from "./components/SmartListSidebar";
+import { TaskRow } from "./components/TaskRow";
+import { TaskHeader } from "./components/TaskHeader";
+import { TaskGroup, TaskSkeleton } from "./components/TaskGroup";
+import { TaskDetailDrawer } from "./components/TaskDetailDrawer";
+import { groupTasks } from "./lib/dateLabels";
+import { useOnline } from "./lib/useOnline";
+import { useTaskUiStore } from "./store";
+import { useTaskWrite } from "./useTaskWrite";
 import { moveTabFocus } from "../../components/ui/tabs";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -7,7 +16,16 @@ import { Modal } from "../../components/ui/Modal";
 import { apiClient, errorMessage } from "../../lib/apiClient";
 import { localInputDate } from "../finance/api";
 import { useAuthStore } from "../auth/store";
-import { Task, TaskPage, Members, Status, statuses, priorities } from "./types";
+import {
+  Task,
+  TaskPage,
+  TaskList,
+  TaskListPage,
+  Members,
+  Status,
+  statuses,
+  priorities,
+} from "./types";
 import { useTaskMutation, useTasksQuery } from "./api";
 import { TaskForm } from "./TaskForm";
 type CommentPage = {
@@ -38,7 +56,7 @@ function Comments({ task, onClose }: { task: Task; onClose: () => void }) {
       busy={add.isPending}
     >
       {q.isPending ? (
-        <Skeleton />
+        <TaskSkeleton />
       ) : q.isError ? (
         <Error error={q.error} />
       ) : (
@@ -132,169 +150,73 @@ function Pager({
     </div>
   );
 }
-function TaskCard({
-  task,
-  members,
-  busy,
-  onStatus,
-  onEdit,
-  onComments,
-  onDelete,
-  onCheck,
-}: {
-  task: Task;
-  members: Members;
-  busy: boolean;
-  onStatus: (s: Status) => void;
-  onEdit: () => void;
-  onComments: () => void;
-  onDelete: () => void;
-  onCheck: (id: string, done: boolean) => void;
-}) {
-  const user = useAuthStore((s) => s.user)!;
-  const today = localInputDate(new Date(), user.timezone);
-  const late =
-    !!task.deadline &&
-    task.deadline < today &&
-    !["DONE", "CANCELLED"].includes(task.status);
-  return (
-    <article className={`task-card ${late ? "task-overdue" : ""}`}>
-      <div className="task-meta">
-        <span
-          className={`task-priority priority-${task.priority.toLowerCase()}`}
-        >
-          {priorities[task.priority]}
-        </span>
-        <span>
-          {task.coupleId ? "Chung" : "Cá nhân"}{" "}
-          {task.kind === "shopping" ? "· Mua sắm" : ""}
-        </span>
-      </div>
-      <h3>{task.title}</h3>
-      {task.description && (
-        <p className="task-description">{task.description}</p>
-      )}
-      <div className="task-meta">
-        <span>
-          {task.deadline
-            ? `Hạn ${task.deadline}${late ? " · Quá hạn" : ""}`
-            : "Không hạn chót"}
-        </span>
-        <span>
-          {task.assignedTo === user.id
-            ? "Giao cho tôi"
-            : (members.items.find((m) => m.id === task.assignedTo)?.name ??
-              (task.assignedTo ? "Người tạo" : "Chưa giao"))}
-        </span>
-      </div>
-      {task.recurrence !== "none" && (
-        <small>
-          Lặp{" "}
-          {
-            (
-              {
-                daily: "hằng ngày",
-                weekly: "hằng tuần",
-                monthly: "hằng tháng",
-              } as const
-            )[task.recurrence]
-          }
-        </small>
-      )}
-      {task.labels.length > 0 && (
-        <div className="task-labels">
-          {task.labels.map((l) => (
-            <span key={l}>{l}</span>
-          ))}
-        </div>
-      )}
-      {task.checklist.length > 0 && (
-        <div className="task-checklist">
-          <small>
-            {task.checklist.filter((i) => i.done).length}/
-            {task.checklist.length}{" "}
-            {task.kind === "shopping" ? "món đã mua" : "việc con"}
-          </small>
-          {task.checklist.map((i) => (
-            <label key={i.id} className="checkbox-label">
-              <input
-                type="checkbox"
-                aria-label={`${task.title}: ${i.text}`}
-                checked={i.done}
-                disabled={task.readOnly || busy}
-                onChange={(e) => onCheck(i.id, e.target.checked)}
-              />
-              <span className={i.done ? "task-checked" : ""}>{i.text}</span>
-            </label>
-          ))}
-        </div>
-      )}
-      {task.completedAt && (
-        <small>
-          Hoàn thành{" "}
-          {new Date(task.completedAt).toLocaleDateString("vi-VN", {
-            timeZone: user.timezone,
-          })}
-        </small>
-      )}
-      <div className="task-actions">
-        <label>
-          Trạng thái
-          <select
-            aria-label={`Trạng thái ${task.title}`}
-            disabled={task.readOnly || busy}
-            value={task.status}
-            onChange={(e) => onStatus(e.target.value as Status)}
-          >
-            {Object.entries(statuses).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </label>
-        {!task.readOnly && (
-          <>
-            <Button className="button-outline" onClick={onEdit} disabled={busy}>
-              Sửa
-            </Button>
-            <Button
-              className="button-outline"
-              onClick={onDelete}
-              disabled={busy}
-            >
-              Xóa
-            </Button>
-          </>
-        )}
-        {task.coupleId && (
-          <Button className="button-outline" onClick={onComments}>
-            Bình luận
-          </Button>
-        )}
-      </div>
-    </article>
-  );
-}
 export function TasksPage() {
   const [params, setParams] = useSearchParams();
   const cid = params.get("coupleId") ?? "";
-  const [scope, setScope] = useState("all"),
-    [status, setStatus] = useState(""),
-    [priority, setPriority] = useState(""),
-    [search, setSearch] = useState(""),
-    [due, setDue] = useState(""),
-    [from, setFrom] = useState(""),
-    [to, setTo] = useState(""),
-    [sort, setSort] = useState("deadline"),
-    [kind, setKind] = useState(""),
-    [label, setLabel] = useState(""),
-    [view, setView] = useState("list"),
-    [page, setPage] = useState(1),
+  const scope = params.get("scope") ?? "all",
+    status = params.get("status") ?? "",
+    priority = params.get("priority") ?? "",
+    search = params.get("search") ?? "",
+    due = params.get("due") ?? "",
+    from = params.get("from") ?? "",
+    to = params.get("to") ?? "",
+    sort = params.get("sort") ?? "deadline",
+    kind = params.get("kind") ?? "",
+    label = params.get("label") ?? "",
+    view = params.get("view") ?? "list",
+    smart = params.get("smart") ?? "all",
+    listId = params.get("list") ?? "",
+    groupBy = params.get("group") ?? "deadline";
+  function update(name: string, value: string) {
+    setParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        if (value) next.set(name, value);
+        else next.delete(name);
+        return next;
+      },
+      { replace: true },
+    );
+  }
+  const setScope = (v: string) => update("scope", v),
+    setStatus = (v: string) => update("status", v),
+    setPriority = (v: string) => update("priority", v),
+    setSearch = (v: string) => update("search", v),
+    setDue = (v: string) => update("due", v),
+    setFrom = (v: string) => update("from", v),
+    setTo = (v: string) => update("to", v),
+    setSort = (v: string) => update("sort", v),
+    setKind = (v: string) => update("kind", v),
+    setLabel = (v: string) => update("label", v),
+    setView = (v: string) => update("view", v);
+  const [page, setPage] = useState(1),
     [editing, setEditing] = useState<Task | true | null>(null),
     [comments, setComments] = useState<Task | null>(null),
     [removing, setRemoving] = useState<Task | null>(null),
-    [confirm, setConfirm] = useState(false);
+    [confirm, setConfirm] = useState(false),
+    [quickText, setQuickText] = useState(""),
+    [creatingList, setCreatingList] = useState(false),
+    [listName, setListName] = useState(""),
+    [listScope, setListScope] = useState("personal"),
+    [listColor, setListColor] = useState("#7E9B57"),
+    [undo, setUndo] = useState<{
+      task: Task;
+      status?: Status;
+      restore?: boolean;
+    } | null>(null),
+    [selected, setSelected] = useState<Task | null>(null);
+  const { selectedId, select } = useTaskUiStore();
+  const online = useOnline();
+  const archivedLists = params.get("archivedLists") === "1";
+  useEffect(() => {
+    select(null);
+    return () => select(null);
+  }, [select]);
+  useEffect(() => {
+    if (!undo) return;
+    const timer = setTimeout(() => setUndo(null), 5000);
+    return () => clearTimeout(timer);
+  }, [undo]);
   useEffect(() => {
     if (params.get("add") === "1" && !cid) {
       setEditing(true);
@@ -306,8 +228,63 @@ export function TasksPage() {
   const user = useAuthStore((s) => s.user)!;
   const context: Record<string, string> = cid ? { coupleId: cid } : {};
   const members = useTasksQuery<Members>("/tasks/members", context);
+  const listsQuery = useTasksQuery<TaskListPage>("/task-lists", {
+    ...context,
+    limit: 100,
+    archived: archivedLists ? "true" : "false",
+  });
+  const summary = useTasksQuery<{
+    counts: Record<string, number>;
+    lists: { id: string; count: number }[];
+    labels: string[];
+  }>("/tasks/summary", context);
+  const detail = useTasksQuery<Task>(
+    `/tasks/${selectedId ?? "none"}`,
+    {},
+    !!selectedId,
+  );
+  const lists = listsQuery.data?.items ?? [];
+  const activeList = lists.find((l) => l.id === listId);
+  const listReady = !listId || !!activeList;
+  const createList = useTaskMutation(
+    async () =>
+      apiClient.post("/task-lists", {
+        name: listName.trim(),
+        scope: listScope,
+        color: listColor,
+        icon: listScope === "shared" ? "Heart" : "ListTodo",
+      }),
+    () => {
+      setCreatingList(false);
+      setListName("");
+    },
+  );
+  const archiveList = useTaskMutation(async (list: TaskList) =>
+    apiClient.put(`/task-lists/${list.id}`, {
+      revision: list.revision,
+      archived: !list.archivedAt,
+    }),
+  );
+  const quick = useTaskMutation(
+    async () => {
+      if (!navigator.onLine) throw new globalThis.Error("Mất kết nối.");
+      return apiClient.post("/tasks", {
+        title: quickText.trim(),
+        scope:
+          activeList?.coupleId || scope === "shared" ? "shared" : "personal",
+        assignedTo: user.id,
+        ...(listId ? { listId } : {}),
+        ...(smart === "today"
+          ? { deadline: localInputDate(new Date(), user.timezone) }
+          : {}),
+      });
+    },
+    () => setQuickText(""),
+  );
   const filters = {
     scope,
+    ...(smart !== "all" ? { smart } : {}),
+    ...(listId ? { list: listId } : {}),
     status,
     priority,
     search,
@@ -326,46 +303,66 @@ export function TasksPage() {
   });
   useEffect(() => {
     setPage(1);
-  }, [scope, status, priority, search, due, from, to, sort, kind, label, cid]);
+  }, [
+    scope,
+    status,
+    priority,
+    search,
+    due,
+    from,
+    to,
+    sort,
+    kind,
+    label,
+    cid,
+    smart,
+    listId,
+  ]);
   useEffect(() => {
     if (q.data && page > Math.max(1, Math.ceil(q.data.total / 20)))
       setPage(Math.max(1, Math.ceil(q.data.total / 20)));
   }, [q.data, page]);
-  const write = useTaskMutation(
-    async (v: {
-      task: Task;
-      status?: Status;
-      checklist?: Task["checklist"];
-    }) =>
-      v.status
-        ? apiClient.patch(`/tasks/${v.task.id}/status`, {
-            status: v.status,
-            revision: v.task.revision,
-          })
-        : apiClient.put("/tasks/" + v.task.id, {
-            checklist: v.checklist,
-            revision: v.task.revision,
-          }),
-  );
-  const remove = useTaskMutation(
-    async () =>
-      apiClient.delete("/tasks/" + removing!.id, {
-        data: { revision: removing!.revision },
-      }),
-    () => {
+  const write = useTaskWrite((input, saved) => {
+    if (input.remove) {
       setRemoving(null);
       setConfirm(false);
+      setUndo({
+        task: { ...input.task, revision: input.task.revision + 1 },
+        restore: true,
+      });
+    } else if (input.status === "DONE" && saved)
+      setUndo({ task: saved, status: input.task.status });
+  });
+  const undoAction = () => {
+    if (!undo) return;
+    write.mutate({
+      task: undo.task,
+      status: undo.status,
+      restore: undo.restore,
+    });
+    setUndo(null);
+  };
+  const remove = {
+    isPending: write.isPending,
+    isError: write.isError,
+    error: write.error,
+    mutate: () => {
+      if (removing) write.mutate({ task: removing, remove: true });
     },
-  );
-  const readOnly = q.data?.readOnly ?? !!cid;
+  };
+  const readOnly = (q.data?.readOnly ?? !!cid) || !!activeList?.readOnly;
   const render = (task: Task) => (
-    <TaskCard
+    <TaskRow
       key={task.id}
       task={task}
       members={members.data ?? { items: [], readOnly: false }}
-      busy={write.isPending}
+      listName={lists.find((l) => l.id === task.listId)?.name}
+      busy={write.isPending || !online}
       onStatus={(status) => write.mutate({ task, status })}
-      onEdit={() => setEditing(task)}
+      onEdit={() => {
+        setSelected(task);
+        select(task.id);
+      }}
       onComments={() => setComments(task)}
       onDelete={() => {
         setRemoving(task);
@@ -383,227 +380,526 @@ export function TasksPage() {
   );
   return (
     <>
-      <div className="page-heading">
-        <div>
-          <span className="eyebrow">TỪNG VIỆC NHỎ, MỖI NGÀY</span>
-          <h1>Công việc</h1>
-          <p>Giữ việc riêng gọn gàng, cùng nhau hoàn thành việc chung.</p>
-        </div>
-        {!readOnly && (
-          <Button
-            onClick={() => setEditing(true)}
-            disabled={members.isPending || members.isError}
+      {summary.isError && (
+        <p role="alert" className="form-error">
+          Chưa tải được tiến độ.{" "}
+          <button
+            className="text-button"
+            onClick={() => void summary.refetch()}
           >
-            <Plus size={18} />
-            Thêm công việc
-          </Button>
-        )}
-      </div>
-      {readOnly && (
-        <p className="couple-archive-note">
-          Đang xem công việc của hành trình đã lưu trữ · Chỉ đọc.
+            Tải lại tiến độ
+          </button>
         </p>
       )}
-      <div className="task-toolbar">
-        <div role="tablist" onKeyDown={moveTabFocus} aria-label="Cách xem">
-          <button
-            role="tab"
-            aria-selected={view === "list"}
-            tabIndex={view === "list" ? 0 : -1}
-            onClick={() => setView("list")}
-          >
-            Danh sách
-          </button>
-          <button
-            role="tab"
-            aria-selected={view === "kanban"}
-            tabIndex={view === "kanban" ? 0 : -1}
-            onClick={() => setView("kanban")}
-          >
-            Kanban
-          </button>
-        </div>
-        <Button
-          className="button-outline"
-          disabled={!user.coupleId && !cid}
-          onClick={() => {
-            setKind(kind === "shopping" ? "" : "shopping");
-            setScope("shared");
+      <TaskHeader
+        name={user.name}
+        timezone={user.timezone}
+        counts={summary.data?.counts}
+      />
+      <div className="todo-workspace">
+        <SmartListSidebar
+          smart={smart}
+          listId={listId}
+          lists={lists}
+          counts={summary.data?.counts}
+          listCounts={summary.data?.lists}
+          labels={summary.data?.labels ?? []}
+          label={label}
+          loading={listsQuery.isPending}
+          error={listsQuery.isError}
+          onRetry={() => void listsQuery.refetch()}
+          archived={archivedLists}
+          onToggleArchive={() =>
+            update("archivedLists", archivedLists ? "" : "1")
+          }
+          historyReadOnly={!!cid}
+          readOnly={readOnly}
+          onSmart={(value) => {
+            setParams(
+              (previous) => {
+                const next = new URLSearchParams(previous);
+                next.set("smart", value);
+                for (const key of ["list", "scope", "status", "due", "kind"])
+                  next.delete(key);
+                return next;
+              },
+              { replace: true },
+            );
           }}
-        >
-          <ShoppingBag size={17} />
-          Mua sắm chung
-        </Button>
-      </div>
-      <Card>
-        <div className="history-filters task-filters">
-          <label>
-            Không gian
-            <select
-              aria-label="Lọc không gian"
-              value={scope}
-              onChange={(e) => setScope(e.target.value)}
-            >
-              <option value="all">Tất cả</option>
-              <option value="personal" disabled={!!cid}>
-                Cá nhân
-              </option>
-              <option value="shared" disabled={!user.coupleId && !cid}>
-                Chung
-              </option>
-              <option value="mine">Giao cho tôi</option>
-            </select>
-          </label>
-          <label>
-            Trạng thái
-            <select
-              aria-label="Lọc trạng thái"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            >
-              <option value="">Tất cả</option>
-              {Object.entries(statuses).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Ưu tiên
-            <select
-              aria-label="Lọc ưu tiên"
-              value={priority}
-              onChange={(e) => setPriority(e.target.value)}
-            >
-              <option value="">Tất cả</option>
-              {Object.entries(priorities).map(([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Hạn chót
-            <select
-              aria-label="Lọc hạn chót"
-              value={due}
-              onChange={(e) => setDue(e.target.value)}
-            >
-              <option value="">Tất cả</option>
-              <option value="today">Hôm nay</option>
-              <option value="overdue">Quá hạn</option>
-            </select>
-          </label>
-          <label>
-            Từ ngày
-            <input
-              type="date"
-              aria-label="Từ ngày"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
-            />
-          </label>
-          <label>
-            Đến ngày
-            <input
-              type="date"
-              aria-label="Đến ngày"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
-            />
-          </label>
-          <label>
-            Nhãn
-            <input
-              aria-label="Lọc nhãn"
-              value={label}
-              maxLength={30}
-              onChange={(e) => setLabel(e.target.value)}
-            />
-          </label>
-          <label>
-            Sắp xếp
-            <select
-              aria-label="Sắp xếp"
-              value={sort}
-              onChange={(e) => setSort(e.target.value)}
-            >
-              <option value="deadline">Hạn gần nhất</option>
-              <option value="priority">Ưu tiên cao nhất</option>
-              <option value="newest">Mới nhất</option>
-              <option value="oldest">Cũ nhất</option>
-            </select>
-          </label>
-          <label>
-            Tìm kiếm
-            <input
-              aria-label="Tìm công việc"
-              placeholder="Tiêu đề, mô tả, nhãn…"
-              value={search}
-              maxLength={160}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </label>
-        </div>
-        {kind === "shopping" && (
-          <p>
-            Đang lọc danh sách mua sắm.{" "}
-            <button className="text-button" onClick={() => setKind("")}>
-              Bỏ lọc mua sắm
-            </button>
-          </p>
-        )}
-      </Card>
-      {members.isError && <Error error={members.error} />}{" "}
-      {write.isError && <Error error={write.error} />}{" "}
-      {q.isPending ? (
-        <Skeleton />
-      ) : q.isError ? (
-        <Card>
-          <Error error={q.error} />
-          <Button onClick={() => void q.refetch()}>Thử lại</Button>
-        </Card>
-      ) : (
-        <>
-          {q.data.items.length === 0 ? (
-            <Card>
-              <EmptyState title="Chưa có công việc phù hợp">
-                Thêm việc mới hoặc thay đổi bộ lọc để xem lại.
-              </EmptyState>
-            </Card>
-          ) : view === "kanban" ? (
-            <>
-              <p className="muted">
-                Bảng hiển thị tối đa 20 việc của trang hiện tại. Chọn trạng thái
-                trên thẻ để chuyển cột.
-              </p>
-              <div className="task-kanban">
-                {Object.entries(statuses).map(([key, name]) => (
-                  <section key={key}>
-                    <h2>
-                      {name}{" "}
-                      <span>
-                        {q.data.items.filter((t) => t.status === key).length}
-                      </span>
-                    </h2>
-                    {q.data.items.filter((t) => t.status === key).map(render)}
-                  </section>
-                ))}
-              </div>
-            </>
-          ) : (
-            <div className="task-list">{q.data.items.map(render)}</div>
+          onList={(list) => {
+            setParams(
+              (previous) => {
+                const next = new URLSearchParams(previous);
+                next.set("list", list.id);
+                for (const key of ["smart", "scope", "status", "due", "kind"])
+                  next.delete(key);
+                return next;
+              },
+              { replace: true },
+            );
+          }}
+          onLabel={setLabel}
+          onNew={() => setCreatingList(true)}
+          onArchive={(list) => {
+            if (online) archiveList.mutate(list);
+          }}
+        />
+        <div className="todo-main">
+          <div className="todo-section-heading">
+            <div>
+              <h2>
+                {activeList?.name ??
+                  smartLists.find(([key]) => key === smart)?.[1] ??
+                  "Công việc"}
+              </h2>
+              <small>{q.data?.total ?? "—"} việc</small>
+            </div>
+            {!readOnly && (
+              <Button
+                onClick={() => setEditing(true)}
+                disabled={
+                  !online || !listReady || members.isPending || members.isError
+                }
+              >
+                <Plus size={18} />
+                Thêm công việc
+              </Button>
+            )}
+          </div>
+          {!online && (
+            <p className="todo-offline" role="status">
+              Mất kết nối. Bạn vẫn có thể xem; kết nối mạng để lưu thay đổi.
+            </p>
           )}
-          <Pager page={page} total={q.data.total} onPage={setPage} />
-        </>
+          {!readOnly && (
+            <form
+              className="todo-quick-add"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (quickText.trim() && online) quick.mutate();
+              }}
+            >
+              <Plus size={18} />
+              <input
+                aria-label="Thêm nhanh công việc"
+                placeholder="Thêm một việc nhỏ…"
+                value={quickText}
+                maxLength={160}
+                disabled={!online || !listReady || quick.isPending}
+                onChange={(e) => setQuickText(e.target.value)}
+              />
+              <Button
+                disabled={
+                  !online || !listReady || quick.isPending || !quickText.trim()
+                }
+              >
+                Thêm
+              </Button>
+            </form>
+          )}
+          {quick.isError && <Error error={quick.error} />}{" "}
+          {createList.isError && <Error error={createList.error} />}{" "}
+          {archiveList.isError && <Error error={archiveList.error} />}
+          {readOnly && (
+            <p className="couple-archive-note">
+              Đang xem công việc của hành trình đã lưu trữ · Chỉ đọc.
+            </p>
+          )}
+          <div className="task-toolbar">
+            <div role="tablist" onKeyDown={moveTabFocus} aria-label="Cách xem">
+              <button
+                role="tab"
+                aria-selected={view === "list"}
+                tabIndex={view === "list" ? 0 : -1}
+                onClick={() => setView("list")}
+              >
+                Danh sách
+              </button>
+              <button
+                role="tab"
+                aria-selected={view === "kanban"}
+                tabIndex={view === "kanban" ? 0 : -1}
+                onClick={() => setView("kanban")}
+              >
+                Kanban
+              </button>
+            </div>
+            <Button
+              className="button-outline"
+              disabled={!user.coupleId && !cid}
+              onClick={() => {
+                setParams(
+                  (previous) => {
+                    const next = new URLSearchParams(previous);
+                    if (kind === "shopping") next.delete("kind");
+                    else next.set("kind", "shopping");
+                    next.set("scope", "shared");
+                    next.delete("smart");
+                    next.delete("list");
+                    return next;
+                  },
+                  { replace: true },
+                );
+              }}
+            >
+              <ShoppingBag size={17} />
+              Mua sắm chung
+            </Button>
+          </div>
+          <Card>
+            <details className="todo-filters" open>
+              <summary>Lọc và sắp xếp</summary>
+              <div className="history-filters task-filters">
+                <label>
+                  Không gian
+                  <select
+                    aria-label="Lọc không gian"
+                    value={scope}
+                    onChange={(e) => setScope(e.target.value)}
+                  >
+                    <option value="all">Tất cả</option>
+                    <option value="personal" disabled={!!cid}>
+                      Cá nhân
+                    </option>
+                    <option value="shared" disabled={!user.coupleId && !cid}>
+                      Chung
+                    </option>
+                    <option value="mine">Giao cho tôi</option>
+                  </select>
+                </label>
+                <label>
+                  Trạng thái
+                  <select
+                    aria-label="Lọc trạng thái"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value)}
+                  >
+                    <option value="">Tất cả</option>
+                    {Object.entries(statuses).map(([k, v]) => (
+                      <option key={k} value={k}>
+                        {v}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Ưu tiên
+                  <select
+                    aria-label="Lọc ưu tiên"
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value)}
+                  >
+                    <option value="">Tất cả</option>
+                    {Object.entries(priorities).map(([k, v]) => (
+                      <option key={k} value={k}>
+                        {v}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  Hạn chót
+                  <select
+                    aria-label="Lọc hạn chót"
+                    value={due}
+                    onChange={(e) => setDue(e.target.value)}
+                  >
+                    <option value="">Tất cả</option>
+                    <option value="today">Hôm nay</option>
+                    <option value="overdue">Quá hạn</option>
+                  </select>
+                </label>
+                <label>
+                  Từ ngày
+                  <input
+                    type="date"
+                    aria-label="Từ ngày"
+                    value={from}
+                    onChange={(e) => setFrom(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Đến ngày
+                  <input
+                    type="date"
+                    aria-label="Đến ngày"
+                    value={to}
+                    onChange={(e) => setTo(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Nhãn
+                  <input
+                    aria-label="Lọc nhãn"
+                    value={label}
+                    maxLength={30}
+                    onChange={(e) => setLabel(e.target.value)}
+                  />
+                </label>
+                <label>
+                  Sắp xếp
+                  <select
+                    aria-label="Sắp xếp"
+                    value={sort}
+                    onChange={(e) => setSort(e.target.value)}
+                  >
+                    <option value="manual">Thứ tự thủ công</option>
+                    <option value="deadline">Hạn gần nhất</option>
+                    <option value="priority">Ưu tiên cao nhất</option>
+                    <option value="newest">Mới nhất</option>
+                    <option value="oldest">Cũ nhất</option>
+                  </select>
+                </label>
+                <label>
+                  Tìm kiếm
+                  <input
+                    aria-label="Tìm công việc"
+                    placeholder="Tiêu đề, mô tả, nhãn…"
+                    value={search}
+                    maxLength={160}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                </label>
+              </div>
+              <label className="todo-group-picker">
+                Nhóm theo
+                <select
+                  aria-label="Nhóm công việc"
+                  value={groupBy}
+                  onChange={(e) => update("group", e.target.value)}
+                >
+                  <option value="deadline">Hạn chót</option>
+                  <option value="list">Danh sách</option>
+                  <option value="priority">Ưu tiên</option>
+                  <option value="assignee">Người thực hiện</option>
+                </select>
+              </label>
+            </details>
+            {kind === "shopping" && (
+              <p>
+                Đang lọc danh sách mua sắm.{" "}
+                <button className="text-button" onClick={() => setKind("")}>
+                  Bỏ lọc mua sắm
+                </button>
+              </p>
+            )}
+          </Card>
+          {members.isError && <Error error={members.error} />}{" "}
+          {write.isError && <Error error={write.error} />}{" "}
+          {q.isPending ? (
+            <Skeleton />
+          ) : q.isError ? (
+            <Card>
+              <Error error={q.error} />
+              <Button onClick={() => void q.refetch()}>Thử lại</Button>
+            </Card>
+          ) : (
+            <>
+              {q.data.items.length === 0 ? (
+                <Card>
+                  <EmptyState
+                    title={
+                      smart === "today"
+                        ? "Hôm nay chưa có việc nào"
+                        : smart === "overdue"
+                          ? "Không có việc quá hạn"
+                          : smart === "done"
+                            ? "Chưa có việc hoàn thành"
+                            : "Chưa có công việc phù hợp"
+                    }
+                  >
+                    Thêm việc mới hoặc thay đổi bộ lọc để xem lại.
+                  </EmptyState>
+                  {!readOnly && (
+                    <Button
+                      className="button-outline"
+                      disabled={!online}
+                      onClick={() => setEditing(true)}
+                    >
+                      Thêm việc đầu tiên
+                    </Button>
+                  )}
+                </Card>
+              ) : view === "kanban" ? (
+                <>
+                  <p className="muted">
+                    Bảng hiển thị tối đa 20 việc của trang hiện tại. Chọn trạng
+                    thái trên thẻ để chuyển cột.
+                  </p>
+                  <div className="task-kanban">
+                    {Object.entries(statuses).map(([key, name]) => (
+                      <section key={key}>
+                        <h2>
+                          {name}{" "}
+                          <span>
+                            {
+                              q.data.items.filter((t) => t.status === key)
+                                .length
+                            }
+                          </span>
+                        </h2>
+                        {q.data.items
+                          .filter((t) => t.status === key)
+                          .map(render)}
+                      </section>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <div className="todo-groups">
+                  {groupTasks(
+                    q.data.items,
+                    new Date(),
+                    user.timezone,
+                    groupBy,
+                  ).map(([key, tasks]) => (
+                    <TaskGroup
+                      key={key}
+                      name={
+                        groupBy === "list"
+                          ? (lists.find((l) => l.id === key)?.name ??
+                            (key === "inbox" ? "Hộp thư vào" : key))
+                          : groupBy === "assignee"
+                            ? (members.data?.items.find((m) => m.id === key)
+                                ?.name ??
+                              (key === "unassigned" ? "Chưa giao" : key))
+                            : key
+                      }
+                      count={tasks.length}
+                    >
+                      {tasks.map(render)}
+                    </TaskGroup>
+                  ))}
+                </div>
+              )}
+              <Pager page={page} total={q.data.total} onPage={setPage} />
+            </>
+          )}
+        </div>
+      </div>
+      {selectedId && selected && (
+        <TaskDetailDrawer
+          key={selectedId}
+          busy={write.isPending}
+          onUndo={undo?.task.id === selectedId ? undoAction : undefined}
+          task={
+            detail.data?.id
+              ? detail.data
+              : (q.data?.items.find((t) => t.id === selectedId) ?? selected)
+          }
+          members={members.data ?? { items: [], readOnly: false }}
+          lists={lists}
+          onClose={() => {
+            select(null);
+            setSelected(null);
+          }}
+          onStatus={(status) => {
+            const current = detail.data?.id
+              ? detail.data
+              : (q.data?.items.find((t) => t.id === selectedId) ?? selected);
+            write.mutate({ task: current, status });
+          }}
+          onComments={() => {
+            select(null);
+            setComments(detail.data?.id ? detail.data : selected);
+          }}
+        />
       )}
-      {editing && members.data && (
+      {undo && undo.task.id !== selectedId && (
+        <div className="todo-undo-toast" role="status">
+          <span>
+            {undo.restore ? "Đã xóa công việc." : "Đã hoàn thành công việc 🌱"}
+          </span>
+          <Button
+            className="button-outline"
+            disabled={write.isPending || !online}
+            onClick={() => {
+              undoAction();
+            }}
+          >
+            Hoàn tác
+          </Button>
+          <button aria-label="Đóng hoàn tác" onClick={() => setUndo(null)}>
+            ×
+          </button>
+        </div>
+      )}
+      {creatingList && (
+        <Modal
+          title="Danh sách mới"
+          onClose={() => setCreatingList(false)}
+          busy={createList.isPending}
+        >
+          <form
+            className="settings-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (listName.trim() && online) createList.mutate();
+            }}
+          >
+            <label>
+              Tên danh sách
+              <input
+                aria-label="Tên danh sách"
+                maxLength={80}
+                value={listName}
+                onChange={(e) => setListName(e.target.value)}
+              />
+            </label>
+            <label>
+              Không gian
+              <select
+                aria-label="Không gian danh sách"
+                value={listScope}
+                onChange={(e) => setListScope(e.target.value)}
+              >
+                <option value="personal">Cá nhân</option>
+                <option value="shared" disabled={!user.coupleId}>
+                  Chung
+                </option>
+              </select>
+            </label>
+            <label>
+              Màu danh sách
+              <select
+                aria-label="Màu danh sách"
+                value={listColor}
+                onChange={(e) => setListColor(e.target.value)}
+              >
+                <option value="#7E9B57">Xanh cốm</option>
+                <option value="#57713A">Xanh đậm</option>
+                <option value="#E38FA9">Hồng</option>
+                <option value="#B3577A">Hồng đậm</option>
+                <option value="#75806B">Xám</option>
+              </select>
+            </label>
+            {createList.isError && <Error error={createList.error} />}
+            <Button
+              disabled={!listName.trim() || createList.isPending || !online}
+            >
+              Tạo danh sách
+            </Button>
+          </form>
+        </Modal>
+      )}
+      {!readOnly && (
+        <button
+          className="quick-add"
+          aria-label="Thêm công việc nhanh"
+          disabled={
+            !online || !listReady || members.isPending || members.isError
+          }
+          onClick={() => setEditing(true)}
+        >
+          <Plus size={23} />
+        </button>
+      )}
+      {editing && members.data && !readOnly && listReady && (
         <TaskForm
           task={editing === true ? undefined : editing}
           members={members.data}
           shopping={kind === "shopping"}
+          list={activeList}
           onClose={() => setEditing(null)}
         />
       )}{" "}

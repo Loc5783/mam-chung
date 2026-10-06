@@ -7,7 +7,7 @@ import { Button } from "../../components/ui";
 import { Modal } from "../../components/ui/Modal";
 import { useAuthStore } from "../auth/store";
 import { useTaskMutation } from "./api";
-import { Task, Members, ChecklistItem, priorities } from "./types";
+import { Task, TaskList, Members, ChecklistItem, priorities } from "./types";
 const schema = z
   .object({
     title: z.string().trim().min(1, "Nhập tiêu đề công việc.").max(160),
@@ -30,11 +30,13 @@ export function TaskForm({
   members,
   onClose,
   shopping = false,
+  list,
 }: {
   task?: Task;
   members: Members;
   onClose: () => void;
   shopping?: boolean;
+  list?: TaskList;
 }) {
   const user = useAuthStore((s) => s.user)!;
   const [checklist, setChecklist] = useState<ChecklistItem[]>(
@@ -52,7 +54,12 @@ export function TaskForm({
     defaultValues: {
       title: task?.title ?? "",
       description: task?.description ?? "",
-      scope: task?.coupleId ? "shared" : shopping ? "shared" : "personal",
+      scope:
+        task?.coupleId || list?.coupleId
+          ? "shared"
+          : shopping
+            ? "shared"
+            : "personal",
       deadline: task?.deadline ?? "",
       priority: task?.priority ?? "MEDIUM",
       assignedTo: task?.assignedTo ?? (!task ? user.id : ""),
@@ -66,6 +73,7 @@ export function TaskForm({
     const { scope, ...values } = v;
     const body = {
       ...values,
+      ...(list ? { listId: list.id } : {}),
       deadline: v.deadline || null,
       assignedTo: v.assignedTo || null,
       labels: v.labels
@@ -114,7 +122,7 @@ export function TaskForm({
               <select
                 aria-label="Không gian"
                 {...register("scope")}
-                disabled={!!task}
+                disabled={!!task || !!list}
                 onChange={(e) => {
                   setValue("scope", e.target.value as Values["scope"]);
                   setValue(

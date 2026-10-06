@@ -168,3 +168,7 @@ npm run migrate:tasks -w @mam-chung/api -- --dry-run
 ```
 
 Apply tự sao lưu tasks/task_lists dưới `.local/task-migration-backups`. Nên thực hiện khi người dùng không đang sửa việc; form cũ được phát hiện bằng revision và cần tải lại. Không dùng database thật khi chạy Jest; các test tự tạo replica set riêng.
+
+### To-do List — Giai đoạn C
+
+Trang `/tasks` có sidebar danh sách thông minh, tiến độ hôm nay, nhóm việc, checkbox/hoàn tác5 giây, drawer tự lưu và tạo/lưu trữ/mở lại danh sách. Chặn ghi ngoại tuyến, rollback khi API lỗi. Natural-language quick add và kéo thả thuộc D; lịch/Focus/nhắc nhẹ thuộc E. Báo cáo và kiểm tra tay: [TASKS_PHASE_C.md](docs/TASKS_PHASE_C.md).

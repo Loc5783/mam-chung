@@ -197,6 +197,11 @@ export const taskSchemas = {
     ],
   },
   TaskBulkResult: obj({ items: { type: "array", items: ref("Task") } }),
+  TaskSummary: obj({
+    counts: { type: "object", additionalProperties: { type: "integer" } },
+    lists: { type: "array", items: obj({ id, count: { type: "integer" } }) },
+    labels: { type: "array", items: { type: "string" } },
+  }),
   TaskChecklist: obj(
     {
       id: {
@@ -364,6 +369,21 @@ const op = (
   },
 });
 export const taskPaths = {
+  "/tasks/summary": {
+    get: op(
+      "Số đếm danh sách thông minh và tiến độ theo quyền",
+      "TaskSummary",
+      [query("coupleId", id)],
+    ),
+  },
+  "/tasks/{id}/restore": {
+    post: op(
+      "Khôi phục việc xóa mềm trong30 ngày; kiểm tra revision và quyền",
+      "Task",
+      [pathId],
+      "TaskDelete",
+    ),
+  },
   "/task-lists": {
     get: op("Danh sách cá nhân/chung theo quyền", "TaskListPage", [
       ...paging,

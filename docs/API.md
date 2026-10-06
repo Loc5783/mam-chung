@@ -259,3 +259,9 @@ PWA không thay đổi contract API và không cache response API. Mọi mutatio
 - GET `/api/tasks` bổ sung list, smart=today|upcoming|overdue|mine|partner|shared|nodate|done, assignee, q (ưu tiên q hơn search), groupBy=deadline|list|priority|assignee, sort=manual. Groups `{key,taskIds}` thuộc trang hiện tại. Những tham số cũ vẫn hoạt động.
 - Task thêm listId/position/startDate/deadlineHasTime/deadlineTime/deadlineTimezone/reminderAt/estimateMinutes/timeSpentSeconds/completedBy. Deadline vẫn là date-only. Giờ HH:mm cần deadlineHasTime=true và ngày hạn; timezone tự lấy hồ sơ nếu chưa gửi. Chỉ server ghi completedBy khi DONE; bỏ DONE xóa completedAt/completedBy. Reminder worker thuộc E, chưa có giao nhắc giờ trong B.
 - Swagger tại `/api/docs` cập nhật request/response/phân trang của các API trên.
+
+## Công việc — Giao diện lõi (C)
+
+- GET `/api/tasks/summary?coupleId=` trả `{counts,lists,labels}`. Counts gồm all/today/upcoming/overdue/mine/partner/shared/nodate/done/todayTotal/todayDone trên toàn bộ việc được phép xem, không phân trang. All gồm các trạng thái; smart khác trừ done đếm việc chưa DONE/CANCELLED. TodayTotal bỏ CANCELLED, TodayDone đếm DONE có hạn hôm nay trong timezone hồ sơ. Lists đếm việc còn mở theo listId. Không trả task/label riêng của partner hoặc couple khác.
+- POST `/api/tasks/:id/restore` nhận `{revision}` của bản đã xóa. Khôi phục cùng ID trong30 ngày, tăng revision, giữ trạng thái và lịch sử. Ngoài quyền/couple archived/list deleted404, list archived409, revision cũ409, quá30 ngày410 RESTORE_EXPIRED. Chỉ việc xóa mềm mới khôi phục được.
+- GET `/api/tasks` không chọn list/coupleId lịch sử sẽ bỏ task trong list archived. Chọn list archived trực tiếp vẫn trả readOnly=true. Không xóa dữ liệu lịch sử.

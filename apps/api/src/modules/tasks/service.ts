@@ -15,9 +15,13 @@ export async function task(
   id: string,
   s: ClientSession,
   write = false,
+  includeDeleted = false,
 ) {
   const u = await user(userId, s, write);
-  const t = await Task.findOne({ _id: id, deletedAt: null }).session(s);
+  const t = await Task.findOne({
+    _id: id,
+    deletedAt: includeDeleted ? { $ne: null } : null,
+  }).session(s);
   if (!t) throw missing();
   let readOnly = false;
   if (t.coupleId) {
@@ -219,6 +223,155 @@ export function validateTaskDates(t: {
     );
 }
 export const taskService = {
+  async summary(id: string, raw: unknown) {
+    const q = schema.readQuery.parse(raw);
+    return inTransaction(async (s) => {
+      const u = await user(id, s),
+        cid = q.coupleId ?? u.coupleId?.toString();
+      if (cid) await shared(id, cid, s);
+      const archived = q.coupleId
+        ? []
+        : await TaskList.find({
+            archivedAt: { $ne: null },
+            $or: [{ ownerId: id }, ...(cid ? [{ coupleId: cid }] : [])],
+          }).session(s);
+      const filter = {
+        deletedAt: null,
+        listId: { $nin: archived.map((l) => l._id) },
+        $or: q.coupleId
+          ? [{ coupleId: cid }]
+          : [
+              { coupleId: null, createdBy: id },
+              ...(cid ? [{ coupleId: cid }] : []),
+            ],
+      };
+      const p = localDateParts(new Date(), u.timezone),
+        today = calendarDate(p.year, p.month, p.day).toISOString().slice(0, 10),
+        upcoming = calendarDate(p.year, p.month, p.day + 7)
+          .toISOString()
+          .slice(0, 10);
+      const open = { $not: [{ $in: ["$status", ["DONE", "CANCELLED"]] }] };
+      const sum = (condition: unknown) => ({
+        $sum: { $cond: [condition, 1, 0] },
+      });
+      const [result] = await Task.aggregate([
+        { $match: Task.find(filter).cast(Task) },
+        {
+          $facet: {
+            counts: [
+              {
+                $group: {
+                  _id: null,
+                  all: sum(true),
+                  today: sum({ $and: [open, { $eq: ["$deadline", today] }] }),
+                  upcoming: sum({
+                    $and: [
+                      open,
+                      { $gt: ["$deadline", today] },
+                      { $lte: ["$deadline", upcoming] },
+                    ],
+                  }),
+                  overdue: sum({
+                    $and: [
+                      open,
+                      { $ne: [{ $ifNull: ["$deadline", null] }, null] },
+                      { $lt: ["$deadline", today] },
+                    ],
+                  }),
+                  mine: sum({ $and: [open, { $eq: ["$assignedTo", u._id] }] }),
+                  partner: sum({
+                    $and: [
+                      open,
+                      { $ne: ["$coupleId", null] },
+                      { $ne: [{ $ifNull: ["$assignedTo", null] }, null] },
+                      { $ne: ["$assignedTo", u._id] },
+                    ],
+                  }),
+                  shared: sum({
+                    $and: [
+                      open,
+                      { $ne: [{ $ifNull: ["$coupleId", null] }, null] },
+                    ],
+                  }),
+                  nodate: sum({
+                    $and: [
+                      open,
+                      { $eq: [{ $ifNull: ["$deadline", null] }, null] },
+                    ],
+                  }),
+                  done: sum({ $eq: ["$status", "DONE"] }),
+                  todayTotal: sum({
+                    $and: [
+                      { $eq: ["$deadline", today] },
+                      { $ne: ["$status", "CANCELLED"] },
+                    ],
+                  }),
+                  todayDone: sum({
+                    $and: [
+                      { $eq: ["$deadline", today] },
+                      { $eq: ["$status", "DONE"] },
+                    ],
+                  }),
+                },
+              },
+            ],
+            lists: [
+              { $match: { status: { $nin: ["DONE", "CANCELLED"] } } },
+              { $group: { _id: "$listId", count: { $sum: 1 } } },
+            ],
+            labels: [
+              { $unwind: "$labels" },
+              { $group: { _id: "$labels" } },
+              { $sort: { _id: 1 } },
+            ],
+          },
+        },
+      ]).session(s);
+      const { _id: _, ...counts } = result.counts[0] ?? {};
+      void _;
+      return {
+        counts: Object.fromEntries(
+          [
+            "all",
+            "today",
+            "upcoming",
+            "overdue",
+            "mine",
+            "partner",
+            "shared",
+            "nodate",
+            "done",
+            "todayTotal",
+            "todayDone",
+          ].map((key) => [key, counts[key] ?? 0]),
+        ),
+        lists: result.lists.map((l: { _id: unknown; count: number }) => ({
+          id: String(l._id),
+          count: l.count,
+        })),
+        labels: result.labels.map((l: { _id: string }) => l._id),
+      };
+    });
+  },
+  async restore(id: string, rawId: unknown, raw: unknown) {
+    const key = objectId.parse(rawId),
+      input = schema.remove.parse(raw);
+    return inTransaction(async (s) => {
+      const { t, u } = await task(id, key, s, true, true);
+      revision(t, input.revision);
+      if (!t.deletedAt || Date.now() - t.deletedAt.getTime() > 30 * 86400000)
+        throw new AppError(
+          410,
+          "RESTORE_EXPIRED",
+          "Công việc đã quá thời hạn khôi phục 30 ngày.",
+        );
+      t.deletedAt = null;
+      t.revision++;
+      await t.save({ session: s });
+      await event(t, u, "đã khôi phục một công việc chung.", s);
+      return dto(t);
+    });
+  },
   async create(id: string, raw: unknown) {
     const input = schema.create.parse(raw);
     return inTransaction(async (s) => {
@@ -277,6 +430,14 @@ export const taskService = {
         await shared(id, sharedId, s);
       }
       const clauses: Record<string, unknown>[] = [];
+      if (!q.list && !q.coupleId) {
+        const archived = await TaskList.find({
+          archivedAt: { $ne: null },
+          deletedAt: null,
+          $or: [{ ownerId: id }, ...(sharedId ? [{ coupleId: sharedId }] : [])],
+        }).session(s);
+        clauses.push({ listId: { $nin: archived.map((l) => l._id) } });
+      }
       if (q.coupleId || q.scope === "shared") {
         if (!sharedId) throw missing();
         clauses.push({ coupleId: sharedId });

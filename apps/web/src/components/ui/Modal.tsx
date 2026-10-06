@@ -9,11 +9,13 @@ export function Modal({
   children,
   onClose,
   busy = false,
+  variant = "modal",
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   busy?: boolean;
+  variant?: "modal" | "drawer";
 }) {
   const panel = useRef<HTMLDivElement>(null),
     titleId = useId();
@@ -75,9 +77,11 @@ export function Modal({
     };
   }, []);
   return createPortal(
-    <div className="modal-backdrop">
+    <div
+      className={`modal-backdrop ${variant === "drawer" ? "todo-drawer-backdrop" : ""}`}
+    >
       <div
-        className="modal-panel"
+        className={`modal-panel ${variant === "drawer" ? "todo-detail-drawer" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

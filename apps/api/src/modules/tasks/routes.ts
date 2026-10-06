@@ -74,6 +74,21 @@ export function taskRoutes() {
     ),
   );
   r.get(
+    "/tasks/summary",
+    validateQuery(z.readQuery),
+    asyncHandler(async (req, res) =>
+      res.json(await s.summary(req.user!.id, req.query)),
+    ),
+  );
+  r.post(
+    "/tasks/:id/restore",
+    validateParams(idParams),
+    validate(z.remove),
+    asyncHandler(async (req, res) =>
+      res.json(await s.restore(req.user!.id, req.params.id, req.body)),
+    ),
+  );
+  r.get(
     "/tasks/members",
     validateQuery(z.readQuery),
     asyncHandler(async (req, res) =>

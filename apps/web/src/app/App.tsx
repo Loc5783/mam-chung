@@ -176,13 +176,15 @@ function Layout({ preview = false }: { preview?: boolean }) {
           </NavLink>
         ))}
       </nav>
-      <Link
-        to={user ? "/finance?tab=transactions&add=1" : "/login"}
-        className="quick-add"
-        aria-label={user ? "Ghi giao dịch nhanh" : "Đăng nhập để thêm nhanh"}
-      >
-        <Plus size={23} />
-      </Link>
+      {location.pathname !== "/tasks" && (
+        <Link
+          to={user ? "/finance?tab=transactions&add=1" : "/login"}
+          className="quick-add"
+          aria-label={user ? "Ghi giao dịch nhanh" : "Đăng nhập để thêm nhanh"}
+        >
+          <Plus size={23} />
+        </Link>
+      )}
     </div>
   );
 }

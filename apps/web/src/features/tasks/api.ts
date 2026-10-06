@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient, getSessionEpoch } from "../../lib/apiClient";
+import { apiClient, errorMessage, getSessionEpoch } from "../../lib/apiClient";
 import { useAuthStore } from "../auth/store";
 import { useUiStore } from "../../app/store";
 export function useTasksQuery<T>(
@@ -22,7 +22,14 @@ export function useTaskMutation<T>(
   const client = useQueryClient(),
     notify = useUiStore((s) => s.notify);
   return useMutation({
-    mutationFn: run,
+    networkMode: "always",
+    mutationFn: (value: T) => {
+      if (!navigator.onLine)
+        throw new Error(
+          "Mất kết nối. Kết nối mạng trước khi cập nhật công việc.",
+        );
+      return run(value);
+    },
     onMutate: () => ({
       epoch: getSessionEpoch(),
       id: useAuthStore.getState().user?.id,
@@ -36,8 +43,10 @@ export function useTaskMutation<T>(
       void client.invalidateQueries({ queryKey: ["tasks", c?.id] });
       void client.invalidateQueries({ queryKey: ["couple", c?.id] });
     },
-    onError: () => {
-      void client.invalidateQueries({ queryKey: ["tasks"] });
+    onError: (error, _value, context) => {
+      if (context?.epoch !== getSessionEpoch()) return;
+      notify(errorMessage(error));
+      void client.invalidateQueries({ queryKey: ["tasks", context?.id] });
     },
   });
 }

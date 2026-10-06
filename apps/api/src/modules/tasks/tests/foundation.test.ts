@@ -183,7 +183,8 @@ it("list archive locks its tasks; unarchive restores access; default cannot arch
   expect((await tasks.get(a, t.id)).readOnly).toBe(true);
   expect((await lists.list(a, { archived: "true" })).items[0].id).toBe(l.id);
   expect(
-    (await tasks.list(a, {})).items.find((row) => row.id === t.id)!.readOnly,
+    (await tasks.list(a, { list: l.id })).items.find((row) => row.id === t.id)!
+      .readOnly,
   ).toBe(true);
   await expect(
     tasks.update(a, t.id, { revision: 0, title: "X" }),
@@ -568,4 +569,106 @@ it("new routes enforce auth and validate reorder/bulk before id routes", async (
     .set("Authorization", authorization)
     .send({ revision: 1, mode: "delete" })
     .expect(204);
+});
+
+it("summary counts all accessible tasks, uses local day and excludes archived/deleted/private partner data", async () => {
+  await User.updateOne({ _id: a }, { timezone: "Pacific/Kiritimati" });
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Pacific/Kiritimati",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  await create({ deadline: today, assignedTo: a, labels: ["maison"] });
+  const done = await create({
+    deadline: today,
+    scope: "shared",
+    assignedTo: b,
+  });
+  await tasks.status(b, done.id, { revision: 0, status: "DONE" });
+  await create({ title: "Privé", deadline: today, labels: ["secret"] }, b);
+  const removed = await create({ deadline: today });
+  await tasks.remove(a, removed.id, { revision: 0 });
+  const archived = await lists.create(a, { name: "Cũ" });
+  await create({ deadline: today, listId: archived.id });
+  await lists.update(a, archived.id, { revision: 0, archived: true });
+  const counts = await tasks.summary(a, {});
+  expect(counts.counts).toMatchObject({
+    all: 2,
+    today: 1,
+    todayTotal: 2,
+    todayDone: 1,
+    done: 1,
+    mine: 1,
+  });
+  expect(counts.labels).toEqual(["maison"]);
+  expect((await tasks.list(a, {})).total).toBe(2);
+  expect((await tasks.list(a, { list: archived.id })).total).toBe(1);
+  expect((await tasks.summary(c, {})).counts.all).toBe(0);
+  await expect(tasks.summary(c, { coupleId: cid })).rejects.toMatchObject({
+    status: 404,
+  });
+  await coupleService.leave(b, { confirm: true });
+  expect((await tasks.summary(a, { coupleId: cid })).counts.done).toBe(1);
+});
+it("restore enforces ownership, revision, 30-day retention and archived read-only scope", async () => {
+  const t = await create();
+  await tasks.remove(a, t.id, { revision: 0 });
+  await expect(tasks.restore(b, t.id, { revision: 1 })).rejects.toMatchObject({
+    status: 404,
+  });
+  await expect(tasks.restore(a, t.id, { revision: 0 })).rejects.toMatchObject({
+    status: 409,
+  });
+  const restored = await tasks.restore(a, t.id, { revision: 1 });
+  expect(restored.revision).toBe(2);
+  expect((await tasks.get(a, t.id)).id).toBe(t.id);
+  await expect(tasks.restore(a, t.id, { revision: 2 })).rejects.toMatchObject({
+    status: 404,
+  });
+  await tasks.remove(a, t.id, { revision: 2 });
+  await Task.updateOne(
+    { _id: t.id },
+    { deletedAt: new Date(Date.now() - 31 * 86400000) },
+  );
+  await expect(tasks.restore(a, t.id, { revision: 3 })).rejects.toMatchObject({
+    code: "RESTORE_EXPIRED",
+  });
+  const joint = await create({ scope: "shared" });
+  await tasks.remove(a, joint.id, { revision: 0 });
+  await coupleService.leave(b, { confirm: true });
+  await expect(
+    tasks.restore(b, joint.id, { revision: 1 }),
+  ).rejects.toMatchObject({ status: 404 });
+});
+it("summary and restore HTTP routes authenticate and return the new contracts", async () => {
+  await RefreshToken.create({
+    userId: a,
+    tokenHash: "a".repeat(64),
+    family: "a",
+    securityVersion: 0,
+    expiresAt: new Date(Date.now() + 86400000),
+  });
+  const token = jwt.sign({ version: 0, family: "a" }, process.env.JWT_SECRET!, {
+    subject: a,
+    issuer: "mam-chung",
+    audience: "mam-chung-web",
+    expiresIn: "15m",
+  });
+  const app = createApp(),
+    auth = "Bearer " + token;
+  await request(app).get("/api/tasks/summary").expect(401);
+  const t = await create();
+  await tasks.remove(a, t.id, { revision: 0 });
+  const summary = await request(app)
+    .get("/api/tasks/summary")
+    .set("Authorization", auth)
+    .expect(200);
+  expect(summary.body.counts.all).toBe(0);
+  const restored = await request(app)
+    .post(`/api/tasks/${t.id}/restore`)
+    .set("Authorization", auth)
+    .send({ revision: 1 })
+    .expect(200);
+  expect(restored.body.id).toBe(t.id);
 });
