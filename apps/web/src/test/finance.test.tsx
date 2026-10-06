@@ -385,3 +385,65 @@ it("không cho sửa hoặc xóa danh mục hệ thống", async () => {
     screen.getByRole("button", { name: "Sửa danh mục Cà phê" }),
   ).toBeInTheDocument();
 });
+
+it.each([
+  { label: "chưa có ví", items: [] },
+  { label: "chỉ có một ví", items: [wallets[0]] },
+  {
+    label: "ví thứ hai đã lưu trữ",
+    items: [wallets[0], { ...wallets[1], archived: true }],
+  },
+])(
+  "giải thích chuyển tiền chưa sẵn sàng khi $label và cho thêm ví",
+  async ({ items }) => {
+    const originalGet = vi.mocked(apiClient.get).getMockImplementation()!;
+    vi.mocked(apiClient.get).mockImplementation(async (...args) =>
+      args[0] === "/wallets"
+        ? { data: { items, total: items.length } }
+        : originalGet(...args),
+    );
+    wrap(<FinancePage />, "/finance?tab=wallets");
+    expect(
+      await screen.findByText(/Cần ít nhất 2 ví đang hoạt động/),
+    ).toBeInTheDocument();
+    const transfer = screen.getByRole("button", {
+      name: "Chuyển tiền",
+    });
+    expect(transfer).toBeDisabled();
+    expect(transfer).toHaveAccessibleDescription(/Cần ít nhất 2 ví/);
+    await userEvent.click(screen.getByRole("button", { name: "Thêm ví" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByLabelText("Tên ví")).toBeInTheDocument();
+  },
+);
+it("hai ví hoạt động mở biểu mẫu chuyển tiền và gửi đúng ví/tiền", async () => {
+  const post = vi.spyOn(apiClient, "post").mockResolvedValue({ data: {} });
+  wrap(<FinancePage />, "/finance?tab=wallets");
+  const transfer = screen.getByRole("button", {
+    name: "Chuyển tiền",
+  });
+  await waitFor(() => expect(transfer).toBeEnabled());
+  expect(
+    screen.queryByText(/Cần ít nhất 2 ví đang hoạt động/),
+  ).not.toBeInTheDocument();
+  await userEvent.click(transfer);
+  expect(screen.getByRole("combobox", { name: /^Từ ví/ })).toHaveValue(
+    "wallet-one",
+  );
+  expect(screen.getByLabelText("Đến ví")).toHaveValue("wallet-two");
+  await userEvent.type(screen.getByLabelText("Số tiền chuyển (đ)"), "10000");
+  await userEvent.click(
+    screen.getByRole("button", { name: "Ghi chuyển tiền" }),
+  );
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  expect(post).toHaveBeenCalledWith(
+    "/wallets/transfer",
+    expect.objectContaining({
+      fromWalletId: "wallet-one",
+      toWalletId: "wallet-two",
+      amount: 10000,
+    }),
+  );
+});

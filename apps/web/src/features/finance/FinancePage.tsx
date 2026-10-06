@@ -55,6 +55,13 @@ export function FinancePage() {
   const allWallets = wallets.data ?? [],
     allCategories = categories.data ?? [];
   const active = allWallets.filter((w) => !w.archived);
+  const transferHint = wallets.isError
+    ? "Chưa tải được danh sách ví. Vui lòng tải lại trang để thử lại."
+    : !wallets.isSuccess
+      ? "Đang tải danh sách ví…"
+      : active.length < 2
+        ? "Cần ít nhất 2 ví đang hoạt động để chuyển tiền giữa ví. Bạn có thể thêm ví nhận tiền hoặc khôi phục ví đã lưu trữ."
+        : null;
   const close = () => setDialog(null);
   const setTab = (value: string) => setParams({ tab: value });
   useEffect(() => {
@@ -90,8 +97,10 @@ export function FinancePage() {
         </div>
         <div className="finance-heading-actions">
           <Button
-            className="button-outline"
-            disabled={active.length < 2}
+            className="button-outline transfer-trigger"
+            disabled={!wallets.isSuccess || active.length < 2}
+            aria-describedby={transferHint ? "transfer-requirement" : undefined}
+            title={transferHint ?? "Ghi nhận chuyển tiền giữa hai ví của bạn"}
             onClick={() => setDialog({ kind: "transfer" })}
           >
             <ArrowLeftRight size={17} />
@@ -108,6 +117,22 @@ export function FinancePage() {
           </Button>
         </div>
       </div>
+      {transferHint && (
+        <div className="transfer-hint">
+          <p id="transfer-requirement" role="status">
+            {transferHint}
+          </p>
+          {wallets.isSuccess && active.length < 2 && (
+            <Button
+              className="button-outline"
+              onClick={() => setDialog({ kind: "wallet" })}
+            >
+              <Plus size={17} />
+              Thêm ví
+            </Button>
+          )}
+        </div>
+      )}
       <div
         className="finance-tabs"
         role="tablist"
