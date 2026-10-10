@@ -58,8 +58,12 @@ export function TasksPreview({
             <div key={g.title}>
               <h3>{g.title}</h3>
               {g.items.length ? (
-                g.items.map((t) => (
-                  <div key={t.id} className="task-preview-row">
+                g.items.map((t, i) => (
+                  <div
+                    key={t.id}
+                    className="task-preview-row stagger-item"
+                    style={{ "--i": Math.min(i, 12) } as React.CSSProperties}
+                  >
                     <span>
                       {t.title}{" "}
                       <small>{t.coupleId ? "Chung" : "Cá nhân"}</small>

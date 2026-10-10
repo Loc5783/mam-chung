@@ -50,7 +50,7 @@ export function AccountHome() {
         </span>
       </div>
       <div className="home-quick-actions" aria-label="Hành động nhanh">
-        <Link className="button" to="/finance?tab=transactions&add=1">
+        <Link className="button button-sheen" to="/finance?tab=transactions&add=1">
           <Plus size={17} />
           Giao dịch
         </Link>
@@ -97,7 +97,7 @@ export function AccountHome() {
           <Card className="couple-dashboard">
             <div className="section-heading">
               <h2>Hành trình chúng mình</h2>
-              <Heart size={22} />
+              <Heart size={22} className="motion-heart-beat" />
             </div>
             {q.data.couple ? (
               <>

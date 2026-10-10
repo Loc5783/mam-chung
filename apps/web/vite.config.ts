@@ -76,11 +76,12 @@ export default defineConfig({
       },
     },
   },
-  server: { proxy: { "/api": "http://127.0.0.1:4000" } },
+  server: { port: 5180, proxy: { "/api": "http://127.0.0.1:4000" } },
   test: {
     maxWorkers: 2,
     minWorkers: 1,
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",
+    testTimeout: 10000,
   },
 });

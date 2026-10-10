@@ -121,6 +121,7 @@ function form(dialog: FitnessDialog, onClose = vi.fn(), onSession = vi.fn()) {
   );
 }
 beforeEach(() => {
+  sessionStorage.clear();
   vi.restoreAllMocks();
   useAuthStore.getState().setSession("token", {
     id: "minh",
@@ -389,6 +390,8 @@ it("rest timer uses elapsed clock, pause/resume and finishes at zero", () => {
 });
 it("rest timer prevents invalid duration and clears its timer on unmount", () => {
   vi.useFakeTimers();
+  const interval = vi.spyOn(window, "setInterval");
+  const clear = vi.spyOn(window, "clearInterval");
   const m = mount(<RestTimer />);
   fireEvent.change(screen.getByLabelText("Thời gian nghỉ"), {
     target: { value: "1" },
@@ -401,7 +404,7 @@ it("rest timer prevents invalid duration and clears its timer on unmount", () =>
   });
   fireEvent.click(screen.getByRole("button", { name: "Bắt đầu / tiếp tục" }));
   m.unmount();
-  expect(vi.getTimerCount()).toBe(0);
+  expect(clear).toHaveBeenCalledWith(interval.mock.results.at(-1)?.value);
 });
 it("continue suggestion shows completed last-set kg/rep and opens next workout", async () => {
   mount(<FitnessPage />);
@@ -442,4 +445,38 @@ it("old workout request completion cannot open a dialog after logout", async () 
   await act(async () => resolve({ data: session }));
   expect(opened).not.toHaveBeenCalled();
   expect(close).not.toHaveBeenCalled();
+});
+
+it("rest timer keeps counting while away and restores an expired timer", () => {
+  vi.useFakeTimers();
+  const first = mount(<RestTimer />);
+  fireEvent.change(screen.getByLabelText("Thời gian nghỉ"), {
+    target: { value: "10" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Bắt đầu / tiếp tục" }));
+  first.unmount();
+  act(() => vi.advanceTimersByTime(4000));
+  const second = mount(<RestTimer />);
+  expect(screen.getByRole("timer")).toHaveTextContent("0:06");
+  expect(screen.getByRole("button", { name: "Tạm dừng" })).toBeInTheDocument();
+  second.unmount();
+  act(() => vi.advanceTimersByTime(7000));
+  mount(<RestTimer />);
+  expect(screen.getByRole("timer")).toHaveTextContent("0:00");
+  expect(screen.getByRole("status")).toHaveTextContent("Hết giờ nghỉ");
+});
+it("rest timer preserves pause and reset across remounts", () => {
+  vi.useFakeTimers();
+  let view = mount(<RestTimer />);
+  fireEvent.click(screen.getByRole("button", { name: "Bắt đầu / tiếp tục" }));
+  act(() => vi.advanceTimersByTime(5000));
+  fireEvent.click(screen.getByRole("button", { name: "Tạm dừng" }));
+  view.unmount();
+  act(() => vi.advanceTimersByTime(20000));
+  view = mount(<RestTimer />);
+  expect(screen.getByRole("timer")).toHaveTextContent("1:25");
+  fireEvent.click(screen.getByRole("button", { name: "Đặt lại" }));
+  view.unmount();
+  mount(<RestTimer />);
+  expect(screen.getByRole("timer")).toHaveTextContent("1:30");
 });

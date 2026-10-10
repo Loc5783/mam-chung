@@ -1,3 +1,10 @@
+import { ShoppingView } from "./components/ShoppingView";
+import { KanbanView } from "./components/KanbanView";
+import { CalendarView } from "./components/CalendarView";
+import { FocusMode } from "./components/FocusMode";
+import { TemplatePicker } from "./components/TemplatePicker";
+import { useFocusStore } from "./store/focus";
+import { useUiStore } from "../../app/store";
 import { BulkActionBar } from "./components/BulkActionBar";
 import { SortableTaskList } from "./components/SortableTaskList";
 import { QuickAddBar } from "./components/QuickAddBar";
@@ -271,6 +278,7 @@ export function TasksPage() {
       apiClient.post("/task-lists", {
         name: listName.trim(),
         scope: listScope,
+        type: listType,
         color: listColor,
         icon: listScope === "shared" ? "Heart" : "ListTodo",
       }),
@@ -377,6 +385,8 @@ export function TasksPage() {
       listId,
     ],
   );
+  const [quickDeadline, setQuickDeadline] = useState<string | null>(null);
+  const [listType, setListType] = useState("normal");
   const [mobileQuick, setMobileQuick] = useState(false),
     [quickBusy, setQuickBusy] = useState(false);
   const [shortcuts, setShortcuts] = useState(false);
@@ -508,10 +518,12 @@ export function TasksPage() {
     window.addEventListener("keydown", handle);
     return () => window.removeEventListener("keydown", handle);
   });
-  const render = (task: Task) => (
+  const render = (task: Task, index = 0) => (
     <div
       key={task.id}
       data-task-id={task.id}
+      className={`stagger-item ${write.isPending && write.variables?.task.id === task.id && write.variables?.remove ? "item-exit" : ""}`.trim()}
+      style={{ "--i": Math.min(index, 12) } as React.CSSProperties}
       onClickCapture={(e) => {
         if (
           (e.ctrlKey || e.metaKey || e.shiftKey) &&
@@ -805,7 +817,37 @@ export function TasksPage() {
               >
                 Kanban
               </button>
+              {[
+                ["calendar", "Lịch"],
+                ["focus", "Focus"],
+              ].map(([key, name]) => (
+                <button
+                  key={key}
+                  role="tab"
+                  aria-selected={view === key}
+                  tabIndex={view === key ? 0 : -1}
+                  onClick={() => setView(key)}
+                >
+                  {name}
+                </button>
+              ))}
             </div>
+            <TemplatePicker
+              listId={listId}
+              disabled={!online || readOnly}
+              onList={(id) => {
+                setParams(
+                  (previous) => {
+                    const next = new URLSearchParams(previous);
+                    next.set("list", id);
+                    next.set("view", "list");
+                    next.delete("smart");
+                    return next;
+                  },
+                  { replace: true },
+                );
+              }}
+            />
             <Button
               className="button-outline"
               disabled={!user.coupleId && !cid}
@@ -968,7 +1010,40 @@ export function TasksPage() {
           </Card>
           {members.isError && <Error error={members.error} />}{" "}
           {write.isError && <Error error={write.error} />}{" "}
-          {q.isPending ? (
+          {view === "calendar" ? (
+            <CalendarView
+              filters={
+                Object.fromEntries(
+                  Object.entries(filters).filter(([, v]) => v),
+                ) as Record<string, string>
+              }
+              disabled={
+                !online || readOnly || write.isPending || reschedule.isPending
+              }
+              onAdd={(date) => {
+                setQuickDeadline(date);
+                setMobileQuick(true);
+              }}
+              onOpen={(task) => {
+                setSelected(task);
+                select(task.id);
+              }}
+              onMove={(task, deadline) => reschedule.mutate({ task, deadline })}
+            />
+          ) : view === "focus" ? (
+            <FocusMode
+              tasks={q.data?.items ?? []}
+              disabled={!online || readOnly || write.isPending}
+              onCheck={(task, id, done) =>
+                write.mutate({
+                  task,
+                  checklist: task.checklist.map((i) =>
+                    i.id === id ? { ...i, done } : i,
+                  ),
+                })
+              }
+            />
+          ) : q.isPending ? (
             <Skeleton />
           ) : q.isError ? (
             <Card>
@@ -1005,28 +1080,18 @@ export function TasksPage() {
               ) : view === "kanban" ? (
                 <>
                   <p className="muted">
-                    Bảng hiển thị tối đa 20 việc của trang hiện tại. Chọn trạng
-                    thái trên thẻ để chuyển cột.
+                    Bảng hiển thị tối đa 20 việc của trang hiện tại. Kéo tay nắm
+                    sang cột khác hoặc chọn trạng thái trên thẻ.
                   </p>
-                  <div className="task-kanban">
-                    {Object.entries(statuses).map(([key, name]) => (
-                      <section key={key}>
-                        <h2>
-                          {name}{" "}
-                          <span>
-                            {
-                              q.data.items.filter((t) => t.status === key)
-                                .length
-                            }
-                          </span>
-                        </h2>
-                        {q.data.items
-                          .filter((t) => t.status === key)
-                          .map(render)}
-                      </section>
-                    ))}
-                  </div>
+                  <KanbanView
+                    tasks={q.data.items}
+                    render={render}
+                    disabled={!online || readOnly || write.isPending}
+                    onStatus={(task, status) => write.mutate({ task, status })}
+                  />
                 </>
+              ) : activeList?.type === "shopping" && sort !== "manual" ? (
+                <ShoppingView tasks={q.data.items} render={render} />
               ) : sort === "manual" && listId ? (
                 <SortableTaskList
                   tasks={q.data.items}
@@ -1055,7 +1120,7 @@ export function TasksPage() {
                       }
                       count={tasks.length}
                     >
-                      {tasks.map(render)}
+                      {tasks.map((t, idx) => render(t, idx))}
                     </TaskGroup>
                   ))}
                 </div>
@@ -1070,6 +1135,34 @@ export function TasksPage() {
           key={selectedId}
           busy={write.isPending}
           onUndo={undo?.task.id === selectedId ? undoAction : undefined}
+          onFocus={() => {
+            const task = detail.data?.id
+              ? detail.data
+              : (q.data?.items.find((t) => t.id === selectedId) ?? selected!);
+            const current = useFocusStore.getState().session;
+            if (current && current.taskId !== task.id)
+              useUiStore
+                .getState()
+                .notify(
+                  "Bạn đang có một phiên tập trung. Lưu hoặc kết thúc phiên đó trước khi chọn việc khác.",
+                );
+            else if (!current)
+              useFocusStore.getState().set({
+                userId: user.id,
+                taskId: task.id,
+                title: task.title,
+                phase: "work",
+                workMinutes: 25,
+                restMinutes: 5,
+                elapsedMs: 0,
+                runningSince: null,
+                sessionId: crypto.randomUUID(),
+                pendingSeconds: null,
+              });
+            select(null);
+            setSelected(null);
+            setView("focus");
+          }}
           task={
             detail.data?.id
               ? detail.data
@@ -1125,6 +1218,17 @@ export function TasksPage() {
               if (listName.trim() && online) createList.mutate();
             }}
           >
+            <label>
+              Loại danh sách
+              <select
+                aria-label="Loại danh sách"
+                value={listType}
+                onChange={(e) => setListType(e.target.value)}
+              >
+                <option value="normal">Công việc</option>
+                <option value="shopping">Mua sắm</option>
+              </select>
+            </label>
             <label>
               Tên danh sách
               <input
@@ -1187,13 +1291,19 @@ export function TasksPage() {
           title="Thêm nhanh công việc"
           variant="drawer"
           busy={quickBusy}
-          onClose={() => setMobileQuick(false)}
+          onClose={() => {
+            setMobileQuick(false);
+            setQuickDeadline(null);
+          }}
         >
           <div className="todo-mobile-quick-sheet">
             <QuickAddBar
               disabled={!online || !listReady || members.isPending}
               onBusy={setQuickBusy}
-              onAdded={() => setMobileQuick(false)}
+              onAdded={() => {
+                setMobileQuick(false);
+                setQuickDeadline(null);
+              }}
               context={{
                 timezone: user.timezone,
                 user: { id: user.id, name: user.name },
@@ -1205,9 +1315,10 @@ export function TasksPage() {
                     : "personal",
                 listId: listId || undefined,
                 deadline:
-                  smart === "today"
+                  quickDeadline ??
+                  (smart === "today"
                     ? localInputDate(new Date(), user.timezone)
-                    : undefined,
+                    : undefined),
               }}
             />
           </div>

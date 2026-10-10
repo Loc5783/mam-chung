@@ -11,9 +11,9 @@ npm ci
 npm run dev:local
 ```
 
-Mở **http://127.0.0.1:5173/register** để tạo tài khoản thật trong bản local. Swagger tại http://127.0.0.1:4000/api/docs.
+Mở **http://127.0.0.1:5180/register** để tạo tài khoản thật trong bản local. Swagger tại http://127.0.0.1:4000/api/docs.
 
-Lần đầu tải MongoDB 7.0.14 từ nguồn chính thức (Windows khoảng 592 MB). Replica set riêng chỉ lắng nghe loopback. Dữ liệu local lưu trong `.local/data`; khóa JWT được tạo ngẫu nhiên trong `.local/jwt-secret`. Cả hai được loại khỏi Git và Docker build context. `Ctrl+C` dừng toàn bộ hệ thống và giữ dữ liệu. Khi sửa backend, khởi động lại `dev:local`. Các cổng dùng: web 5173, API 4000, MongoDB local 27118; hãy dừng bản chạy cũ trước khi mở bản mới. Thử nghiệm Jest dùng DB riêng, không xóa DB local này.
+Lần đầu tải MongoDB 7.0.14 từ nguồn chính thức (Windows khoảng 592 MB). Replica set riêng chỉ lắng nghe loopback. Dữ liệu local lưu trong `.local/data`; khóa JWT được tạo ngẫu nhiên trong `.local/jwt-secret`. Cả hai được loại khỏi Git và Docker build context. `Ctrl+C` dừng toàn bộ hệ thống và giữ dữ liệu. Khi sửa backend, khởi động lại `dev:local`. Các cổng dùng: web 5180 (hoặc tùy chỉnh qua biến `WEB_PORT`), API 4000, MongoDB local 27118; hãy dừng bản chạy cũ trước khi mở bản mới. Thử nghiệm Jest dùng DB riêng, không xóa DB local này.
 
 `.local` là chế độ phát triển trên máy riêng, không phải cấu hình triển khai server. Có thể đặt `MONGOMS_DOWNLOAD_DIR` để tái sử dụng thư mục chứa binary MongoDB đã tải.
 

@@ -13,6 +13,7 @@ export function useTasksQuery<T>(
     queryKey: ["tasks", id, path, params],
     queryFn: async () => (await apiClient.get<T>(path, { params })).data,
     refetchInterval: 15000,
+    refetchOnWindowFocus: true,
   });
 }
 export function useTaskMutation<T>(

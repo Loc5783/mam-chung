@@ -8,7 +8,7 @@ import { calendarDate, nextOccurrence } from "../planning/service";
 import { User } from "../users/model";
 import { CoupleMember, CoupleActivity } from "../couples/models";
 import { objectId } from "../finance/schema";
-import { Task, TaskComment, TaskList } from "./models";
+import { Task, TaskComment, TaskList, TaskActivity } from "./models";
 import * as schema from "./schema";
 export async function task(
   userId: string,
@@ -73,6 +73,17 @@ export async function event(
   message: string,
   s: ClientSession,
 ) {
+  await TaskActivity.create(
+    [
+      {
+        taskId: t._id,
+        actorId: u._id,
+        actorName: u.name,
+        message: t.coupleId ? message : message.replace(" chung", ""),
+      },
+    ],
+    { session: s },
+  );
   if (t.coupleId)
     await CoupleActivity.create(
       [
@@ -250,6 +261,7 @@ export async function createTask(
     [
       {
         ...fields,
+        kind: list.type === "shopping" ? "shopping" : fields.kind,
         listId: list._id,
         position: await appendTaskPosition(list.id, s),
         deadlineTimezone: fields.deadlineHasTime

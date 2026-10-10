@@ -1,4 +1,4 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { PageBoundary, RouteFocus } from "../components/ui/PageBoundary";
 import { PwaStatus } from "../features/pwa/PwaStatus";
 import { NotificationBell } from "../features/notifications/NotificationBell";
@@ -91,6 +91,28 @@ function Layout({ preview = false }: { preview?: boolean }) {
             (location.pathname === "/settings"
               ? "Cài đặt"
               : "Không tìm thấy trang");
+  useEffect(() => {
+    if (!location.hash) {
+      try {
+        const mainEl = document.getElementById("main-content");
+        if (typeof mainEl?.scrollTo === "function") {
+          mainEl.scrollTo({ top: 0, behavior: "smooth" });
+        } else if (mainEl) {
+          mainEl.scrollTop = 0;
+        }
+        if (
+          typeof window !== "undefined" &&
+          typeof window.scrollTo === "function" &&
+          !navigator?.userAgent?.includes("jsdom")
+        ) {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      } catch {
+        // Silently ignore in test environments that do not implement DOM scrolling
+      }
+    }
+  }, [location.pathname, location.hash]);
+
   return (
     <div className="app-layout">
       <aside className="sidebar">
@@ -156,9 +178,11 @@ function Layout({ preview = false }: { preview?: boolean }) {
         </header>
         <main id="main-content" tabIndex={-1} className="page-content">
           <PageBoundary key={location.pathname}>
-            <Suspense fallback={<p role="status">Đang tải trang…</p>}>
-              <Outlet />
-            </Suspense>
+            <div className="page-transition-wrap" key={location.pathname}>
+              <Suspense fallback={<p role="status">Đang tải trang…</p>}>
+                <Outlet />
+              </Suspense>
+            </div>
           </PageBoundary>
         </main>
       </div>

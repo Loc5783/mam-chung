@@ -1,13 +1,6 @@
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-} from "recharts";
 import { EmptyState } from "../../components/ui";
+import { AnimatedLine } from "../../components/charts";
+
 export function Chart({
   rows,
   keys,
@@ -17,25 +10,13 @@ export function Chart({
 }) {
   return rows.length ? (
     <div className="fitness-chart">
-      <ResponsiveContainer width="100%" height={260}>
-        <LineChart data={rows}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#e4e8d9" />
-          <XAxis dataKey="date" />
-          <YAxis />
-          <Tooltip />
-          {keys.map((k) => (
-            <Line
-              key={k.key}
-              type="monotone"
-              dataKey={k.key}
-              name={k.name}
-              stroke={k.color}
-              strokeWidth={2}
-              connectNulls={false}
-            />
-          ))}
-        </LineChart>
-      </ResponsiveContainer>
+      <AnimatedLine
+        data={rows}
+        lines={keys}
+        xAxisKey="date"
+        height={260}
+        ariaLabel="Biểu đồ tiến trình tập luyện"
+      />
     </div>
   ) : (
     <EmptyState title="Chưa có dữ liệu">

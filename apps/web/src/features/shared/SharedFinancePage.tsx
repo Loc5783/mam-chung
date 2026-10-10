@@ -9,6 +9,7 @@ import {
   PiggyBank,
 } from "lucide-react";
 import { Card, Button, EmptyState, Skeleton } from "../../components/ui";
+import { CountUp } from "../../lib/motion";
 import { Modal } from "../../components/ui/Modal";
 import { apiClient, errorMessage } from "../../lib/apiClient";
 import { useAuthStore } from "../auth/store";
@@ -158,14 +159,18 @@ function SharedContent({ funds }: { funds: SharedFunds }) {
           <div className="shared-stats">
             <Card>
               <span>Tổng số dư quỹ</span>
-              <h2>{money(dash.data.totalBalance)}</h2>
+              <h2>
+                <CountUp value={dash.data.totalBalance} format={money} />
+              </h2>
               <Wallet size={24} />
             </Card>
             <Card>
               <span>
                 Chi chung tháng {dash.data.month.split("-").reverse().join("/")}
               </span>
-              <h2>{money(dash.data.monthExpense)}</h2>
+              <h2>
+                <CountUp value={dash.data.monthExpense} format={money} />
+              </h2>
               <small>Gồm chi quỹ và tiền ứng cá nhân</small>
             </Card>
             <Card className="shared-debt">
@@ -230,8 +235,12 @@ function SharedContent({ funds }: { funds: SharedFunds }) {
           )}
           {funds.items.length ? (
             <div className="shared-fund-grid">
-              {funds.items.map((w) => (
-                <Card key={w.id}>
+              {funds.items.map((w, i) => (
+                <Card
+                  key={w.id}
+                  className="stagger-item"
+                  style={{ "--i": Math.min(i, 12) } as React.CSSProperties}
+                >
                   <span className="eyebrow">
                     {w.archived ? "ĐÃ LƯU TRỮ" : "QUỸ CHUNG"}
                   </span>

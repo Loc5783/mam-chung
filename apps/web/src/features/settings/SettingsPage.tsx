@@ -4,13 +4,18 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { UserRound, ShieldCheck, LogOut, Trash2 } from "lucide-react";
+import { UserRound, ShieldCheck, LogOut, Trash2, Sparkles } from "lucide-react";
 import {
   apiClient,
   clearSession,
   errorMessage,
   getSessionEpoch,
 } from "../../lib/apiClient";
+import {
+  getMotionPreference,
+  setMotionPreference,
+  type MotionPreference,
+} from "../../lib/motion";
 import { useAuthStore, Profile } from "../auth/store";
 import { useUiStore } from "../../app/store";
 import { Button, Card, Skeleton } from "../../components/ui";
@@ -167,6 +172,78 @@ function ProfileForm({ user }: { user: Profile }) {
     </form>
   );
 }
+
+function MotionPreferenceControl() {
+  const [pref, setPref] = useState<MotionPreference>(() => getMotionPreference());
+  const notify = useUiStore((s) => s.notify);
+
+  const selectPreference = (next: MotionPreference) => {
+    setPref(next);
+    setMotionPreference(next);
+    notify(
+      next === "reduced"
+        ? "Đã chọn giảm hiệu ứng chuyển động."
+        : next === "full"
+          ? "Đã bật toàn bộ hiệu ứng chuyển động."
+          : "Đã bật hiệu ứng tự động theo hệ thống.",
+    );
+  };
+
+  return (
+    <div
+      className="motion-options"
+      role="radiogroup"
+      aria-label="Tùy chọn hiệu ứng chuyển động"
+    >
+      <label className={`motion-option ${pref === "system" ? "active" : ""}`}>
+        <input
+          type="radio"
+          name="motion-pref"
+          value="system"
+          checked={pref === "system"}
+          onChange={() => selectPreference("system")}
+        />
+        <div>
+          <b>Tự động theo hệ thống</b>
+          <small>
+            Bật hoặc giảm chuyển động tùy theo cài đặt của hệ điều hành.
+          </small>
+        </div>
+      </label>
+      <label className={`motion-option ${pref === "full" ? "active" : ""}`}>
+        <input
+          type="radio"
+          name="motion-pref"
+          value="full"
+          checked={pref === "full"}
+          onChange={() => selectPreference("full")}
+        />
+        <div>
+          <b>Luôn bật hiệu ứng</b>
+          <small>
+            Hiển thị đầy đủ chuyển động mượt mà, số đếm tăng và biểu đồ quét.
+          </small>
+        </div>
+      </label>
+      <label className={`motion-option ${pref === "reduced" ? "active" : ""}`}>
+        <input
+          type="radio"
+          name="motion-pref"
+          value="reduced"
+          checked={pref === "reduced"}
+          onChange={() => selectPreference("reduced")}
+        />
+        <div>
+          <b>Luôn giảm chuyển động</b>
+          <small>
+            Tối giản hoạt ảnh; số liệu và biểu đồ hiển thị ngay trạng thái cuối.
+          </small>
+        </div>
+      </label>
+    </div>
+  );
+}
+
 export function SettingsPage() {
   const user = useAuthStore((s) => s.user)!;
   const client = useQueryClient();
@@ -315,6 +392,16 @@ export function SettingsPage() {
                 {change.isPending ? "Đang xử lý…" : "Đổi mật khẩu"}
               </Button>
             </form>
+          </Card>
+          <Card>
+            <div className="section-heading">
+              <h2>Hiệu ứng chuyển động</h2>
+              <Sparkles size={22} />
+            </div>
+            <p className="settings-description">
+              Tùy chỉnh chuyển động mượt mà, số đếm tăng và hiệu ứng biểu đồ trên toàn ứng dụng.
+            </p>
+            <MotionPreferenceControl />
           </Card>
           <Card>
             <h2>Phiên đăng nhập</h2>

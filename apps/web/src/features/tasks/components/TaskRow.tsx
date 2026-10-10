@@ -6,6 +6,7 @@ import {
   MessageCircle,
   Repeat,
   ListChecks,
+  Sprout,
 } from "lucide-react";
 import { useAuthStore } from "../../auth/store";
 import { localInputDate } from "../../finance/api";
@@ -41,7 +42,8 @@ export const TaskRow = memo(function TaskRow({
     done = task.status === "DONE",
     disabled = task.readOnly || busy;
   const gesture = useRef<{ x: number; y: number } | null>(null),
-    [swipeActions, setSwipeActions] = useState(false);
+    [swipeActions, setSwipeActions] = useState(false),
+    [justCompleted, setJustCompleted] = useState(false);
   const term = search.trim(),
     at = term
       ? task.title.toLocaleLowerCase().indexOf(term.toLocaleLowerCase())
@@ -101,31 +103,46 @@ export const TaskRow = memo(function TaskRow({
           <button onClick={() => setSwipeActions(false)}>Đóng</button>
         </div>
       )}
-      <button
-        role="checkbox"
-        aria-checked={done}
-        aria-label={`Hoàn thành ${task.title}`}
-        className="todo-checkbox"
-        disabled={disabled}
-        onClick={() => onStatus(done ? "TODO" : "DONE")}
-      >
-        <Check size={15} />
-      </button>
+      <div className="todo-checkbox-wrap">
+        <button
+          role="checkbox"
+          aria-checked={done}
+          aria-label={`Hoàn thành ${task.title}`}
+          className="todo-checkbox"
+          disabled={disabled}
+          onClick={() => {
+            if (!done) {
+              setJustCompleted(true);
+              setTimeout(() => setJustCompleted(false), 700);
+            }
+            onStatus(done ? "TODO" : "DONE");
+          }}
+        >
+          <Check size={15} />
+        </button>
+        {justCompleted && (
+          <span className="todo-sprout-burst" aria-hidden="true">
+            <Sprout size={16} />
+          </span>
+        )}
+      </div>
       <div className="todo-row-content">
         <button className="todo-title-button" onClick={onEdit}>
           <h3>
             {task.status === "IN_PROGRESS" && (
               <span className="todo-working-dot" />
             )}
-            {at < 0 ? (
-              task.title
-            ) : (
-              <>
-                {task.title.slice(0, at)}
-                <mark>{task.title.slice(at, at + term.length)}</mark>
-                {task.title.slice(at + term.length)}
-              </>
-            )}
+            <span className="todo-strike-text">
+              {at < 0 ? (
+                task.title
+              ) : (
+                <>
+                  {task.title.slice(0, at)}
+                  <mark>{task.title.slice(at, at + term.length)}</mark>
+                  {task.title.slice(at + term.length)}
+                </>
+              )}
+            </span>
           </h3>
         </button>
         <p className="todo-row-caption">

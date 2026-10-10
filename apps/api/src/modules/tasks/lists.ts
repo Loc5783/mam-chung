@@ -163,6 +163,43 @@ export const listDto = (
   isDefault: !!list.systemKey,
   readOnly,
 });
+export async function createList(
+  actor: string,
+  input: ReturnType<typeof listCreate.parse>,
+  s: ClientSession,
+) {
+  const u = await user(actor, s, true);
+  const scope =
+    input.scope === "shared"
+      ? { coupleId: u.coupleId?.toString() }
+      : { ownerId: actor };
+  if (input.scope === "shared") {
+    if (!scope.coupleId) throw missing();
+    await shared(actor, scope.coupleId, s, true);
+  }
+  await ensureInbox(
+    input.scope === "shared"
+      ? { coupleId: scope.coupleId! }
+      : { ownerId: actor },
+    s,
+  );
+  const last = await TaskList.findOne({ ...scope, deletedAt: null })
+    .sort({ position: -1 })
+    .session(s);
+  const { scope: _, ...fields } = input;
+  void _;
+  const [list] = await TaskList.create(
+    [
+      {
+        ...fields,
+        ...scope,
+        position: between(last?.position ?? null, null),
+      },
+    ],
+    { session: s },
+  );
+  return listDto(list);
+}
 export const taskListService = {
   async list(actor: string, raw: unknown) {
     const q = listQuery.parse(raw);
@@ -205,39 +242,7 @@ export const taskListService = {
   },
   async create(actor: string, raw: unknown) {
     const input = listCreate.parse(raw);
-    return inTransaction(async (s) => {
-      const u = await user(actor, s, true);
-      const scope =
-        input.scope === "shared"
-          ? { coupleId: u.coupleId?.toString() }
-          : { ownerId: actor };
-      if (input.scope === "shared") {
-        if (!scope.coupleId) throw missing();
-        await shared(actor, scope.coupleId, s, true);
-      }
-      await ensureInbox(
-        input.scope === "shared"
-          ? { coupleId: scope.coupleId! }
-          : { ownerId: actor },
-        s,
-      );
-      const last = await TaskList.findOne({ ...scope, deletedAt: null })
-        .sort({ position: -1 })
-        .session(s);
-      const { scope: _, ...fields } = input;
-      void _;
-      const [list] = await TaskList.create(
-        [
-          {
-            ...fields,
-            ...scope,
-            position: between(last?.position ?? null, null),
-          },
-        ],
-        { session: s },
-      );
-      return listDto(list);
-    });
+    return inTransaction((s) => createList(actor, input, s));
   },
   async update(actor: string, rawId: unknown, raw: unknown) {
     const id = objectId.parse(rawId),

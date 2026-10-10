@@ -10,9 +10,10 @@ import {
   Plus,
   Sprout,
 } from "lucide-react";
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { Link } from "react-router-dom";
 import { Card, EmptyState, Skeleton, Button } from "../../components/ui";
+import { AnimatedDonut } from "../../components/charts";
+import { CountUp } from "../../lib/motion";
 import { errorMessage } from "../../lib/apiClient";
 import { formatMoney } from "../../lib/format";
 import { useFinanceDashboard, displayDate } from "./api";
@@ -35,8 +36,12 @@ export function EntryRows({
 }) {
   return (
     <div className="recent-entry-list">
-      {items.map((entry) => (
-        <div className="recent-entry" key={entry.id}>
+      {items.map((entry, i) => (
+        <div
+          className="recent-entry stagger-item"
+          key={entry.id}
+          style={{ "--i": Math.min(i, 12) } as React.CSSProperties}
+        >
           <span
             className={`mini-icon ${entry.type === "expense" ? "pink" : ""}`}
           >
@@ -83,6 +88,7 @@ export function FinanceOverview({
   budgets?: Budget[];
 }) {
   const [chartType, setChartType] = useState<"income" | "expense">("expense");
+  const [activeCategory, setActiveCategory] = useState<string | number | null>(null);
   const chartId = useId();
   const query = useFinanceDashboard(!overview);
   if (!overview && query.isPending)
@@ -118,7 +124,9 @@ export function FinanceOverview({
           <div className="stat-label">
             Tổng số dư cá nhân <WalletIcon size={19} />
           </div>
-          <strong>{formatMoney(data.totalBalance)}</strong>
+          <strong>
+            <CountUp value={data.totalBalance} format={formatMoney} />
+          </strong>
           <span className="stat-foot">
             {data.wallets.length} ví · bao gồm ví lưu trữ
           </span>
@@ -133,7 +141,9 @@ export function FinanceOverview({
               <ArrowDownLeft size={18} />
             </span>
           </div>
-          <strong>{formatMoney(data.income)}</strong>
+          <strong>
+            <CountUp value={data.income} format={formatMoney} />
+          </strong>
           <Change value={data.incomeChange} />
         </Card>
         <Card>
@@ -143,7 +153,9 @@ export function FinanceOverview({
               <ArrowUpRight size={18} />
             </span>
           </div>
-          <strong>{formatMoney(data.expense)}</strong>
+          <strong>
+            <CountUp value={data.expense} format={formatMoney} />
+          </strong>
           <Change value={data.expenseChange} />
         </Card>
       </div>
@@ -181,6 +193,8 @@ export function FinanceOverview({
             id={`${chartId}-panel`}
             role="tabpanel"
             aria-labelledby={`${chartId}-${chartType}`}
+            key={chartType}
+            className="filter-refresh"
           >
             {chartGroups.length === 0 ? (
               <>
@@ -210,54 +224,58 @@ export function FinanceOverview({
                   role="img"
                   aria-label={`${chartLabel} tháng này ${formatMoney(chartTotal)}`}
                 >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={chartGroups}
-                        dataKey="amount"
-                        nameKey="name"
-                        innerRadius={62}
-                        outerRadius={86}
-                        paddingAngle={chartGroups.length > 1 ? 3 : 0}
-                        isAnimationActive={false}
-                        stroke="white"
-                      >
-                        {chartGroups.map((item, i) => (
-                          <Cell key={item.categoryId} fill={colors[i]} />
-                        ))}
-                      </Pie>
-                      <Tooltip
-                        formatter={(value) => [
-                          formatMoney(Number(value)),
-                          "Số tiền",
-                        ]}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="donut-center">
-                    <small>{showingIncome ? "Tổng thu" : "Tổng chi"}</small>
-                    <b>{formatMoney(chartTotal)}</b>
-                  </div>
+                  <AnimatedDonut
+                    data={chartGroups}
+                    dataKey="amount"
+                    nameKey="name"
+                    colors={colors}
+                    innerRadius={62}
+                    outerRadius={86}
+                    centerLabel={showingIncome ? "Tổng thu" : "Tổng chi"}
+                    centerValue={chartTotal}
+                    centerFormatter={formatMoney}
+                    height="100%"
+                    activeId={activeCategory}
+                    onActiveChange={setActiveCategory}
+                    tooltipFormatter={(val) => [formatMoney(val), "Số tiền"]}
+                  />
                 </div>
                 <div className="real-legend">
-                  {chartGroups.map((item, i) => (
-                    <div key={item.categoryId}>
-                      <span
-                        className="legend-dot"
-                        style={{ background: colors[i] }}
-                      />
-                      <div>
-                        <b>{item.name}</b>
-                        <small>{formatMoney(item.amount)}</small>
+                  {chartGroups.map((item, i) => {
+                    const isHovered = activeCategory === item.categoryId;
+                    const isDimmed = activeCategory !== null && !isHovered;
+                    return (
+                      <div
+                        key={item.categoryId}
+                        className={`chart-legend-row ${isHovered ? "active" : ""}`}
+                        style={{
+                          opacity: isDimmed ? 0.45 : 1,
+                          transition: "all var(--dur-fast) var(--ease-out)",
+                          cursor: "pointer",
+                          padding: "4px 8px",
+                          borderRadius: "8px",
+                          backgroundColor: isHovered ? "var(--primary-lighter)" : "transparent",
+                        }}
+                        onMouseEnter={() => setActiveCategory(item.categoryId)}
+                        onMouseLeave={() => setActiveCategory(null)}
+                      >
+                        <span
+                          className="legend-dot"
+                          style={{ background: colors[i % colors.length] }}
+                        />
+                        <div>
+                          <b>{item.name}</b>
+                          <small>{formatMoney(item.amount)}</small>
+                        </div>
+                        <strong>
+                          {chartTotal
+                            ? Math.round((item.amount / chartTotal) * 100)
+                            : 0}
+                          %
+                        </strong>
                       </div>
-                      <strong>
-                        {chartTotal
-                          ? Math.round((item.amount / chartTotal) * 100)
-                          : 0}
-                        %
-                      </strong>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -280,8 +298,12 @@ export function FinanceOverview({
             </EmptyState>
           ) : (
             <div className="overview-wallets">
-              {data.wallets.map((wallet) => (
-                <div key={wallet.id}>
+              {data.wallets.map((wallet, i) => (
+                <div
+                  key={wallet.id}
+                  className="stagger-item"
+                  style={{ "--i": Math.min(i, 12) } as React.CSSProperties}
+                >
                   <span
                     className="wallet-color-dot"
                     style={{ background: wallet.color }}

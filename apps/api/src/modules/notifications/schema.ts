@@ -7,6 +7,8 @@ export const types = [
   "PAYMENT_CONFIRM",
   "TASK_ASSIGNED",
   "TASK_DUE",
+  "TASK_NUDGE",
+  "TASK_REMINDER",
   "BUDGET_EXCEEDED",
 ] as const;
 export const list = pagination

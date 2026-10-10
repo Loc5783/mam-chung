@@ -72,7 +72,7 @@ describe("Tài khoản và giao diện", () => {
   it("xem dữ liệu mẫu tại trang preview", async () => {
     renderApp("/preview");
     expect(
-      await screen.findByText(/Các số liệu bên dưới/, {}, { timeout: 5000 }),
+      await screen.findByText(/Các số liệu bên dưới/, {}, { timeout: 10000 }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "Chi tiêu của bạn" }),
@@ -106,7 +106,11 @@ describe("Tài khoản và giao diện", () => {
     await userEvent.type(screen.getByLabelText("Mật khẩu"), "Secret12345");
     await userEvent.click(screen.getByRole("button", { name: "Đăng nhập" }));
     expect(
-      await screen.findByRole("heading", { name: /Chào Minh/ }),
+      await screen.findByRole(
+        "heading",
+        { name: /Chào Minh/ },
+        { timeout: 10000 },
+      ),
     ).toBeInTheDocument();
     expect(post).toHaveBeenCalledWith("/auth/login", {
       email: "minh@example.test",

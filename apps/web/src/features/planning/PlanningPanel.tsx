@@ -47,16 +47,21 @@ export function Progress({
   label: string;
   status?: string;
 }) {
+  const clamped = Math.min(100, Math.max(0, value));
   return (
     <div
       className={`plan-progress ${status}`}
       role="progressbar"
       aria-label={label}
-      aria-valuenow={Math.min(100, Math.max(0, value))}
+      aria-valuenow={clamped}
       aria-valuemin={0}
       aria-valuemax={100}
     >
-      <span style={{ width: `${Math.min(100, Math.max(0, value))}%` }} />
+      <span
+        style={{
+          transform: `scaleX(${clamped / 100})`,
+        }}
+      />
     </div>
   );
 }
@@ -245,8 +250,12 @@ function Budgets({ categories }: { categories: Category[] }) {
       {query.data &&
         (query.data.items.length ? (
           <div className="wallet-grid budget-grid">
-            {query.data.items.map((b) => (
-              <Card key={b.id} className={`budget-card ${b.status}`}>
+            {query.data.items.map((b, i) => (
+              <Card
+                key={b.id}
+                className={`budget-card ${b.status} stagger-item`}
+                style={{ "--i": Math.min(i, 12) } as React.CSSProperties}
+              >
                 <div className="section-heading">
                   <span className="category-symbol expense">
                     <FinanceIcon name={b.categoryIcon} />
@@ -343,8 +352,12 @@ function Goals() {
       {query.data &&
         (query.data.items.length ? (
           <div className="wallet-grid goal-grid">
-            {query.data.items.map((g) => (
-              <Card key={g.id} className="goal-card">
+            {query.data.items.map((g, i) => (
+              <Card
+                key={g.id}
+                className="goal-card stagger-item"
+                style={{ "--i": Math.min(i, 12) } as React.CSSProperties}
+              >
                 <div className="section-heading">
                   <span
                     className="wallet-symbol"
@@ -606,8 +619,12 @@ function RecurringList({
       {query.data &&
         (query.data.items.length ? (
           <div className="recurring-grid">
-            {query.data.items.map((r) => (
-              <Card key={r.id} className="recurring-card">
+            {query.data.items.map((r, i) => (
+              <Card
+                key={r.id}
+                className="recurring-card stagger-item"
+                style={{ "--i": Math.min(i, 12) } as React.CSSProperties}
+              >
                 <div className="section-heading">
                   <span className={`category-symbol ${r.type}`}>
                     <CalendarClock size={21} />

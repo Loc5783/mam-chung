@@ -66,10 +66,11 @@ function run(args, cwd, env) {
   return child;
 }
 (async () => {
+  const webPort = Number(process.env.WEB_PORT || 5180);
   await Promise.all([
     assertPortAvailable(27118),
     assertPortAvailable(4000),
-    assertPortAvailable(5173),
+    assertPortAvailable(webPort),
   ]);
   console.log("Đang mở MongoDB replica set riêng cho bản chạy local…");
   replica = await MongoMemoryReplSet.create({
@@ -92,7 +93,7 @@ function run(args, cwd, env) {
     NODE_ENV: "development",
     PORT: "4000",
     TRUST_PROXY_HOPS: "0",
-    CORS_ORIGIN: "http://127.0.0.1:5173",
+    CORS_ORIGIN: `http://127.0.0.1:${webPort}`,
     MONGODB_URI: replica.getUri("mam_chung_local"),
     JWT_SECRET: fs.readFileSync(secretPath, "utf8"),
   };
@@ -102,12 +103,12 @@ function run(args, cwd, env) {
     "bin/vite.js",
   );
   run(
-    [viteBin, "--host", "127.0.0.1", "--port", "5173", "--strictPort"],
+    [viteBin, "--host", "127.0.0.1", "--port", String(webPort), "--strictPort"],
     path.join(root, "apps/web"),
     env,
   );
   console.log(
-    "Mầm Chung: http://127.0.0.1:5173/ · Swagger: http://127.0.0.1:4000/api/docs",
+    `Mầm Chung: http://127.0.0.1:${webPort}/ · Swagger: http://127.0.0.1:4000/api/docs`,
   );
   console.log(
     "Dữ liệu local nằm trong .local/data và được giữ khi dừng bình thường. Ctrl+C để dừng.",

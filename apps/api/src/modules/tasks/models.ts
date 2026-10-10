@@ -7,6 +7,7 @@ const taskSchema = new Schema(
     deadlineHasTime: { type: Boolean, default: false },
     deadlineTime: { type: String, default: null },
     deadlineTimezone: { type: String, default: null },
+    lastNudgedAt: { type: Date, default: null },
     reminderAt: { type: Date, default: null },
     estimateMinutes: { type: Number, default: null },
     timeSpentSeconds: { type: Number, default: 0 },
@@ -125,4 +126,60 @@ listSchema.index(
   { unique: true, partialFilterExpression: { systemKey: { $type: "string" } } },
 );
 export const TaskList = model("TaskList", listSchema, "task_lists");
-export const taskModels = [Task, TaskComment, TaskList];
+export const TaskActivity = model(
+  "TaskActivity",
+  new Schema(
+    {
+      taskId: { type: Schema.Types.ObjectId, required: true, index: true },
+      actorId: { type: Schema.Types.ObjectId, required: true },
+      actorName: { type: String, required: true },
+      message: { type: String, required: true },
+    },
+    { timestamps: true },
+  ),
+  "task_activity",
+);
+const timeSchema = new Schema(
+  {
+    taskId: { type: Schema.Types.ObjectId, required: true },
+    userId: { type: Schema.Types.ObjectId, required: true },
+    sessionId: { type: String, required: true },
+    seconds: { type: Number, required: true },
+  },
+  { timestamps: true },
+);
+timeSchema.index({ taskId: 1, userId: 1, sessionId: 1 }, { unique: true });
+export const TaskTimeReceipt = model(
+  "TaskTimeReceipt",
+  timeSchema,
+  "task_time_receipts",
+);
+const templateSchema = new Schema(
+  {
+    name: { type: String, required: true },
+    ownerId: { type: Schema.Types.ObjectId, default: null },
+    coupleId: { type: Schema.Types.ObjectId, default: null },
+    type: { type: String, enum: ["normal", "shopping"], default: "normal" },
+    items: { type: [Schema.Types.Mixed], default: [] },
+  },
+  { timestamps: true },
+);
+templateSchema.pre("validate", function () {
+  if (!!this.ownerId === !!this.coupleId)
+    this.invalidate("ownerId", "Mẫu cần đúng một chủ sở hữu.");
+});
+templateSchema.index({ ownerId: 1 });
+templateSchema.index({ coupleId: 1 });
+export const TaskTemplate = model(
+  "TaskTemplate",
+  templateSchema,
+  "task_templates",
+);
+export const taskModels = [
+  Task,
+  TaskComment,
+  TaskList,
+  TaskActivity,
+  TaskTimeReceipt,
+  TaskTemplate,
+];

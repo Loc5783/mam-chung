@@ -1,3 +1,4 @@
+import { TaskExtras } from "./TaskExtras";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
@@ -71,6 +72,7 @@ export function TaskDetailDrawer({
   onComments,
   busy = false,
   onUndo,
+  onFocus,
 }: {
   task: Task;
   members: Members;
@@ -80,6 +82,7 @@ export function TaskDetailDrawer({
   onComments: () => void;
   busy?: boolean;
   onUndo?: () => void;
+  onFocus?: () => void;
 }) {
   const user = useAuthStore((s) => s.user)!,
     online = useOnline(),
@@ -509,6 +512,11 @@ export function TaskDetailDrawer({
           </>
         )}
       </div>
+      <TaskExtras
+        task={server.current}
+        disabled={task.readOnly || !online || dirty || save.isPending || busy}
+        onFocus={onFocus}
+      />
     </Modal>
   );
 }

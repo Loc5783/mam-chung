@@ -1,28 +1,95 @@
-import { useEffect, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 import { X, Sprout } from "lucide-react";
 import { useUiStore } from "../../app/store";
-export function Button(props: ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button {...props} className={`button ${props.className || ""}`} />;
+
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  sheen?: boolean;
 }
+
+export function Button({ sheen, className = "", ...props }: ButtonProps) {
+  const isPrimary =
+    !className.includes("button-outline") &&
+    !className.includes("button-danger") &&
+    !className.includes("button-ghost") &&
+    !className.includes("icon-button") &&
+    !className.includes("compact");
+  const hasSheen = sheen ?? isPrimary;
+  const sheenClass = hasSheen ? "button-sheen" : "";
+  return (
+    <button
+      {...props}
+      className={`button ${sheenClass} ${className}`.trim()}
+    />
+  );
+}
+
 export function Card({
   children,
   className = "",
+  spotlight = true,
+  style,
 }: {
   children: ReactNode;
   className?: string;
+  spotlight?: boolean;
+  style?: React.CSSProperties;
 }) {
-  return <section className={`card ${className}`}>{children}</section>;
+  const rafId = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (rafId.current !== null) {
+        cancelAnimationFrame(rafId.current);
+      }
+    };
+  }, []);
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLElement>) => {
+    if (!spotlight || e.pointerType === "touch") return;
+    const currentTarget = e.currentTarget;
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+
+    if (rafId.current !== null) {
+      cancelAnimationFrame(rafId.current);
+    }
+
+    rafId.current = requestAnimationFrame(() => {
+      const rect = currentTarget.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      currentTarget.style.setProperty("--mx", `${x}px`);
+      currentTarget.style.setProperty("--my", `${y}px`);
+    });
+  };
+
+  return (
+    <section
+      onPointerMove={handlePointerMove}
+      data-spotlight={spotlight ? "true" : undefined}
+      className={`card ${className}`}
+      style={style}
+    >
+      {children}
+    </section>
+  );
 }
 export function EmptyState({
   title,
   children,
+  icon,
 }: {
   title: string;
   children: ReactNode;
+  icon?: ReactNode;
 }) {
   return (
     <div className="empty-state">
-      <Sprout size={36} />
+      {icon ? (
+        <div className="empty-state-icon">{icon}</div>
+      ) : (
+        <Sprout size={36} className="empty-state-icon" />
+      )}
       <h3>{title}</h3>
       <p>{children}</p>
     </div>

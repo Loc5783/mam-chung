@@ -1,4 +1,14 @@
 import {
+  taskExtras,
+  timeInput,
+  templateInput,
+  applyInput,
+  reminderInput,
+  scopeInput,
+} from "./extensions";
+import { pagination } from "../finance/schema";
+import { z as validator } from "zod";
+import {
   taskListService as lists,
   listCreate,
   listUpdate,
@@ -20,7 +30,113 @@ import * as z from "./schema";
 import { taskService as s } from "./service";
 export function taskRoutes() {
   const r = Router();
-  r.use(["/tasks", "/task-lists"], auth);
+  r.use(["/tasks", "/task-lists", "/task-templates"], auth);
+  r.post(
+    "/tasks/:id/scope",
+    validateParams(idParams),
+    validate(scopeInput),
+    asyncHandler(async (req, res) =>
+      res.json(await taskExtras.scope(req.user!.id, req.params.id, req.body)),
+    ),
+  );
+  r.post(
+    "/tasks/:id/reminder",
+    validateParams(idParams),
+    validate(reminderInput),
+    asyncHandler(async (req, res) =>
+      res.json(
+        await taskExtras.reminder(req.user!.id, req.params.id, req.body),
+      ),
+    ),
+  );
+  r.get(
+    "/task-templates",
+    validateQuery(pagination),
+    asyncHandler(async (req, res) =>
+      res.json(await taskExtras.templates(req.user!.id, req.query)),
+    ),
+  );
+  r.post(
+    "/task-templates",
+    validate(templateInput),
+    asyncHandler(async (req, res) =>
+      res
+        .status(201)
+        .json(await taskExtras.saveTemplate(req.user!.id, req.body)),
+    ),
+  );
+  r.post(
+    "/task-templates/:id/apply",
+    validateParams(idParams),
+    validate(applyInput),
+    asyncHandler(async (req, res) =>
+      res
+        .status(201)
+        .json(
+          await taskExtras.applyTemplate(req.user!.id, req.params.id, req.body),
+        ),
+    ),
+  );
+  r.get(
+    "/tasks/:id/activity",
+    validateParams(idParams),
+    validateQuery(pagination),
+    asyncHandler(async (req, res) =>
+      res.json(
+        await taskExtras.activity(req.user!.id, req.params.id, req.query),
+      ),
+    ),
+  );
+  r.post(
+    "/tasks/:id/time",
+    validateParams(idParams),
+    validate(timeInput),
+    asyncHandler(async (req, res) =>
+      res.json(await taskExtras.time(req.user!.id, req.params.id, req.body)),
+    ),
+  );
+  r.post(
+    "/tasks/:id/nudge",
+    validateParams(idParams),
+    validate(validator.object({}).strict()),
+    asyncHandler(async (req, res) =>
+      res.json(await taskExtras.nudge(req.user!.id, req.params.id, req.body)),
+    ),
+  );
+  r.post(
+    "/tasks/:id/duplicate",
+    validateParams(idParams),
+    validate(validator.object({}).strict()),
+    asyncHandler(async (req, res) =>
+      res
+        .status(201)
+        .json(
+          await taskExtras.duplicate(req.user!.id, req.params.id, req.body),
+        ),
+    ),
+  );
+  r.post(
+    "/tasks/:id/subtasks/:subId/promote",
+    validateParams(
+      validator.object({
+        id: validator.string().regex(/^[a-f0-9]{24}$/i),
+        subId: validator.string().uuid(),
+      }),
+    ),
+    validate(z.remove),
+    asyncHandler(async (req, res) =>
+      res
+        .status(201)
+        .json(
+          await taskExtras.promote(
+            req.user!.id,
+            req.params.id,
+            req.params.subId,
+            req.body,
+          ),
+        ),
+    ),
+  );
   r.get(
     "/task-lists",
     validateQuery(listQuery),

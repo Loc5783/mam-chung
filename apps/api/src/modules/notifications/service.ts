@@ -7,7 +7,7 @@ import { User } from "../users/model";
 import { userRepository } from "../users/repository";
 import { Couple, CoupleMember, CoupleInvite } from "../couples/models";
 import { Settlement } from "../shared/models";
-import { Task } from "../tasks/models";
+import { Task, TaskList } from "../tasks/models";
 import { Budget } from "../planning/models";
 import { FinancialTransaction, Category } from "../finance/models";
 import { objectId } from "../finance/schema";
@@ -163,7 +163,11 @@ async function sync(id: string, s: ClientSession) {
         });
     }
   }
+  const archivedLists = await TaskList.find({ archivedAt: { $ne: null } })
+    .select("_id")
+    .session(s);
   const tasks = await Task.find({
+    listId: { $nin: archivedLists.map((l) => l._id) },
     deletedAt: null,
     status: { $in: ["TODO", "IN_PROGRESS"] },
     $or: [
@@ -228,6 +232,30 @@ async function sync(id: string, s: ClientSession) {
       href: "/finance?tab=budgets",
       sourceId: b.id as string,
       occurredAt: now,
+    });
+  }
+  const notices = await Notification.find({
+    userId: id,
+    active: true,
+    type: { $in: ["TASK_NUDGE", "TASK_REMINDER"] },
+    "payload.sourceId": { $in: tasks.map((t) => t.id) },
+  }).session(s);
+  for (const n of notices) {
+    const t = tasks.find((t) => t.id === n.payload!.sourceId);
+    if (!t || (t.assignedTo ?? t.createdBy).toString() !== id) continue;
+    if (
+      n.type === "TASK_REMINDER" &&
+      n.eventKey !== `reminder:${t.id}:${t.reminderAt?.toISOString()}`
+    )
+      continue;
+    add({
+      key: n.eventKey,
+      type: n.type as Event["type"],
+      title: n.title,
+      message: n.message,
+      href: n.href,
+      sourceId: n.payload!.sourceId,
+      occurredAt: n.occurredAt,
     });
   }
   for (const e of events) {

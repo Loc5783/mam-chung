@@ -4273,3 +4273,117 @@ main:focus {
     padding-bottom: calc(20px + env(safe-area-inset-bottom));
   }
 }
+
+.todo-kanban-handle {
+  min-height: 44px;
+  color: #57713a;
+  touch-action: none;
+  border: 1px solid #e4e8d9;
+  border-radius: 10px;
+  background: white;
+  padding: 6px 12px;
+}
+.todo-drop-active {
+  outline: 2px solid #7e9b57;
+  background: #f2f6ea !important;
+}
+.todo-calendar-nav {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 16px 0;
+}
+.todo-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  overflow: auto;
+}
+.todo-calendar-grid section {
+  min-height: 150px;
+  padding: 10px;
+  border: 1px solid #e4e8d9;
+  border-radius: 16px;
+  background: white;
+}
+.todo-calendar-grid section > button {
+  min-height: 44px;
+  color: #57713a;
+  background: transparent;
+  border: 0;
+}
+.todo-calendar-task {
+  display: flex;
+  background: #e7efdb;
+  border-radius: 10px;
+  margin: 6px 0;
+  padding: 4px;
+  color: #57713a;
+}
+.todo-calendar-task.is-partner {
+  background: #fbe6ed;
+  color: #b3577a;
+}
+.todo-calendar-task button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  min-height: 44px;
+  overflow-wrap: anywhere;
+}
+.todo-calendar-task button:first-child {
+  touch-action: none;
+}
+.todo-focus {
+  display: grid;
+  gap: 14px;
+  max-width: 600px;
+  padding: 24px;
+  background: white;
+  border: 1px solid #e4e8d9;
+  border-radius: 16px;
+  margin: 16px auto;
+}
+.todo-focus label,
+.todo-extras label {
+  display: grid;
+  gap: 6px;
+}
+.todo-focus label:has(input[type="checkbox"]) {
+  display: flex;
+  align-items: center;
+}
+.todo-focus-clock {
+  font-size: 64px;
+  color: #57713a;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.todo-extras {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid #e4e8d9;
+  margin-top: 20px;
+  padding-top: 20px;
+}
+.todo-extras p {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.todo-extras details summary {
+  min-height: 44px;
+  cursor: pointer;
+}
+.todo-extras details li {
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+@media (max-width: 767px) {
+  .todo-calendar-grid {
+    grid-template-columns: repeat(7, minmax(135px, 1fr));
+  }
+  .todo-focus {
+    padding: 16px;
+  }
+}

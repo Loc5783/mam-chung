@@ -1,3 +1,4 @@
+import { startTaskReminderJob } from "./modules/tasks/job";
 import { startRecurringJob } from "./modules/planning/job";
 import mongoose from "mongoose";
 import { app } from "./app";
@@ -9,7 +10,9 @@ async function start() {
   const server = app.listen(env.PORT, () =>
     logger.info({ port: env.PORT }, "Mầm Chung đã sẵn sàng"),
   );
-  const stopJob = startRecurringJob();
+  const stopRecurring = startRecurringJob(),
+    stopReminders = startTaskReminderJob();
+  const stopJob = () => Promise.all([stopRecurring(), stopReminders()]);
   const stop = () => {
     server.close(() => {
       void stopJob()

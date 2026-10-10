@@ -1,10 +1,12 @@
+import { useAuthStore } from "../auth/store";
 import { moveTabFocus } from "../../components/ui/tabs";
 import { Chart } from "./FitnessChart";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Plus } from "lucide-react";
 import { Card, Button, EmptyState, Skeleton } from "../../components/ui";
+import { AnimatedDonut } from "../../components/charts";
+import { CountUp } from "../../lib/motion";
 import { Modal } from "../../components/ui/Modal";
 import { apiClient, errorMessage } from "../../lib/apiClient";
 import { useFitnessQuery, useFitnessMutation } from "./api";
@@ -21,10 +23,68 @@ import {
 import { FitnessDialog, FitnessForm } from "./FitnessForm";
 const fmt = (n: number) =>
   new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(n);
+type RestTimerState = { seconds: number; left: number; end: number | null };
+const defaultTimer: RestTimerState = { seconds: 90, left: 90, end: null };
+function readTimer(storageKey: string): RestTimerState {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(storageKey) || "null");
+    if (
+      saved &&
+      Number.isInteger(saved.seconds) &&
+      saved.seconds >= 10 &&
+      saved.seconds <= 600 &&
+      Number.isInteger(saved.left) &&
+      saved.left >= 0 &&
+      saved.left <= saved.seconds &&
+      (saved.end === null || (Number.isFinite(saved.end) && saved.end > 0))
+    ) {
+      const left =
+        saved.end === null
+          ? saved.left
+          : Math.max(
+              0,
+              Math.min(
+                saved.seconds,
+                Math.ceil((saved.end - Date.now()) / 1000),
+              ),
+            );
+      return {
+        seconds: saved.seconds,
+        left,
+        end: left === 0 ? null : saved.end,
+      };
+    }
+  } catch {
+    /* Storage may be unavailable. Keep the timer usable. */
+  }
+  return defaultTimer;
+}
 export function RestTimer() {
-  const [seconds, setSeconds] = useState(90),
-    [left, setLeft] = useState(90),
-    [end, setEnd] = useState<number | null>(null);
+  const userId = useAuthStore((state) => state.user?.id) || "anonymous";
+  return (
+    <PersistentRestTimer
+      key={userId}
+      storageKey={`mam-chung:rest-timer:${userId}`}
+    />
+  );
+}
+function PersistentRestTimer({ storageKey }: { storageKey: string }) {
+  const [initial] = useState(() => readTimer(storageKey));
+  const [seconds, setSeconds] = useState(initial.seconds),
+    [left, setLeft] = useState(initial.left),
+    [end, setEnd] = useState<number | null>(initial.end);
+  useEffect(() => {
+    try {
+      if (Number.isInteger(seconds) && seconds >= 10 && seconds <= 600) {
+        sessionStorage.setItem(
+          storageKey,
+          JSON.stringify({ seconds, left, end }),
+        );
+      }
+    } catch {
+      /* Storage may be unavailable. Keep the timer usable. */
+    }
+  }, [storageKey, seconds, left, end]);
   useEffect(() => {
     if (end === null) return;
     const tick = () => {
@@ -60,11 +120,14 @@ export function RestTimer() {
       <Button
         className="button-outline"
         disabled={!Number.isInteger(seconds) || seconds < 10 || seconds > 600}
-        onClick={() =>
-          end === null
-            ? setEnd(Date.now() + Math.max(1, left || seconds) * 1000)
-            : setEnd(null)
-        }
+        onClick={() => {
+          if (end === null)
+            setEnd(Date.now() + Math.max(1, left || seconds) * 1000);
+          else {
+            setLeft(Math.max(0, Math.ceil((end - Date.now()) / 1000)));
+            setEnd(null);
+          }
+        }}
       >
         {end === null ? "Bắt đầu / tiếp tục" : "Tạm dừng"}
       </Button>
@@ -142,10 +205,16 @@ function Analytics({
           ["Tổng phút", report.stats.totalMinutes],
           ["Volume gần nhất", report.stats.lastVolume],
           ["Buổi / tuần trong khoảng", report.stats.frequencyPerWeek],
-        ].map(([label, value]) => (
-          <Card key={label}>
+        ].map(([label, value], i) => (
+          <Card
+            key={label}
+            className="stagger-item"
+            style={{ "--i": Math.min(i, 12) } as React.CSSProperties}
+          >
             <span>{label}</span>
-            <h2>{fmt(Number(value))}</h2>
+            <h2>
+              <CountUp value={Number(value)} format={fmt} />
+            </h2>
           </Card>
         ))}
       </div>
@@ -223,22 +292,20 @@ function Analytics({
           <h2>Phân bố theo rep</h2>
           {report.repDistribution.some((r) => r.count) ? (
             <div className="fitness-chart">
-              <ResponsiveContainer width="100%" height={260}>
-                <PieChart>
-                  <Pie
-                    data={report.repDistribution}
-                    nameKey="name"
-                    dataKey="count"
-                    innerRadius={65}
-                    outerRadius={95}
-                  >
-                    {["#b3577a", "#7e9b57", "#b9cc9a"].map((c) => (
-                      <Cell key={c} fill={c} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
+              <AnimatedDonut
+                data={report.repDistribution}
+                nameKey="name"
+                dataKey="count"
+                colors={["#b3577a", "#7e9b57", "#b9cc9a"]}
+                innerRadius={65}
+                outerRadius={95}
+                centerLabel="Tổng set"
+                centerValue={report.repDistribution.reduce((sum, r) => sum + r.count, 0)}
+                centerFormatter={(v) => `${v} set`}
+                height={260}
+                tooltipFormatter={(val, name) => [`${val} set`, String(name)]}
+                ariaLabel="Phân bố rep theo các mức tập"
+              />
             </div>
           ) : (
             <EmptyState title="Chưa có set hoàn thành">
@@ -749,8 +816,12 @@ export function FitnessPage() {
             ) : (
               <>
                 {sessions.data.items.length ? (
-                  sessions.data.items.map((w) => (
-                    <article className="fitness-session" key={w.id}>
+                  sessions.data.items.map((w, i) => (
+                    <article
+                      className="fitness-session stagger-item"
+                      key={w.id}
+                      style={{ "--i": Math.min(i, 12) } as React.CSSProperties}
+                    >
                       <div>
                         <h3>
                           {w.date} · {w.durationMinutes} phút
@@ -816,8 +887,12 @@ export function FitnessPage() {
           ) : exercises.isError ? (
             <ErrorBox error={exercises.error} />
           ) : (
-            exercises.data.items.map((e) => (
-              <article className="fitness-session" key={e.id}>
+            exercises.data.items.map((e, i) => (
+              <article
+                className="fitness-session stagger-item"
+                key={e.id}
+                style={{ "--i": Math.min(i, 12) } as React.CSSProperties}
+              >
                 <div>
                   <b>{e.name}</b>
                   <p>
@@ -869,8 +944,12 @@ export function FitnessPage() {
           ) : templates.isError ? (
             <ErrorBox error={templates.error} />
           ) : templates.data.items.length ? (
-            templates.data.items.map((t) => (
-              <article className="fitness-session" key={t.id}>
+            templates.data.items.map((t, i) => (
+              <article
+                className="fitness-session stagger-item"
+                key={t.id}
+                style={{ "--i": Math.min(i, 12) } as React.CSSProperties}
+              >
                 <div>
                   <h3>{t.name}</h3>
                   <p>
@@ -928,8 +1007,12 @@ export function FitnessPage() {
           ) : (
             <>
               {bodies.data.items.length ? (
-                bodies.data.items.map((b) => (
-                  <article className="fitness-session" key={b.id}>
+                bodies.data.items.map((b, i) => (
+                  <article
+                    className="fitness-session stagger-item"
+                    key={b.id}
+                    style={{ "--i": Math.min(i, 12) } as React.CSSProperties}
+                  >
                     <div>
                       <h3>{b.date}</h3>
                       <p>

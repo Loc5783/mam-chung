@@ -1,17 +1,6 @@
 import { useState } from "react";
-import {
-  BarChart,
-  Bar,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  LineChart,
-  Line,
-} from "recharts";
 import { Card, Button, Skeleton, EmptyState } from "../../components/ui";
+import { AnimatedBar, AnimatedLine } from "../../components/charts";
 import { formatMoney } from "../../lib/format";
 import { errorMessage } from "../../lib/apiClient";
 import { useReports, useCurrentMonth } from "./api";
@@ -72,7 +61,7 @@ export function PlanningReports() {
         </Card>
       ) : (
         data && (
-          <>
+          <div key={`${months}-${endMonth}`} className="filter-refresh">
             <div className="history-summary report-summary">
               <span>
                 Tổng thu{" "}
@@ -110,44 +99,19 @@ export function PlanningReports() {
                 role="img"
                 aria-label={`Biểu đồ thu chi ${months} tháng, tổng thu ${formatMoney(data.totalIncome)}, tổng chi ${formatMoney(data.totalExpense)}`}
               >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={chart}
-                    margin={{ top: 20, right: 10, left: 5, bottom: 10 }}
-                  >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      stroke="#E4E8D9"
-                    />
-                    <XAxis
-                      dataKey="month"
-                      tickFormatter={(v) => `${v.slice(5)}/${v.slice(2, 4)}`}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <YAxis
-                      width={58}
-                      tickFormatter={(v) => `${Math.round(v / 1000)}k`}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <Tooltip formatter={(v) => formatMoney(Number(v))} />
-                    <Legend />
-                    <Bar
-                      dataKey="income"
-                      name="Thu nhập"
-                      fill="#7E9B57"
-                      radius={[5, 5, 0, 0]}
-                      isAnimationActive={false}
-                    />
-                    <Bar
-                      dataKey="expense"
-                      name="Chi tiêu"
-                      fill="#E38FA9"
-                      radius={[5, 5, 0, 0]}
-                      isAnimationActive={false}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
+                <AnimatedBar
+                  data={chart}
+                  bars={[
+                    { key: "income", name: "Thu nhập", color: "#7E9B57", radius: [5, 5, 0, 0] },
+                    { key: "expense", name: "Chi tiêu", color: "#E38FA9", radius: [5, 5, 0, 0] },
+                  ]}
+                  xAxisKey="month"
+                  xAxisFormatter={(v) => `${v.slice(5)}/${v.slice(2, 4)}`}
+                  yAxisFormatter={(v) => `${Math.round(v / 1000)}k`}
+                  tooltipFormatter={(v) => formatMoney(Number(v))}
+                  height="100%"
+                  ariaLabel={`Biểu đồ thu chi ${months} tháng, tổng thu ${formatMoney(data.totalIncome)}, tổng chi ${formatMoney(data.totalExpense)}`}
+                />
               </div>
               <div className="table-scroll">
                 <table className="history-table report-table">
@@ -187,40 +151,21 @@ export function PlanningReports() {
                     role="img"
                     aria-label="Xu hướng chi của 5 danh mục có tổng chi cao nhất"
                   >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                        data={chart}
-                        margin={{ top: 20, right: 15, left: 5, bottom: 10 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#E4E8D9" />
-                        <XAxis
-                          dataKey="month"
-                          tickFormatter={(v) =>
-                            `${v.slice(5)}/${v.slice(2, 4)}`
-                          }
-                          tick={{ fontSize: 11 }}
-                        />
-                        <YAxis
-                          width={58}
-                          tickFormatter={(v) => `${Math.round(v / 1000)}k`}
-                          tick={{ fontSize: 11 }}
-                        />
-                        <Tooltip formatter={(v) => formatMoney(Number(v))} />
-                        <Legend />
-                        {lines.map((c, i) => (
-                          <Line
-                            key={c.categoryId}
-                            dataKey={c.categoryId}
-                            name={c.name}
-                            type="linear"
-                            stroke={colors[i]}
-                            strokeWidth={2}
-                            dot={{ r: 3 }}
-                            isAnimationActive={false}
-                          />
-                        ))}
-                      </LineChart>
-                    </ResponsiveContainer>
+                    <AnimatedLine
+                      data={chart}
+                      lines={lines.map((c, i) => ({
+                        key: c.categoryId,
+                        name: c.name,
+                        color: colors[i % colors.length],
+                      }))}
+                      xAxisKey="month"
+                      xAxisFormatter={(v) => `${v.slice(5)}/${v.slice(2, 4)}`}
+                      yAxisFormatter={(v) => `${Math.round(v / 1000)}k`}
+                      tooltipFormatter={(v) => formatMoney(Number(v))}
+                      showLegend
+                      height="100%"
+                      ariaLabel="Xu hướng chi của 5 danh mục có tổng chi cao nhất"
+                    />
                   </div>
                   <div className="report-category-list">
                     {data.categories.map((c, i) => (
@@ -241,7 +186,7 @@ export function PlanningReports() {
                 </EmptyState>
               )}
             </Card>
-          </>
+          </div>
         )
       )}
     </>

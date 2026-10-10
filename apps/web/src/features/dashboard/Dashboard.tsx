@@ -13,6 +13,7 @@ import {
 import { Link } from "react-router-dom";
 import { Card } from "../../components/ui";
 import { formatMoney } from "../../lib/format";
+import { CountUp } from "../../lib/motion";
 const expenses = [
   ["Ăn uống", 38],
   ["Mua sắm", 27],
@@ -31,7 +32,7 @@ export function Dashboard() {
           </h1>
           <p>Cùng chăm chút cho những điều quan trọng.</p>
         </div>
-        <Link to="/login" className="button">
+        <Link to="/login" className="button button-sheen">
           <Plus size={17} /> Bắt đầu hành trình
         </Link>
       </div>
@@ -50,7 +51,9 @@ export function Dashboard() {
           <div className="stat-label">
             Tổng số dư cá nhân <Wallet size={19} />
           </div>
-          <strong>{formatMoney(24500000)}</strong>
+          <strong>
+            <CountUp value={24500000} format={formatMoney} />
+          </strong>
           <span className="stat-foot">
             Trong 3 ví của bạn <span>↗</span>
           </span>
@@ -65,7 +68,9 @@ export function Dashboard() {
               <ArrowDownLeft size={18} />
             </span>
           </div>
-          <strong>{formatMoney(15000000)}</strong>
+          <strong>
+            <CountUp value={15000000} format={formatMoney} />
+          </strong>
           <span className="stat-foot">
             <span className="pill">+12,5%</span> so với tháng trước
           </span>
@@ -77,7 +82,9 @@ export function Dashboard() {
               <ArrowUpRight size={18} />
             </span>
           </div>
-          <strong>{formatMoney(6250000)}</strong>
+          <strong>
+            <CountUp value={6250000} format={formatMoney} />
+          </strong>
           <span className="stat-foot">
             <span className="pill pink">−8,2%</span> so với tháng trước
           </span>
@@ -131,17 +138,19 @@ export function Dashboard() {
               <span className="eyebrow">KHÔNG GIAN CHUNG</span>
               <h2>Mình cùng nhau</h2>
             </div>
-            <Heart size={22} />
+            <Heart size={22} className="motion-heart-beat" />
           </div>
           <div className="couple-avatars">
             <span>M</span>
-            <Heart size={18} />
+            <Heart size={18} className="motion-heart-beat" />
             <span>L</span>
           </div>
           <h3>Minh & Lan</h3>
           <p>Mỗi ngày bên nhau, thêm một chút lớn lên.</p>
           <div className="together-days">
-            <b>365</b>
+            <b className="tabular-nums">
+              <CountUp value={365} />
+            </b>
             <span>ngày cùng nhau</span>
           </div>
           <div className="couple-foot">
@@ -163,7 +172,7 @@ export function Dashboard() {
               <ChevronRight size={20} />
             </Link>
           </div>
-          <div className="task-row">
+          <div className="task-row stagger-item" style={{ "--i": 0 } as React.CSSProperties}>
             <span className="task-check" />
             <div>
               <b>Đi chợ cho bữa tối</b>
@@ -173,7 +182,7 @@ export function Dashboard() {
             </div>
             <span className="pill pink">Vừa</span>
           </div>
-          <div className="task-row">
+          <div className="task-row stagger-item" style={{ "--i": 1 } as React.CSSProperties}>
             <span className="task-check" />
             <div>
               <b>Hoàn thành báo cáo tuần</b>
@@ -183,7 +192,7 @@ export function Dashboard() {
             </div>
             <span className="pill">Cao</span>
           </div>
-          <div className="task-row completed">
+          <div className="task-row completed stagger-item" style={{ "--i": 2 } as React.CSSProperties}>
             <span className="task-check checked">
               <Check size={14} />
             </span>

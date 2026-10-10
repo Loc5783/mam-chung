@@ -387,7 +387,7 @@ function CoupleView({ couple }: { couple: CoupleData }) {
           {couple.members.length === 1 && !archived && (
             <div className="couple-person waiting">
               <span className="couple-avatar">
-                <Heart />
+                <Heart className="motion-heart-beat" />
               </span>
               <b>Chờ người thương</b>
               <small>Ghép đôi bằng mã mời</small>
@@ -396,7 +396,7 @@ function CoupleView({ couple }: { couple: CoupleData }) {
         </div>
         {couple.anniversaryInfo ? (
           <div className="anniversary-box">
-            <CalendarHeart />
+            <CalendarHeart className="motion-heart-beat" />
             <div>
               <b>
                 {couple.anniversaryInfo.daysTogether.toLocaleString("vi-VN")}{" "}
@@ -433,7 +433,7 @@ function CoupleView({ couple }: { couple: CoupleData }) {
             <Card>
               <div className="section-heading">
                 <h2>Mời người thương</h2>
-                <Heart size={22} />
+                <Heart size={22} className="motion-heart-beat" />
               </div>
               <p>
                 Mã dùng một lần, hết hạn sau 48 giờ. Tạo mã mới sẽ thu hồi mã
@@ -616,7 +616,7 @@ export function CouplePage() {
       ) : (
         <div className="couple-two-column">
           <Card>
-            <Heart className="couple-heart" size={42} />
+            <Heart className="couple-heart motion-heart-beat" size={42} />
             <h2>Một chỗ dành cho chúng mình</h2>
             <p>
               Tạo hành trình và gửi mã mời, hoặc dùng mã của người thương để
@@ -703,7 +703,7 @@ export function InvitePage() {
   return (
     <div className="invite-page">
       <Card>
-        <Heart className="couple-heart" size={42} />
+        <Heart className="couple-heart motion-heart-beat" size={42} />
         <h1>Một lời mời cùng vun đắp</h1>
         {q.isPending ? (
           <Skeleton />
@@ -765,7 +765,7 @@ export function CouplePreview() {
     <Card className="couple-dashboard">
       <div className="section-heading">
         <h2>Hành trình chúng mình</h2>
-        <Heart size={22} />
+        <Heart size={22} className="motion-heart-beat" />
       </div>
       {q.isError ? (
         <ErrorBox error={q.error} />
