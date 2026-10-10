@@ -77,6 +77,8 @@ taskSchema.index(
   },
 );
 taskSchema.index({ coupleId: 1, deletedAt: 1, deadline: 1 });
+taskSchema.index({ coupleId: 1, deletedAt: 1, status: 1, completedAt: 1 });
+taskSchema.index({ createdBy: 1, deletedAt: 1, status: 1, completedAt: 1 });
 taskSchema.index({ coupleId: 1, listId: 1, position: 1 });
 taskSchema.index({ createdBy: 1, listId: 1, position: 1 });
 taskSchema.index({ assignedTo: 1, status: 1, deadline: 1 });

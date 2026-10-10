@@ -6,6 +6,7 @@ import {
   reminderInput,
   scopeInput,
 } from "./extensions";
+import { taskStatsService, statsQuery } from "./stats";
 import { pagination } from "../finance/schema";
 import { z as validator } from "zod";
 import {
@@ -208,6 +209,13 @@ export function taskRoutes() {
     validateQuery(z.readQuery),
     asyncHandler(async (req, res) =>
       res.json(await s.summary(req.user!.id, req.query)),
+    ),
+  );
+  r.get(
+    "/tasks/stats",
+    validateQuery(statsQuery),
+    asyncHandler(async (req, res) =>
+      res.json(await taskStatsService.get(req.user!.id, req.query)),
     ),
   );
   r.post(

@@ -341,6 +341,64 @@ export const taskSchemas = {
     items: { type: "array", items: obj({ id, name: { type: "string" } }) },
     readOnly: { type: "boolean" },
   }),
+  TaskStats: obj({
+    completed: obj({
+      today: { type: "integer" },
+      thisWeek: { type: "integer" },
+      thisMonth: { type: "integer" },
+    }),
+    onTimeRate: { type: "number", nullable: true },
+    streak: obj({
+      current: { type: "integer" },
+      best: { type: "integer" },
+    }),
+    byDay: {
+      type: "array",
+      items: obj({
+        date: { type: "string", format: "date" },
+        completed: { type: "integer" },
+      }),
+    },
+    byList: {
+      type: "array",
+      items: obj({
+        listId: { ...id, nullable: true },
+        name: { type: "string" },
+        count: { type: "integer" },
+        color: { type: "string" },
+      }),
+    },
+    byPriority: obj({
+      LOW: { type: "integer" },
+      MEDIUM: { type: "integer" },
+      HIGH: { type: "integer" },
+      URGENT: { type: "integer" },
+    }),
+    couple: {
+      type: "object",
+      nullable: true,
+      properties: {
+        members: {
+          type: "array",
+          items: obj({
+            userId: id,
+            name: { type: "string" },
+            completed: { type: "integer" },
+          }),
+        },
+        total: { type: "integer" },
+      },
+    },
+    lateHabits: {
+      type: "array",
+      items: obj({
+        name: { type: "string" },
+        type: { type: "string", enum: ["label", "list"] },
+        lateCount: { type: "integer" },
+        rate: { type: "number" },
+      }),
+    },
+  }),
 };
 const secured = [{ bearerAuth: [] }];
 const response = (schema: string) => ({
@@ -431,6 +489,19 @@ export const taskPaths = {
       "Số đếm danh sách thông minh và tiến độ theo quyền",
       "TaskSummary",
       [query("coupleId", id)],
+    ),
+  },
+  "/tasks/stats": {
+    get: op(
+      "Thống kê công việc: tỷ lệ đúng hạn, chuỗi ngày, phân bố và cặp đôi",
+      "TaskStats",
+      [
+        query("range", { type: "string", enum: ["7d", "30d", "90d"] }),
+        query("scope", {
+          type: "string",
+          enum: ["personal", "shared", "all"],
+        }),
+      ],
     ),
   },
   "/tasks/{id}/restore": {
