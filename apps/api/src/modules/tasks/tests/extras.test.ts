@@ -341,8 +341,16 @@ it("reminder job rerun produces zero duplicate notifications", async () => {
 
 it("applying template creates new list and items with calculated dates", async () => {
   const list = await lists.create(a, { name: "Chuẩn bị tiệc" });
-  await make({ listId: list.id, title: "Lên thực đơn", deadline: "2099-10-01" });
-  await make({ listId: list.id, title: "Mua bánh kẹo", deadline: "2099-10-03" });
+  await make({
+    listId: list.id,
+    title: "Lên thực đơn",
+    deadline: "2099-10-01",
+  });
+  await make({
+    listId: list.id,
+    title: "Mua bánh kẹo",
+    deadline: "2099-10-03",
+  });
   const template = await extras.saveTemplate(a, {
     name: "Mẫu tiệc",
     listId: list.id,
@@ -408,7 +416,9 @@ it("archived couple rejects writes on shared tasks", async () => {
   const t = await make({ scope: "shared", assignedTo: b });
   await coupleService.leave(b, { confirm: true });
 
-  await expect(extras.nudge(a, t.id, {})).rejects.toMatchObject({ status: 404 });
+  await expect(extras.nudge(a, t.id, {})).rejects.toMatchObject({
+    status: 404,
+  });
   await expect(
     extras.time(a, t.id, { sessionId: randomUUID(), seconds: 15 }),
   ).rejects.toMatchObject({ status: 404 });
@@ -422,4 +432,3 @@ it("archived couple rejects writes on shared tasks", async () => {
     status: 404,
   });
 });
-

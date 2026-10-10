@@ -1,8 +1,14 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter } from "react-router-dom";
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 import { KanbanView } from "../features/tasks/components/KanbanView";
 import { CalendarView } from "../features/tasks/components/CalendarView";
@@ -11,7 +17,10 @@ import { TemplatePicker } from "../features/tasks/components/TemplatePicker";
 import { ShoppingView } from "../features/tasks/components/ShoppingView";
 import { TaskExtras } from "../features/tasks/components/TaskExtras";
 import { QuickAddBar } from "../features/tasks/components/QuickAddBar";
-import { FormattedDescription, isSafeUrl } from "../features/tasks/components/FormattedDescription";
+import {
+  FormattedDescription,
+  isSafeUrl,
+} from "../features/tasks/components/FormattedDescription";
 import { useTaskWrite } from "../features/tasks/useTaskWrite";
 import { useAuthStore } from "../features/auth/store";
 import { useFocusStore } from "../features/tasks/store/focus";
@@ -90,7 +99,8 @@ beforeEach(() => {
 
 describe("FormattedDescription Component", () => {
   it("renders bold, italic, and bullet lists safely", () => {
-    const markdown = "Dòng 1: **đậm** và *nghiêng*\n- Mục danh sách 1\n- Mục danh sách 2";
+    const markdown =
+      "Dòng 1: **đậm** và *nghiêng*\n- Mục danh sách 1\n- Mục danh sách 2";
     render(<FormattedDescription text={markdown} />);
 
     expect(screen.getByText("đậm").tagName).toBe("STRONG");
@@ -100,7 +110,8 @@ describe("FormattedDescription Component", () => {
   });
 
   it("renders safe http and https links with security attributes", () => {
-    const text = "Xem tại [Google](https://google.com) và [Nội bộ](http://local.test)";
+    const text =
+      "Xem tại [Google](https://google.com) và [Nội bộ](http://local.test)";
     render(<FormattedDescription text={text} />);
 
     const googleLink = screen.getByRole("link", { name: "Google" });
@@ -113,7 +124,8 @@ describe("FormattedDescription Component", () => {
   });
 
   it("strictly rejects javascript:, data:, and malicious links without creating an <a> element", () => {
-    const text = "Thử [Hack](javascript:alert('xss')) hoặc [Data](data:text/html,evil)";
+    const text =
+      "Thử [Hack](javascript:alert('xss')) hoặc [Data](data:text/html,evil)";
     render(<FormattedDescription text={text} />);
 
     expect(screen.queryByRole("link")).toBeNull();
@@ -121,12 +133,15 @@ describe("FormattedDescription Component", () => {
   });
 
   it("neutralizes raw html tags and script injections via React escaping", () => {
-    const malicious = '<script>alert("xss")</script><img src="x" onerror="alert(1)">';
+    const malicious =
+      '<script>alert("xss")</script><img src="x" onerror="alert(1)">';
     render(<FormattedDescription text={malicious} />);
 
     expect(document.querySelector("script")).toBeNull();
     expect(document.querySelector("img")).toBeNull();
-    expect(screen.getByText(/<script>alert\("xss"\)<\/script>/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/<script>alert\("xss"\)<\/script>/),
+    ).toBeInTheDocument();
   });
 
   it("isSafeUrl helper validates strict protocols", () => {
@@ -169,9 +184,15 @@ describe("KanbanView Component", () => {
       />,
     );
 
-    expect(screen.getByRole("heading", { name: /Cần làm/ })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /Đang làm/ })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /Hoàn thành/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Cần làm/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Đang làm/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: /Hoàn thành/ }),
+    ).toBeInTheDocument();
 
     const select = screen.getByLabelText("Trạng thái của t1");
     fireEvent.change(select, { target: { value: "DONE" } });
@@ -189,14 +210,18 @@ describe("KanbanView Component", () => {
       />,
     );
 
-    const handle = screen.getByRole("button", { name: `Di chuyển ${mockTask.title}` });
+    const handle = screen.getByRole("button", {
+      name: `Di chuyển ${mockTask.title}`,
+    });
     expect(handle).toBeInTheDocument();
     expect(handle).not.toBeDisabled();
   });
 
   it("rollback and toast notification on mutation failure", async () => {
     // Test the rollback + toast behavior of useTaskWrite
-    vi.spyOn(apiClient, "patch").mockRejectedValueOnce(new Error("Lỗi cập nhật trạng thái"));
+    vi.spyOn(apiClient, "patch").mockRejectedValueOnce(
+      new Error("Lỗi cập nhật trạng thái"),
+    );
     const notifySpy = vi.spyOn(useUiStore.getState(), "notify");
 
     function TestComponent() {
@@ -220,14 +245,21 @@ describe("KanbanView Component", () => {
       limit: 20,
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Cập nhật trạng thái" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Cập nhật trạng thái" }),
+    );
 
     await waitFor(() => {
-      expect(notifySpy).toHaveBeenCalledWith("Có lỗi xảy ra. Vui lòng thử lại.");
+      expect(notifySpy).toHaveBeenCalledWith(
+        "Có lỗi xảy ra. Vui lòng thử lại.",
+      );
     });
 
     // Check query cache was rolled back to initial state
-    const cached = queryClient.getQueryData<{ items: Task[] }>(["tasks", mockUser.id]);
+    const cached = queryClient.getQueryData<{ items: Task[] }>([
+      "tasks",
+      mockUser.id,
+    ]);
     expect(cached?.items[0].status).toBe("TODO");
   });
 });
@@ -248,7 +280,9 @@ describe("CalendarView Component", () => {
       />,
     );
 
-    expect(await screen.findByRole("button", { name: "Trước" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Trước" }),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Sau" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Hôm nay" })).toBeInTheDocument();
 
@@ -276,7 +310,9 @@ describe("CalendarView Component", () => {
       />,
     );
 
-    const dayButtons = await screen.findAllByRole("button", { name: /Thêm việc ngày/ });
+    const dayButtons = await screen.findAllByRole("button", {
+      name: /Thêm việc ngày/,
+    });
     expect(dayButtons.length).toBeGreaterThan(0);
     fireEvent.click(dayButtons[0]);
     expect(onAdd).toHaveBeenCalled();
@@ -286,15 +322,15 @@ describe("CalendarView Component", () => {
 describe("FocusMode Component", () => {
   it("configures work, short rest, and long rest with tab notice", () => {
     renderWithProviders(
-      <FocusMode
-        tasks={[mockTask]}
-        disabled={false}
-        onCheck={vi.fn()}
-      />,
+      <FocusMode tasks={[mockTask]} disabled={false} onCheck={vi.fn()} />,
     );
 
-    expect(screen.getByText("Một việc, một khoảng tập trung 🌱")).toBeInTheDocument();
-    expect(screen.getAllByText("Chỉ chạy khi tab đang mở.")[0]).toBeInTheDocument();
+    expect(
+      screen.getByText("Một việc, một khoảng tập trung 🌱"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText("Chỉ chạy khi tab đang mở.")[0],
+    ).toBeInTheDocument();
 
     const workInput = screen.getByLabelText("Thời gian tập trung");
     const restInput = screen.getByLabelText("Thời gian nghỉ ngắn");
@@ -316,16 +352,14 @@ describe("FocusMode Component", () => {
     try {
       const onCheck = vi.fn();
       renderWithProviders(
-        <FocusMode
-          tasks={[mockTask]}
-          disabled={false}
-          onCheck={onCheck}
-        />,
+        <FocusMode tasks={[mockTask]} disabled={false} onCheck={onCheck} />,
       );
 
       const select = screen.getByLabelText("Việc tập trung");
       fireEvent.change(select, { target: { value: mockTask.id } });
-      fireEvent.click(screen.getByRole("button", { name: "Bắt đầu tập trung" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Bắt đầu tập trung" }),
+      );
 
       expect(screen.getByText("Tập trung")).toBeInTheDocument();
       expect(screen.getByRole("timer")).toHaveTextContent("25:00");
@@ -337,35 +371,39 @@ describe("FocusMode Component", () => {
 
       const pauseBtn = screen.getByRole("button", { name: "Tạm dừng" });
       fireEvent.click(pauseBtn);
-      expect(screen.getByRole("button", { name: "Tiếp tục" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Tiếp tục" }),
+      ).toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }
   });
 
   it("calls POST /tasks/:id/time on stop and save with exact seconds", async () => {
-    const postSpy = vi.spyOn(apiClient, "post").mockImplementation(async () => ({ data: {} }));
+    const postSpy = vi
+      .spyOn(apiClient, "post")
+      .mockImplementation(async () => ({ data: {} }));
 
     vi.useFakeTimers({ shouldAdvanceTime: true });
 
     try {
       renderWithProviders(
-        <FocusMode
-          tasks={[mockTask]}
-          disabled={false}
-          onCheck={vi.fn()}
-        />,
+        <FocusMode tasks={[mockTask]} disabled={false} onCheck={vi.fn()} />,
       );
 
       const select = screen.getByLabelText("Việc tập trung");
       fireEvent.change(select, { target: { value: mockTask.id } });
-      fireEvent.click(screen.getByRole("button", { name: "Bắt đầu tập trung" }));
+      fireEvent.click(
+        screen.getByRole("button", { name: "Bắt đầu tập trung" }),
+      );
 
       act(() => {
         vi.advanceTimersByTime(60000);
       });
 
-      const stopBtn = screen.getByRole("button", { name: "Dừng và lưu thời gian" });
+      const stopBtn = screen.getByRole("button", {
+        name: "Dừng và lưu thời gian",
+      });
       fireEvent.click(stopBtn);
 
       await waitFor(() => {
@@ -382,15 +420,21 @@ describe("FocusMode Component", () => {
   });
 
   it("does not call POST /tasks/:id/time when 0 seconds elapsed", () => {
-    const postSpy = vi.spyOn(apiClient, "post").mockImplementation(async () => ({ data: {} }));
-    renderWithProviders(<FocusMode tasks={[mockTask]} disabled={false} onCheck={vi.fn()} />);
+    const postSpy = vi
+      .spyOn(apiClient, "post")
+      .mockImplementation(async () => ({ data: {} }));
+    renderWithProviders(
+      <FocusMode tasks={[mockTask]} disabled={false} onCheck={vi.fn()} />,
+    );
 
     const select = screen.getByLabelText("Việc tập trung");
     fireEvent.change(select, { target: { value: mockTask.id } });
     fireEvent.click(screen.getByRole("button", { name: "Bắt đầu tập trung" }));
 
     // Stop button is disabled when less than 1s elapsed
-    const stopBtn = screen.getByRole("button", { name: "Dừng và lưu thời gian" });
+    const stopBtn = screen.getByRole("button", {
+      name: "Dừng và lưu thời gian",
+    });
     expect(stopBtn).toBeDisabled();
     expect(postSpy).not.toHaveBeenCalled();
   });
@@ -398,11 +442,7 @@ describe("FocusMode Component", () => {
   it("cleans up interval timer when unmounting", () => {
     const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval");
     const { unmount } = renderWithProviders(
-      <FocusMode
-        tasks={[mockTask]}
-        disabled={false}
-        onCheck={vi.fn()}
-      />,
+      <FocusMode tasks={[mockTask]} disabled={false} onCheck={vi.fn()} />,
     );
     unmount();
     expect(clearIntervalSpy).toHaveBeenCalled();
@@ -414,32 +454,36 @@ describe("TemplatePicker Component", () => {
     const onList = vi.fn();
     vi.spyOn(apiClient, "get").mockResolvedValue({
       data: {
-        items: [{ id: "tmpl-1", name: "Mẫu sinh hoạt", count: 3, readOnly: false }],
+        items: [
+          { id: "tmpl-1", name: "Mẫu sinh hoạt", count: 3, readOnly: false },
+        ],
       },
     });
-    const postSpy = vi.spyOn(apiClient, "post").mockImplementation(async (url) => {
-      if (url.includes("/apply")) {
-        return { data: { list: { id: "new-list-123" } } };
-      }
-      return { data: {} };
-    });
+    const postSpy = vi
+      .spyOn(apiClient, "post")
+      .mockImplementation(async (url) => {
+        if (url.includes("/apply")) {
+          return { data: { list: { id: "new-list-123" } } };
+        }
+        return { data: {} };
+      });
 
     renderWithProviders(
-      <TemplatePicker
-        listId="list-1"
-        disabled={false}
-        onList={onList}
-      />,
+      <TemplatePicker listId="list-1" disabled={false} onList={onList} />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Mẫu danh sách" }));
-    expect(await screen.findByRole("heading", { name: "Mẫu danh sách" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Mẫu danh sách" }),
+    ).toBeInTheDocument();
 
     const nameInput = screen.getByLabelText(/Tên mẫu \/ danh sách mới/);
     fireEvent.change(nameInput, { target: { value: "Mẫu tuần" } });
 
     // Save current list
-    fireEvent.click(screen.getByRole("button", { name: "Lưu danh sách hiện tại thành mẫu" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Lưu danh sách hiện tại thành mẫu" }),
+    );
     await waitFor(() => {
       expect(postSpy).toHaveBeenCalledWith("/task-templates", {
         listId: "list-1",
@@ -452,7 +496,9 @@ describe("TemplatePicker Component", () => {
     fireEvent.change(select, { target: { value: "tmpl-1" } });
     fireEvent.change(nameInput, { target: { value: "Danh sách mới từ mẫu" } });
 
-    fireEvent.click(screen.getByRole("button", { name: "Tạo danh sách từ mẫu" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Tạo danh sách từ mẫu" }),
+    );
     await waitFor(() => {
       expect(onList).toHaveBeenCalledWith("new-list-123");
     });
@@ -462,10 +508,34 @@ describe("TemplatePicker Component", () => {
 describe("ShoppingView Component", () => {
   it("groups by first label, puts unlabeled into 'Chưa phân khu', and completed at the bottom", () => {
     const tasks: Task[] = [
-      { ...mockTask, id: "1", title: "Thịt heo", labels: ["thịt"], status: "TODO" },
-      { ...mockTask, id: "2", title: "Cải xanh", labels: ["rau"], status: "TODO" },
-      { ...mockTask, id: "3", title: "Nước rửa chén", labels: [], status: "TODO" },
-      { ...mockTask, id: "4", title: "Muối", labels: ["gia-vị"], status: "DONE" },
+      {
+        ...mockTask,
+        id: "1",
+        title: "Thịt heo",
+        labels: ["thịt"],
+        status: "TODO",
+      },
+      {
+        ...mockTask,
+        id: "2",
+        title: "Cải xanh",
+        labels: ["rau"],
+        status: "TODO",
+      },
+      {
+        ...mockTask,
+        id: "3",
+        title: "Nước rửa chén",
+        labels: [],
+        status: "TODO",
+      },
+      {
+        ...mockTask,
+        id: "4",
+        title: "Muối",
+        labels: ["gia-vị"],
+        status: "DONE",
+      },
     ];
 
     render(
@@ -484,14 +554,11 @@ describe("ShoppingView Component", () => {
 
 describe("TaskExtras Component", () => {
   it("displays nudge button for partner task and sends nudge request", async () => {
-    const postSpy = vi.spyOn(apiClient, "post").mockImplementation(async () => ({ data: {} }));
+    const postSpy = vi
+      .spyOn(apiClient, "post")
+      .mockImplementation(async () => ({ data: {} }));
 
-    renderWithProviders(
-      <TaskExtras
-        task={mockTask}
-        disabled={false}
-      />,
-    );
+    renderWithProviders(<TaskExtras task={mockTask} disabled={false} />);
 
     const nudgeBtn = screen.getByRole("button", { name: "Nhắc nhẹ 💌" });
     fireEvent.click(nudgeBtn);
@@ -501,24 +568,30 @@ describe("TaskExtras Component", () => {
   });
 
   it("handles duplicate task and confirms scope switch", async () => {
-    const postSpy = vi.spyOn(apiClient, "post").mockImplementation(async () => ({ data: {} }));
+    const postSpy = vi
+      .spyOn(apiClient, "post")
+      .mockImplementation(async () => ({ data: {} }));
 
-    renderWithProviders(
-      <TaskExtras
-        task={mockTask}
-        disabled={false}
-      />,
-    );
+    renderWithProviders(<TaskExtras task={mockTask} disabled={false} />);
 
     // Duplicate
     fireEvent.click(screen.getByRole("button", { name: "Nhân bản việc" }));
     await waitFor(() => {
-      expect(postSpy).toHaveBeenCalledWith(`/tasks/${mockTask.id}/duplicate`, {});
+      expect(postSpy).toHaveBeenCalledWith(
+        `/tasks/${mockTask.id}/duplicate`,
+        {},
+      );
     });
 
     // Scope conversion confirmation modal
-    fireEvent.click(screen.getByRole("button", { name: "Chuyển thành việc cá nhân" }));
-    expect(await screen.findByRole("heading", { name: "Chuyển không gian công việc?" })).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Chuyển thành việc cá nhân" }),
+    );
+    expect(
+      await screen.findByRole("heading", {
+        name: "Chuyển không gian công việc?",
+      }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Xác nhận chuyển" }));
     await waitFor(() => {
@@ -532,11 +605,19 @@ describe("TaskExtras Component", () => {
 
 describe("QuickAddBar Multi-line Paste Edge Cases", () => {
   it("opens confirmation modal 'Tạo N việc?' and ignores empty lines", async () => {
-    const postSpy = vi.spyOn(apiClient, "post").mockImplementation(async () => ({ data: {} }));
+    const postSpy = vi
+      .spyOn(apiClient, "post")
+      .mockImplementation(async () => ({ data: {} }));
 
     renderWithProviders(
       <QuickAddBar
-        context={{ user: mockUser, scope: "personal" }}
+        context={{
+          user: mockUser,
+          timezone: "Asia/Ho_Chi_Minh",
+          members: [{ id: "user-1", name: "Minh" }],
+          lists: [],
+          scope: "personal",
+        }}
         disabled={false}
       />,
     );
@@ -546,10 +627,14 @@ describe("QuickAddBar Multi-line Paste Edge Cases", () => {
       target: { value: "Việc một\n\nViệc hai #nhà\n   \nViệc ba" },
     });
 
-    expect(screen.getByText("3 việc · kiểm tra trước khi thêm.")).toBeInTheDocument();
+    expect(
+      screen.getByText("3 việc · kiểm tra trước khi thêm."),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Thêm" }));
-    expect(await screen.findByRole("heading", { name: "Tạo 3 việc?" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: "Tạo 3 việc?" }),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Xác nhận thêm" }));
     await waitFor(() => {
@@ -569,16 +654,27 @@ describe("QuickAddBar Multi-line Paste Edge Cases", () => {
   it("blocks submission and shows warning when lines exceed 50", async () => {
     renderWithProviders(
       <QuickAddBar
-        context={{ user: mockUser, scope: "personal" }}
+        context={{
+          user: mockUser,
+          timezone: "Asia/Ho_Chi_Minh",
+          members: [{ id: "user-1", name: "Minh" }],
+          lists: [],
+          scope: "personal",
+        }}
         disabled={false}
       />,
     );
 
     const textarea = screen.getByLabelText("Thêm nhanh công việc");
-    const text51 = Array.from({ length: 51 }, (_, i) => `Việc thứ ${i + 1}`).join("\n");
+    const text51 = Array.from(
+      { length: 51 },
+      (_, i) => `Việc thứ ${i + 1}`,
+    ).join("\n");
     fireEvent.change(textarea, { target: { value: text51 } });
 
-    expect(await screen.findByText("Tối đa 50 việc mỗi lần.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Tối đa 50 việc mỗi lần."),
+    ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Thêm" })).toBeDisabled();
   });
 });

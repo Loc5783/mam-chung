@@ -221,7 +221,7 @@ export function FocusMode({
               }}
             >
               <Button
-                variant={session.restType !== "long" ? "primary" : "secondary"}
+                className={session.restType !== "long" ? "" : "button-outline"}
                 disabled={log.isPending}
                 onClick={() => {
                   set({
@@ -236,7 +236,7 @@ export function FocusMode({
                 Nghỉ ngắn ({rest}p)
               </Button>
               <Button
-                variant={session.restType === "long" ? "primary" : "secondary"}
+                className={session.restType === "long" ? "" : "button-outline"}
                 disabled={log.isPending}
                 onClick={() => {
                   set({
