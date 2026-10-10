@@ -295,3 +295,131 @@ it("activity is recorded for personal tasks and hidden from other users", async 
     status: 404,
   });
 });
+
+it("nudge enforces strictly 1 hour cooldown per task without blocking distinct tasks", async () => {
+  const t1 = await make({ scope: "shared", assignedTo: b });
+  const t2 = await make({ scope: "shared", assignedTo: b });
+  await extras.nudge(a, t1.id, {});
+  await expect(extras.nudge(a, t1.id, {})).rejects.toMatchObject({
+    status: 429,
+    code: "NUDGE_LIMIT",
+  });
+  await expect(extras.nudge(a, t2.id, {})).resolves.toBeDefined();
+  await Task.updateOne(
+    { _id: t1.id },
+    { $set: { lastNudgedAt: new Date(Date.now() - 3540000) } },
+  );
+  await expect(extras.nudge(a, t1.id, {})).rejects.toMatchObject({
+    status: 429,
+    code: "NUDGE_LIMIT",
+  });
+  await Task.updateOne(
+    { _id: t1.id },
+    { $set: { lastNudgedAt: new Date(Date.now() - 3600001) } },
+  );
+  await expect(extras.nudge(a, t1.id, {})).resolves.toBeDefined();
+});
+
+it("reminder job rerun produces zero duplicate notifications", async () => {
+  const t = await make({ scope: "shared", assignedTo: b });
+  await extras.reminder(a, t.id, {
+    mode: "custom",
+    local: "2099-10-05T09:00",
+    revision: 0,
+  });
+  const now = new Date("2099-10-06T00:00:00Z");
+  const firstRun = await runTaskReminderJob(now);
+  expect(firstRun.created).toBe(1);
+  expect(await Notification.countDocuments({ type: "TASK_REMINDER" })).toBe(1);
+
+  const secondRun = await runTaskReminderJob(now);
+  expect(secondRun.created).toBe(0);
+  const thirdRun = await runTaskReminderJob(new Date("2099-10-06T00:05:00Z"));
+  expect(thirdRun.created).toBe(0);
+  expect(await Notification.countDocuments({ type: "TASK_REMINDER" })).toBe(1);
+});
+
+it("applying template creates new list and items with calculated dates", async () => {
+  const list = await lists.create(a, { name: "Chuẩn bị tiệc" });
+  await make({ listId: list.id, title: "Lên thực đơn", deadline: "2099-10-01" });
+  await make({ listId: list.id, title: "Mua bánh kẹo", deadline: "2099-10-03" });
+  const template = await extras.saveTemplate(a, {
+    name: "Mẫu tiệc",
+    listId: list.id,
+  });
+
+  const applied = await extras.applyTemplate(a, template.id, {
+    name: "Tiệc sinh nhật",
+    startDate: "2099-11-10",
+  });
+  expect(applied.list.name).toBe("Tiệc sinh nhật");
+  expect(applied.items).toHaveLength(2);
+  expect(applied.items.map((i) => i.title).sort()).toEqual([
+    "Lên thực đơn",
+    "Mua bánh kẹo",
+  ]);
+  expect(await TaskTemplate.findById(template.id)).toBeTruthy();
+});
+
+it("concurrent distinct time receipts accumulate timeSpentSeconds accurately", async () => {
+  const t = await make();
+  const session1 = randomUUID();
+  const session2 = randomUUID();
+  await Promise.all([
+    extras.time(a, t.id, { sessionId: session1, seconds: 20 }),
+    extras.time(a, t.id, { sessionId: session2, seconds: 35 }),
+  ]);
+  const updated = await tasks.get(a, t.id);
+  expect(updated.timeSpentSeconds).toBe(55);
+});
+
+it("activity logs accurately record actor ID, name, and specific action message", async () => {
+  const t = await make({ scope: "shared", assignedTo: b });
+  await extras.nudge(a, t.id, {});
+  await extras.time(a, t.id, { sessionId: randomUUID(), seconds: 45 });
+  const act = await extras.activity(a, t.id, {});
+  expect(act.items.length).toBeGreaterThanOrEqual(3);
+  const nudgeEntry = act.items.find((i) => i.message.includes("lời nhắc nhẹ"));
+  expect(nudgeEntry).toBeDefined();
+  expect(nudgeEntry?.actorId).toBe(a);
+  expect(nudgeEntry?.actorName).toBe("Minh");
+
+  const timeEntry = act.items.find((i) => i.message.includes("45 giây"));
+  expect(timeEntry).toBeDefined();
+  expect(timeEntry?.actorId).toBe(a);
+  expect(timeEntry?.actorName).toBe("Minh");
+});
+
+it("shared-to-personal conversion strictly rejects non-creator member", async () => {
+  const t = await make({ scope: "shared", assignedTo: a }, b);
+  await expect(
+    extras.scope(a, t.id, { revision: 0, scope: "personal" }),
+  ).rejects.toMatchObject({ status: 403, code: "CREATOR_ONLY" });
+
+  const converted = await extras.scope(b, t.id, {
+    revision: 0,
+    scope: "personal",
+  });
+  expect(converted.coupleId).toBeNull();
+  expect(converted.assignedTo).toBe(b);
+});
+
+it("archived couple rejects writes on shared tasks", async () => {
+  const t = await make({ scope: "shared", assignedTo: b });
+  await coupleService.leave(b, { confirm: true });
+
+  await expect(extras.nudge(a, t.id, {})).rejects.toMatchObject({ status: 404 });
+  await expect(
+    extras.time(a, t.id, { sessionId: randomUUID(), seconds: 15 }),
+  ).rejects.toMatchObject({ status: 404 });
+  await expect(
+    extras.reminder(a, t.id, { mode: "before", minutes: 30, revision: 0 }),
+  ).rejects.toMatchObject({ status: 404 });
+  await expect(
+    extras.scope(a, t.id, { revision: 0, scope: "personal" }),
+  ).rejects.toMatchObject({ status: 404 });
+  await expect(extras.duplicate(a, t.id, {})).rejects.toMatchObject({
+    status: 404,
+  });
+});
+
