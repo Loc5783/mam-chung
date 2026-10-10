@@ -2,6 +2,7 @@ import { ShoppingView } from "./components/ShoppingView";
 import { KanbanView } from "./components/KanbanView";
 import { CalendarView } from "./components/CalendarView";
 import { FocusMode } from "./components/FocusMode";
+import { StatsPanel } from "./components/StatsPanel";
 import { TemplatePicker } from "./components/TemplatePicker";
 import { useFocusStore } from "./store/focus";
 import { useUiStore } from "../../app/store";
@@ -820,6 +821,7 @@ export function TasksPage() {
               {[
                 ["calendar", "Lịch"],
                 ["focus", "Focus"],
+                ["stats", "Thống kê"],
               ].map(([key, name]) => (
                 <button
                   key={key}
@@ -1010,6 +1012,21 @@ export function TasksPage() {
           </Card>
           {members.isError && <Error error={members.error} />}{" "}
           {write.isError && <Error error={write.error} />}{" "}
+          {view !== "stats" && (
+            <StatsPanel
+              collapsible
+              defaultCollapsed
+              onFilterLate={(habit) => {
+                if (habit.type === "label") {
+                  setLabel(habit.name);
+                  setView("list");
+                } else {
+                  update("list", habit.name);
+                  setView("list");
+                }
+              }}
+            />
+          )}
           {view === "calendar" ? (
             <CalendarView
               filters={
@@ -1042,6 +1059,18 @@ export function TasksPage() {
                   ),
                 })
               }
+            />
+          ) : view === "stats" ? (
+            <StatsPanel
+              onFilterLate={(habit) => {
+                if (habit.type === "label") {
+                  setLabel(habit.name);
+                  setView("list");
+                } else {
+                  update("list", habit.name);
+                  setView("list");
+                }
+              }}
             />
           ) : q.isPending ? (
             <Skeleton />

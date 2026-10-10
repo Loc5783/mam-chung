@@ -77,3 +77,46 @@ export type TaskListPage = {
   limit: number;
   readOnly: boolean;
 };
+
+export type TaskStats = {
+  completed: {
+    today: number;
+    thisWeek: number;
+    thisMonth: number;
+  };
+  onTimeRate: number | null;
+  streak: {
+    current: number;
+    best: number;
+  };
+  byDay: {
+    date: string;
+    completed: number;
+  }[];
+  byList: {
+    listId: string | null;
+    name: string;
+    count: number;
+    color?: string;
+  }[];
+  byPriority: {
+    LOW: number;
+    MEDIUM: number;
+    HIGH: number;
+    URGENT: number;
+  };
+  couple: {
+    members: {
+      userId: string;
+      name: string;
+      completed: number;
+    }[];
+    total: number;
+  } | null;
+  lateHabits: {
+    name: string;
+    type: "label" | "list";
+    lateCount: number;
+    rate: number;
+  }[];
+};

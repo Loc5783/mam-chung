@@ -1,4 +1,9 @@
-import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  type ButtonHTMLAttributes,
+  type ReactNode,
+} from "react";
 import { X, Sprout } from "lucide-react";
 import { useUiStore } from "../../app/store";
 
@@ -16,11 +21,15 @@ export function Button({ sheen, className = "", ...props }: ButtonProps) {
   const hasSheen = sheen ?? isPrimary;
   const sheenClass = hasSheen ? "button-sheen" : "";
   return (
-    <button
-      {...props}
-      className={`button ${sheenClass} ${className}`.trim()}
-    />
+    <button {...props} className={`button ${sheenClass} ${className}`.trim()} />
   );
+}
+
+export interface CardProps extends React.HTMLAttributes<HTMLElement> {
+  children: ReactNode;
+  className?: string;
+  spotlight?: boolean;
+  style?: React.CSSProperties;
 }
 
 export function Card({
@@ -28,12 +37,8 @@ export function Card({
   className = "",
   spotlight = true,
   style,
-}: {
-  children: ReactNode;
-  className?: string;
-  spotlight?: boolean;
-  style?: React.CSSProperties;
-}) {
+  ...props
+}: CardProps) {
   const rafId = useRef<number | null>(null);
 
   useEffect(() => {
@@ -45,6 +50,7 @@ export function Card({
   }, []);
 
   const handlePointerMove = (e: React.PointerEvent<HTMLElement>) => {
+    props.onPointerMove?.(e);
     if (!spotlight || e.pointerType === "touch") return;
     const currentTarget = e.currentTarget;
     const clientX = e.clientX;
@@ -65,9 +71,10 @@ export function Card({
 
   return (
     <section
+      {...props}
       onPointerMove={handlePointerMove}
       data-spotlight={spotlight ? "true" : undefined}
-      className={`card ${className}`}
+      className={`card ${className}`.trim()}
       style={style}
     >
       {children}
