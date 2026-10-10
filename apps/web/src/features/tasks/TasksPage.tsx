@@ -1,9 +1,4 @@
-import { ShoppingView } from "./components/ShoppingView";
-import { KanbanView } from "./components/KanbanView";
-import { CalendarView } from "./components/CalendarView";
-import { FocusMode } from "./components/FocusMode";
-import { StatsPanel } from "./components/StatsPanel";
-import { TemplatePicker } from "./components/TemplatePicker";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { useFocusStore } from "./store/focus";
 import { useUiStore } from "../../app/store";
 import { BulkActionBar } from "./components/BulkActionBar";
@@ -12,14 +7,18 @@ import { QuickAddBar } from "./components/QuickAddBar";
 import { SmartListSidebar, smartLists } from "./components/SmartListSidebar";
 import { TaskRow } from "./components/TaskRow";
 import { TaskHeader } from "./components/TaskHeader";
-import { TaskGroup, TaskSkeleton } from "./components/TaskGroup";
+import { TaskGroup } from "./components/TaskGroup";
 import { TaskDetailDrawer } from "./components/TaskDetailDrawer";
+import { TemplatePicker } from "./components/TemplatePicker";
+import { TaskCommentsModal } from "./components/TaskCommentsModal";
+import { DeleteTaskModal } from "./components/DeleteTaskModal";
+import { ShortcutsModal } from "./components/ShortcutsModal";
+import { VirtualTaskList } from "./components/VirtualTaskList";
 import { groupTasks } from "./lib/dateLabels";
 import { useOnline } from "./lib/useOnline";
 import { useTaskUiStore } from "./store";
 import { useTaskWrite } from "./useTaskWrite";
 import { moveTabFocus } from "../../components/ui/tabs";
-import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Plus, ShoppingBag } from "lucide-react";
 import { Card, Button, EmptyState, Skeleton } from "../../components/ui";
@@ -38,89 +37,25 @@ import {
   priorities,
 } from "./types";
 import { useTaskMutation, useTasksQuery } from "./api";
+import { KanbanView } from "./components/KanbanView";
 import { TaskForm } from "./TaskForm";
-type CommentPage = {
-  items: { id: string; authorName: string; text: string; createdAt: string }[];
-  total: number;
-  readOnly: boolean;
-};
-function Comments({ task, onClose }: { task: Task; onClose: () => void }) {
-  const zone = useAuthStore((s) => s.user!.timezone);
-  const [page, setPage] = useState(1),
-    [text, setText] = useState("");
-  const q = useTasksQuery<CommentPage>(`/tasks/${task.id}/comments`, {
-    page,
-    limit: 20,
-  });
-  const add = useTaskMutation(
-    async () =>
-      apiClient.post(`/tasks/${task.id}/comments`, { text: text.trim() }),
-    () => {
-      setText("");
-      if (q.data) setPage(Math.ceil((q.data.total + 1) / 20));
-    },
-  );
-  return (
-    <Modal
-      title={`Bình luận · ${task.title}`}
-      onClose={onClose}
-      busy={add.isPending}
-    >
-      {q.isPending ? (
-        <TaskSkeleton />
-      ) : q.isError ? (
-        <Error error={q.error} />
-      ) : (
-        <>
-          <div className="task-comments">
-            {q.data.items.map((c) => (
-              <article key={c.id}>
-                <b>{c.authorName}</b>
-                <small>
-                  {new Date(c.createdAt).toLocaleString("vi-VN", {
-                    timeZone: zone,
-                  })}
-                </small>
-                <p>{c.text}</p>
-              </article>
-            ))}
-            {!q.data.total && <p>Chưa có bình luận.</p>}
-          </div>
-          <Pager
-            page={page}
-            total={q.data.total}
-            onPage={setPage}
-            unit="bình luận"
-          />
-          {!q.data.readOnly && (
-            <form
-              className="settings-form finance-form task-form"
-              onSubmit={(e) => {
-                e.preventDefault();
-                add.mutate();
-              }}
-            >
-              <label>
-                Bình luận ngắn
-                <textarea
-                  aria-label="Bình luận ngắn"
-                  value={text}
-                  maxLength={500}
-                  disabled={add.isPending}
-                  onChange={(e) => setText(e.target.value)}
-                />
-              </label>
-              <Button disabled={!text.trim() || add.isPending}>
-                Gửi bình luận
-              </Button>
-            </form>
-          )}
-        </>
-      )}
-      {add.isError && <Error error={add.error} />}
-    </Modal>
-  );
-}
+
+const CalendarView = lazy(() =>
+  import("./components/CalendarView").then((m) => ({
+    default: m.CalendarView,
+  })),
+);
+const FocusMode = lazy(() =>
+  import("./components/FocusMode").then((m) => ({ default: m.FocusMode })),
+);
+const StatsPanel = lazy(() =>
+  import("./components/StatsPanel").then((m) => ({ default: m.StatsPanel })),
+);
+const ShoppingView = lazy(() =>
+  import("./components/ShoppingView").then((m) => ({
+    default: m.ShoppingView,
+  })),
+);
 function Error({ error }: { error: unknown }) {
   return (
     <p role="alert" className="form-error">
@@ -204,7 +139,6 @@ export function TasksPage() {
     [editing, setEditing] = useState<Task | true | null>(null),
     [comments, setComments] = useState<Task | null>(null),
     [removing, setRemoving] = useState<Task | null>(null),
-    [confirm, setConfirm] = useState(false),
     [creatingList, setCreatingList] = useState(false),
     [listName, setListName] = useState(""),
     [listScope, setListScope] = useState("personal"),
@@ -343,7 +277,6 @@ export function TasksPage() {
   const write = useTaskWrite((input, saved) => {
     if (input.remove) {
       setRemoving(null);
-      setConfirm(false);
       setUndo({
         task: { ...input.task, revision: input.task.revision + 1 },
         restore: true,
@@ -513,7 +446,6 @@ export function TasksPage() {
       if (key === "delete") {
         event.preventDefault();
         setRemoving(task);
-        setConfirm(false);
       }
     };
     window.addEventListener("keydown", handle);
@@ -623,7 +555,6 @@ export function TasksPage() {
         onComments={() => setComments(task)}
         onDelete={() => {
           setRemoving(task);
-          setConfirm(false);
         }}
         onCheck={(id, done) =>
           write.mutate({
@@ -638,15 +569,7 @@ export function TasksPage() {
   );
   return (
     <>
-      {shortcuts && (
-        <Modal title="Phím tắt công việc" onClose={() => setShortcuts(false)}>
-          <p>
-            N: thêm việc · /: tìm kiếm · J/K: lên/xuống · X: hoàn thành · E: chi
-            tiết · T: hạn hôm nay · Delete: xóa · Esc: đóng · Ctrl+Z: hoàn tác.
-          </p>
-          <p>Phím tắt không chạy khi bạn đang nhập nội dung.</p>
-        </Modal>
-      )}
+      {shortcuts && <ShortcutsModal onClose={() => setShortcuts(false)} />}
       {bulkUndo && (
         <div className="todo-undo-toast" role="status">
           <span>Đã cập nhật nhóm việc.</span>
@@ -1013,65 +936,75 @@ export function TasksPage() {
           {members.isError && <Error error={members.error} />}{" "}
           {write.isError && <Error error={write.error} />}{" "}
           {view !== "stats" && (
-            <StatsPanel
-              collapsible
-              defaultCollapsed
-              onFilterLate={(habit) => {
-                if (habit.type === "label") {
-                  setLabel(habit.name);
-                  setView("list");
-                } else {
-                  update("list", habit.name);
-                  setView("list");
-                }
-              }}
-            />
+            <Suspense fallback={<Skeleton className="h-12 w-full mb-3" />}>
+              <StatsPanel
+                collapsible
+                defaultCollapsed
+                onFilterLate={(habit) => {
+                  if (habit.type === "label") {
+                    setLabel(habit.name);
+                    setView("list");
+                  } else {
+                    update("list", habit.name);
+                    setView("list");
+                  }
+                }}
+              />
+            </Suspense>
           )}
           {view === "calendar" ? (
-            <CalendarView
-              filters={
-                Object.fromEntries(
-                  Object.entries(filters).filter(([, v]) => v),
-                ) as Record<string, string>
-              }
-              disabled={
-                !online || readOnly || write.isPending || reschedule.isPending
-              }
-              onAdd={(date) => {
-                setQuickDeadline(date);
-                setMobileQuick(true);
-              }}
-              onOpen={(task) => {
-                setSelected(task);
-                select(task.id);
-              }}
-              onMove={(task, deadline) => reschedule.mutate({ task, deadline })}
-            />
-          ) : view === "focus" ? (
-            <FocusMode
-              tasks={q.data?.items ?? []}
-              disabled={!online || readOnly || write.isPending}
-              onCheck={(task, id, done) =>
-                write.mutate({
-                  task,
-                  checklist: task.checklist.map((i) =>
-                    i.id === id ? { ...i, done } : i,
-                  ),
-                })
-              }
-            />
-          ) : view === "stats" ? (
-            <StatsPanel
-              onFilterLate={(habit) => {
-                if (habit.type === "label") {
-                  setLabel(habit.name);
-                  setView("list");
-                } else {
-                  update("list", habit.name);
-                  setView("list");
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <CalendarView
+                filters={
+                  Object.fromEntries(
+                    Object.entries(filters).filter(([, v]) => v),
+                  ) as Record<string, string>
                 }
-              }}
-            />
+                disabled={
+                  !online || readOnly || write.isPending || reschedule.isPending
+                }
+                onAdd={(date) => {
+                  setQuickDeadline(date);
+                  setMobileQuick(true);
+                }}
+                onOpen={(task) => {
+                  setSelected(task);
+                  select(task.id);
+                }}
+                onMove={(task, deadline) =>
+                  reschedule.mutate({ task, deadline })
+                }
+              />
+            </Suspense>
+          ) : view === "focus" ? (
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <FocusMode
+                tasks={q.data?.items ?? []}
+                disabled={!online || readOnly || write.isPending}
+                onCheck={(task, id, done) =>
+                  write.mutate({
+                    task,
+                    checklist: task.checklist.map((i) =>
+                      i.id === id ? { ...i, done } : i,
+                    ),
+                  })
+                }
+              />
+            </Suspense>
+          ) : view === "stats" ? (
+            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+              <StatsPanel
+                onFilterLate={(habit) => {
+                  if (habit.type === "label") {
+                    setLabel(habit.name);
+                    setView("list");
+                  } else {
+                    update("list", habit.name);
+                    setView("list");
+                  }
+                }}
+              />
+            </Suspense>
           ) : q.isPending ? (
             <Skeleton />
           ) : q.isError ? (
@@ -1120,7 +1053,9 @@ export function TasksPage() {
                   />
                 </>
               ) : activeList?.type === "shopping" && sort !== "manual" ? (
-                <ShoppingView tasks={q.data.items} render={render} />
+                <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                  <ShoppingView tasks={q.data.items} render={render} />
+                </Suspense>
               ) : sort === "manual" && listId ? (
                 <SortableTaskList
                   tasks={q.data.items}
@@ -1149,7 +1084,11 @@ export function TasksPage() {
                       }
                       count={tasks.length}
                     >
-                      {tasks.map((t, idx) => render(t, idx))}
+                      <VirtualTaskList
+                        tasks={tasks}
+                        render={(t, idx) => render(t, idx)}
+                        threshold={200}
+                      />
                     </TaskGroup>
                   ))}
                 </div>
@@ -1363,39 +1302,16 @@ export function TasksPage() {
         />
       )}{" "}
       {comments && (
-        <Comments task={comments} onClose={() => setComments(null)} />
+        <TaskCommentsModal task={comments} onClose={() => setComments(null)} />
       )}{" "}
       {removing && (
-        <Modal
-          title="Xóa công việc"
-          onClose={() => setRemoving(null)}
+        <DeleteTaskModal
+          task={removing}
           busy={remove.isPending}
-        >
-          <p>Xóa “{removing.title}”? Bản lặp đã tạo trước đó vẫn được giữ.</p>
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={confirm}
-              onChange={(e) => setConfirm(e.target.checked)}
-            />
-            Tôi xác nhận xóa công việc này.
-          </label>
-          {remove.isError && <Error error={remove.error} />}
-          <div className="modal-actions">
-            <Button
-              className="button-outline"
-              onClick={() => setRemoving(null)}
-            >
-              Hủy
-            </Button>
-            <Button
-              disabled={!confirm || remove.isPending}
-              onClick={() => remove.mutate()}
-            >
-              Xác nhận xóa
-            </Button>
-          </div>
-        </Modal>
+          error={remove.error}
+          onClose={() => setRemoving(null)}
+          onConfirm={() => remove.mutate()}
+        />
       )}
     </>
   );

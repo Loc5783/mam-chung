@@ -102,8 +102,14 @@ export function EmptyState({
     </div>
   );
 }
-export function Skeleton() {
-  return <div className="skeleton" aria-label="Đang tải" role="status" />;
+export function Skeleton({ className = "" }: { className?: string } = {}) {
+  return (
+    <div
+      className={`skeleton ${className}`.trim()}
+      aria-label="Đang tải"
+      role="status"
+    />
+  );
 }
 export function Toast() {
   const { toast, dismiss } = useUiStore();
