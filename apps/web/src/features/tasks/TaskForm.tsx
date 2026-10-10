@@ -8,6 +8,7 @@ import { Modal } from "../../components/ui/Modal";
 import { useAuthStore } from "../auth/store";
 import { useTaskMutation } from "./api";
 import { Task, TaskList, Members, ChecklistItem, priorities } from "./types";
+import { FormattedDescription } from "./components/FormattedDescription";
 const schema = z
   .object({
     title: z.string().trim().min(1, "Nhập tiêu đề công việc.").max(160),
@@ -116,6 +117,17 @@ export function TaskForm({
               maxLength={2000}
             />
           </label>
+          {watch("description")?.trim() ? (
+            <div
+              className="task-description-preview"
+              data-testid="task-description-preview"
+            >
+              <span className="task-description-preview-title">
+                Xem trước mô tả:
+              </span>
+              <FormattedDescription text={watch("description")} />
+            </div>
+          ) : null}
           <div className="form-two-columns">
             <label>
               Không gian

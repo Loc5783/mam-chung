@@ -4387,3 +4387,59 @@ main:focus {
     padding: 16px;
   }
 }
+
+.task-description-preview {
+  margin-top: 6px;
+  padding: 10px 12px;
+  background: var(--bg-soft, #f7f9f2);
+  border: 1px dashed #d5dcc4;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.task-description-preview-title {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-muted, #738065);
+  margin-bottom: 4px;
+}
+
+.formatted-description {
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+.formatted-description p {
+  margin: 0 0 6px 0;
+}
+
+.formatted-description p:last-child {
+  margin-bottom: 0;
+}
+
+.formatted-description ul {
+  margin: 4px 0 6px 18px;
+  padding: 0;
+  list-style-type: disc;
+}
+
+.formatted-description li {
+  margin-bottom: 2px;
+}
+
+.formatted-description a {
+  color: #57713a;
+  text-decoration: underline;
+}
+
+.todo-focus-notice {
+  font-size: 12px;
+  color: var(--ink-muted, #738065);
+  background: #f4f6ee;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin: 0;
+  text-align: center;
+}

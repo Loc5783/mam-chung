@@ -69,7 +69,7 @@ export function QuickAddBar({
     disabled ||
     save.isPending ||
     !lines.length ||
-    lines.length > 100 ||
+    lines.length > 50 ||
     warnings.length > 0;
   return (
     <div className="todo-quick-workspace">
@@ -166,7 +166,7 @@ export function QuickAddBar({
               {message}
             </p>
           ))}
-          {lines.length > 100 && <p role="alert">Tối đa 100 việc mỗi lần.</p>}
+          {lines.length > 50 && <p role="alert">Tối đa 50 việc mỗi lần.</p>}
           {lines.length > 1 && (
             <p>{lines.length} việc · kiểm tra trước khi thêm.</p>
           )}
@@ -175,7 +175,7 @@ export function QuickAddBar({
       {save.isError && <p role="alert">{errorMessage(save.error)}</p>}
       {confirm && (
         <Modal
-          title={`Thêm ${items.length} công việc?`}
+          title={`Tạo ${items.length} việc?`}
           busy={save.isPending}
           onClose={() => setConfirm(false)}
         >

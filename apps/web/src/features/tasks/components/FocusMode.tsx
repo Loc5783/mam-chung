@@ -19,6 +19,7 @@ export function FocusMode({
     [picked, setPicked] = useState(""),
     [work, setWork] = useState(25),
     [rest, setRest] = useState(5),
+    [longRest, setLongRest] = useState(15),
     [now, setNow] = useState(Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 500);
@@ -130,6 +131,7 @@ export function FocusMode({
             Tập trung (phút)
             <input
               type="number"
+              aria-label="Thời gian tập trung"
               min={1}
               max={180}
               value={work}
@@ -137,15 +139,30 @@ export function FocusMode({
             />
           </label>
           <label>
-            Nghỉ (phút)
+            Nghỉ ngắn (phút)
             <input
               type="number"
+              aria-label="Thời gian nghỉ ngắn"
               min={1}
               max={60}
               value={rest}
               onChange={(e) => setRest(Number(e.target.value))}
             />
           </label>
+          <label>
+            Nghỉ dài (phút)
+            <input
+              type="number"
+              aria-label="Thời gian nghỉ dài"
+              min={1}
+              max={60}
+              value={longRest}
+              onChange={(e) => setLongRest(Number(e.target.value))}
+            />
+          </label>
+          <p className="todo-focus-notice" role="note">
+            Chỉ chạy khi tab đang mở.
+          </p>
           <Button
             disabled={
               disabled ||
@@ -155,7 +172,10 @@ export function FocusMode({
               work > 180 ||
               !Number.isInteger(rest) ||
               rest < 1 ||
-              rest > 60
+              rest > 60 ||
+              !Number.isInteger(longRest) ||
+              longRest < 1 ||
+              longRest > 60
             }
             onClick={() => {
               const task = tasks.find((t) => t.id === picked)!;
@@ -166,6 +186,8 @@ export function FocusMode({
                 phase: "work",
                 workMinutes: work,
                 restMinutes: rest,
+                longRestMinutes: longRest,
+                restType: "short",
                 elapsedMs: 0,
                 runningSince: Date.now(),
                 sessionId: crypto.randomUUID(),
@@ -180,7 +202,56 @@ export function FocusMode({
       ) : (
         <>
           <h3>{q.data?.title ?? session.title}</h3>
-          <p>{session.phase === "work" ? "Tập trung" : "Nghỉ nhẹ"}</p>
+          <p>
+            {session.phase === "work"
+              ? "Tập trung"
+              : session.restType === "long"
+                ? "Nghỉ dài"
+                : "Nghỉ nhẹ"}
+          </p>
+          <p className="todo-focus-notice" role="note">
+            Chỉ chạy khi tab đang mở.
+          </p>
+          {session.phase === "rest" && (
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                justifyContent: "center",
+              }}
+            >
+              <Button
+                variant={session.restType !== "long" ? "primary" : "secondary"}
+                disabled={log.isPending}
+                onClick={() => {
+                  set({
+                    ...session,
+                    restType: "short",
+                    restMinutes: rest,
+                    elapsedMs: 0,
+                    runningSince: session.runningSince ? Date.now() : null,
+                  });
+                }}
+              >
+                Nghỉ ngắn ({rest}p)
+              </Button>
+              <Button
+                variant={session.restType === "long" ? "primary" : "secondary"}
+                disabled={log.isPending}
+                onClick={() => {
+                  set({
+                    ...session,
+                    restType: "long",
+                    restMinutes: session.longRestMinutes ?? longRest,
+                    elapsedMs: 0,
+                    runningSince: session.runningSince ? Date.now() : null,
+                  });
+                }}
+              >
+                Nghỉ dài ({session.longRestMinutes ?? longRest}p)
+              </Button>
+            </div>
+          )}
           <div
             className="todo-focus-clock"
             role="timer"

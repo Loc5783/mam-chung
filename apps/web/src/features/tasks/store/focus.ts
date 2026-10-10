@@ -7,6 +7,8 @@ export type FocusSession = {
   phase: "work" | "rest";
   workMinutes: number;
   restMinutes: number;
+  longRestMinutes?: number;
+  restType?: "short" | "long";
   elapsedMs: number;
   runningSince: number | null;
   sessionId: string;

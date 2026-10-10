@@ -1,4 +1,5 @@
 import { TaskExtras } from "./TaskExtras";
+import { FormattedDescription } from "./FormattedDescription";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
@@ -256,6 +257,17 @@ export function TaskDetailDrawer({
             onChange={(e) => change("description", e.target.value)}
           />
         </label>
+        {draft.description.trim() ? (
+          <div
+            className="task-description-preview"
+            data-testid="task-description-preview"
+          >
+            <span className="task-description-preview-title">
+              Xem trước mô tả:
+            </span>
+            <FormattedDescription text={draft.description} />
+          </div>
+        ) : null}
         <div className="form-two-columns">
           <label>
             Trạng thái
