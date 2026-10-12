@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiClient, errorMessage, getSessionEpoch } from "../../lib/apiClient";
+import { apiClient, parseApiError, getSessionEpoch } from "../../lib/apiClient";
 import { useAuthStore } from "../auth/store";
 import { useUiStore } from "../../app/store";
 import type { Task, TaskPage, Status } from "./types";
@@ -100,6 +100,7 @@ export function useTaskWrite(
     },
     onError: (error, input, context) => {
       if (context?.epoch !== getSessionEpoch()) return;
+      const apiErr = parseApiError(error);
       for (const [key, value] of context.snapshots) {
         if (!page(value)) continue;
         const previous = value.items.find((t) => t.id === input.task.id);
@@ -107,6 +108,14 @@ export function useTaskWrite(
         client.setQueryData<unknown>(key, (current: unknown) => {
           if (!page(current)) return current;
           const exists = current.items.some((t) => t.id === input.task.id);
+          // If task was deleted (404), remove it from client cache instead of restoring!
+          if (apiErr.isNotFound) {
+            return {
+              ...current,
+              total: exists ? Math.max(0, current.total - 1) : current.total,
+              items: current.items.filter((t) => t.id !== input.task.id),
+            };
+          }
           return {
             ...current,
             total: input.remove && !exists ? current.total + 1 : current.total,
@@ -116,7 +125,7 @@ export function useTaskWrite(
           };
         });
       }
-      useUiStore.getState().notify(errorMessage(error));
+      useUiStore.getState().notify(apiErr.message);
     },
     onSuccess: (saved, input, context) => {
       if (context?.epoch !== getSessionEpoch()) return;

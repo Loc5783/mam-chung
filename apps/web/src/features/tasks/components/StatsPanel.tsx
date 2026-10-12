@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button, Card } from "../../../components/ui";
 import { AnimatedBar, AnimatedDonut } from "../../../components/charts";
+import { safeStorage } from "../../../lib/safeStorage";
 import { useTasksQuery } from "../api";
 import type { TaskStats } from "../types";
 
@@ -22,24 +23,16 @@ export function StatsPanel({
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const [range, setRange] = useState<"7d" | "30d" | "90d">("30d");
   const [scope, setScope] = useState<"personal" | "shared" | "all">(() => {
-    try {
-      const stored = localStorage.getItem(SCOPE_STORAGE_KEY);
-      if (stored === "personal" || stored === "shared" || stored === "all") {
-        return stored;
-      }
-    } catch {
-      // LocalStorage not available or restricted
+    const stored = safeStorage.getItem(SCOPE_STORAGE_KEY);
+    if (stored === "personal" || stored === "shared" || stored === "all") {
+      return stored;
     }
     return "all";
   });
 
   const handleScopeChange = (nextScope: "personal" | "shared" | "all") => {
     setScope(nextScope);
-    try {
-      localStorage.setItem(SCOPE_STORAGE_KEY, nextScope);
-    } catch {
-      // Ignore storage errors
-    }
+    safeStorage.setItem(SCOPE_STORAGE_KEY, nextScope);
   };
 
   const { data, isPending, isError, error, refetch } = useTasksQuery<TaskStats>(

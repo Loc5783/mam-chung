@@ -128,3 +128,5 @@ export function Toast() {
     </div>
   ) : null;
 }
+
+export { ViewErrorBoundary } from "./ViewErrorBoundary";

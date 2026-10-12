@@ -21,7 +21,13 @@ import { useTaskWrite } from "./useTaskWrite";
 import { moveTabFocus } from "../../components/ui/tabs";
 import { useSearchParams } from "react-router-dom";
 import { Plus, ShoppingBag } from "lucide-react";
-import { Card, Button, EmptyState, Skeleton } from "../../components/ui";
+import {
+  Card,
+  Button,
+  EmptyState,
+  Skeleton,
+  ViewErrorBoundary,
+} from "../../components/ui";
 import { Modal } from "../../components/ui/Modal";
 import { apiClient, errorMessage } from "../../lib/apiClient";
 import { localInputDate } from "../finance/api";
@@ -936,75 +942,86 @@ export function TasksPage() {
           {members.isError && <Error error={members.error} />}{" "}
           {write.isError && <Error error={write.error} />}{" "}
           {view !== "stats" && (
-            <Suspense fallback={<Skeleton className="h-12 w-full mb-3" />}>
-              <StatsPanel
-                collapsible
-                defaultCollapsed
-                onFilterLate={(habit) => {
-                  if (habit.type === "label") {
-                    setLabel(habit.name);
-                    setView("list");
-                  } else {
-                    update("list", habit.name);
-                    setView("list");
-                  }
-                }}
-              />
-            </Suspense>
+            <ViewErrorBoundary name="Thống kê nhanh">
+              <Suspense fallback={<Skeleton className="h-12 w-full mb-3" />}>
+                <StatsPanel
+                  collapsible
+                  defaultCollapsed
+                  onFilterLate={(habit) => {
+                    if (habit.type === "label") {
+                      setLabel(habit.name);
+                      setView("list");
+                    } else {
+                      update("list", habit.name);
+                      setView("list");
+                    }
+                  }}
+                />
+              </Suspense>
+            </ViewErrorBoundary>
           )}
           {view === "calendar" ? (
-            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-              <CalendarView
-                filters={
-                  Object.fromEntries(
-                    Object.entries(filters).filter(([, v]) => v),
-                  ) as Record<string, string>
-                }
-                disabled={
-                  !online || readOnly || write.isPending || reschedule.isPending
-                }
-                onAdd={(date) => {
-                  setQuickDeadline(date);
-                  setMobileQuick(true);
-                }}
-                onOpen={(task) => {
-                  setSelected(task);
-                  select(task.id);
-                }}
-                onMove={(task, deadline) =>
-                  reschedule.mutate({ task, deadline })
-                }
-              />
-            </Suspense>
-          ) : view === "focus" ? (
-            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-              <FocusMode
-                tasks={q.data?.items ?? []}
-                disabled={!online || readOnly || write.isPending}
-                onCheck={(task, id, done) =>
-                  write.mutate({
-                    task,
-                    checklist: task.checklist.map((i) =>
-                      i.id === id ? { ...i, done } : i,
-                    ),
-                  })
-                }
-              />
-            </Suspense>
-          ) : view === "stats" ? (
-            <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-              <StatsPanel
-                onFilterLate={(habit) => {
-                  if (habit.type === "label") {
-                    setLabel(habit.name);
-                    setView("list");
-                  } else {
-                    update("list", habit.name);
-                    setView("list");
+            <ViewErrorBoundary name="Lịch">
+              <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                <CalendarView
+                  filters={
+                    Object.fromEntries(
+                      Object.entries(filters).filter(([, v]) => v),
+                    ) as Record<string, string>
                   }
-                }}
-              />
-            </Suspense>
+                  disabled={
+                    !online ||
+                    readOnly ||
+                    write.isPending ||
+                    reschedule.isPending
+                  }
+                  onAdd={(date) => {
+                    setQuickDeadline(date);
+                    setMobileQuick(true);
+                  }}
+                  onOpen={(task) => {
+                    setSelected(task);
+                    select(task.id);
+                  }}
+                  onMove={(task, deadline) =>
+                    reschedule.mutate({ task, deadline })
+                  }
+                />
+              </Suspense>
+            </ViewErrorBoundary>
+          ) : view === "focus" ? (
+            <ViewErrorBoundary name="Focus">
+              <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                <FocusMode
+                  tasks={q.data?.items ?? []}
+                  disabled={!online || readOnly || write.isPending}
+                  onCheck={(task, id, done) =>
+                    write.mutate({
+                      task,
+                      checklist: task.checklist.map((i) =>
+                        i.id === id ? { ...i, done } : i,
+                      ),
+                    })
+                  }
+                />
+              </Suspense>
+            </ViewErrorBoundary>
+          ) : view === "stats" ? (
+            <ViewErrorBoundary name="Thống kê">
+              <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                <StatsPanel
+                  onFilterLate={(habit) => {
+                    if (habit.type === "label") {
+                      setLabel(habit.name);
+                      setView("list");
+                    } else {
+                      update("list", habit.name);
+                      setView("list");
+                    }
+                  }}
+                />
+              </Suspense>
+            </ViewErrorBoundary>
           ) : q.isPending ? (
             <Skeleton />
           ) : q.isError ? (
@@ -1040,7 +1057,7 @@ export function TasksPage() {
                   )}
                 </Card>
               ) : view === "kanban" ? (
-                <>
+                <ViewErrorBoundary name="Kanban">
                   <p className="muted">
                     Bảng hiển thị tối đa 20 việc của trang hiện tại. Kéo tay nắm
                     sang cột khác hoặc chọn trạng thái trên thẻ.
@@ -1051,11 +1068,13 @@ export function TasksPage() {
                     disabled={!online || readOnly || write.isPending}
                     onStatus={(task, status) => write.mutate({ task, status })}
                   />
-                </>
+                </ViewErrorBoundary>
               ) : activeList?.type === "shopping" && sort !== "manual" ? (
-                <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-                  <ShoppingView tasks={q.data.items} render={render} />
-                </Suspense>
+                <ViewErrorBoundary name="Mua sắm">
+                  <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+                    <ShoppingView tasks={q.data.items} render={render} />
+                  </Suspense>
+                </ViewErrorBoundary>
               ) : sort === "manual" && listId ? (
                 <SortableTaskList
                   tasks={q.data.items}
@@ -1099,60 +1118,62 @@ export function TasksPage() {
         </div>
       </div>
       {selectedId && selected && (
-        <TaskDetailDrawer
-          key={selectedId}
-          busy={write.isPending}
-          onUndo={undo?.task.id === selectedId ? undoAction : undefined}
-          onFocus={() => {
-            const task = detail.data?.id
-              ? detail.data
-              : (q.data?.items.find((t) => t.id === selectedId) ?? selected!);
-            const current = useFocusStore.getState().session;
-            if (current && current.taskId !== task.id)
-              useUiStore
-                .getState()
-                .notify(
-                  "Bạn đang có một phiên tập trung. Lưu hoặc kết thúc phiên đó trước khi chọn việc khác.",
-                );
-            else if (!current)
-              useFocusStore.getState().set({
-                userId: user.id,
-                taskId: task.id,
-                title: task.title,
-                phase: "work",
-                workMinutes: 25,
-                restMinutes: 5,
-                elapsedMs: 0,
-                runningSince: null,
-                sessionId: crypto.randomUUID(),
-                pendingSeconds: null,
-              });
-            select(null);
-            setSelected(null);
-            setView("focus");
-          }}
-          task={
-            detail.data?.id
-              ? detail.data
-              : (q.data?.items.find((t) => t.id === selectedId) ?? selected)
-          }
-          members={members.data ?? { items: [], readOnly: false }}
-          lists={lists}
-          onClose={() => {
-            select(null);
-            setSelected(null);
-          }}
-          onStatus={(status) => {
-            const current = detail.data?.id
-              ? detail.data
-              : (q.data?.items.find((t) => t.id === selectedId) ?? selected);
-            write.mutate({ task: current, status });
-          }}
-          onComments={() => {
-            select(null);
-            setComments(detail.data?.id ? detail.data : selected);
-          }}
-        />
+        <ViewErrorBoundary name="Chi tiết công việc">
+          <TaskDetailDrawer
+            key={selectedId}
+            busy={write.isPending}
+            onUndo={undo?.task.id === selectedId ? undoAction : undefined}
+            onFocus={() => {
+              const task = detail.data?.id
+                ? detail.data
+                : (q.data?.items.find((t) => t.id === selectedId) ?? selected!);
+              const current = useFocusStore.getState().session;
+              if (current && current.taskId !== task.id)
+                useUiStore
+                  .getState()
+                  .notify(
+                    "Bạn đang có một phiên tập trung. Lưu hoặc kết thúc phiên đó trước khi chọn việc khác.",
+                  );
+              else if (!current)
+                useFocusStore.getState().set({
+                  userId: user.id,
+                  taskId: task.id,
+                  title: task.title,
+                  phase: "work",
+                  workMinutes: 25,
+                  restMinutes: 5,
+                  elapsedMs: 0,
+                  runningSince: null,
+                  sessionId: crypto.randomUUID(),
+                  pendingSeconds: null,
+                });
+              select(null);
+              setSelected(null);
+              setView("focus");
+            }}
+            task={
+              detail.data?.id
+                ? detail.data
+                : (q.data?.items.find((t) => t.id === selectedId) ?? selected)
+            }
+            members={members.data ?? { items: [], readOnly: false }}
+            lists={lists}
+            onClose={() => {
+              select(null);
+              setSelected(null);
+            }}
+            onStatus={(status) => {
+              const current = detail.data?.id
+                ? detail.data
+                : (q.data?.items.find((t) => t.id === selectedId) ?? selected);
+              write.mutate({ task: current, status });
+            }}
+            onComments={() => {
+              select(null);
+              setComments(detail.data?.id ? detail.data : selected);
+            }}
+          />
+        </ViewErrorBoundary>
       )}
       {undo && undo.task.id !== selectedId && (
         <div className="todo-undo-toast" role="status">

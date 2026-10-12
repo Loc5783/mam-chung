@@ -49,5 +49,9 @@ export function useTaskMutation<T>(
       notify(errorMessage(error));
       void client.invalidateQueries({ queryKey: ["tasks", context?.id] });
     },
+    onSettled: (_data, _error, _variables, context) => {
+      if (context?.epoch !== getSessionEpoch()) return;
+      void client.invalidateQueries({ queryKey: ["tasks", context?.id] });
+    },
   });
 }

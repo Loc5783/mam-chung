@@ -5,8 +5,12 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { App } from "./app/App";
 import { queryClient } from "./lib/queryClient";
 import { getMotionPreference, setMotionPreference } from "./lib/motion";
+import { setupGlobalErrorHandlers } from "./lib/setupGlobalErrorHandlers";
 import "./styles/global.css";
 import "./styles/motion.css";
+
+// Capture unexpected errors and unhandled promise rejections
+setupGlobalErrorHandlers();
 
 // Apply persisted motion preference on startup
 setMotionPreference(getMotionPreference());
