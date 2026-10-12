@@ -20,7 +20,13 @@ import { useTaskUiStore } from "./store";
 import { useTaskWrite } from "./useTaskWrite";
 import { moveTabFocus } from "../../components/ui/tabs";
 import { useSearchParams } from "react-router-dom";
-import { Plus, ShoppingBag, SlidersHorizontal, RotateCcw } from "lucide-react";
+import {
+  Plus,
+  ShoppingBag,
+  SlidersHorizontal,
+  RotateCcw,
+  HelpCircle,
+} from "lucide-react";
 import {
   Card,
   Button,
@@ -695,7 +701,7 @@ export function TasksPage() {
         />
         <div className="todo-main">
           <div className="todo-section-heading">
-            <div>
+            <div className="todo-heading-info">
               <h2>
                 {activeList?.name ??
                   smartLists.find(([key]) => key === smart)?.[1] ??
@@ -703,17 +709,31 @@ export function TasksPage() {
               </h2>
               <small>{q.data?.total ?? "—"} việc</small>
             </div>
-            {!readOnly && (
-              <Button
-                onClick={() => setEditing(true)}
-                disabled={
-                  !online || !listReady || members.isPending || members.isError
-                }
+            <div className="todo-heading-actions">
+              <button
+                type="button"
+                className="button-icon-subtle"
+                aria-label="Hướng dẫn phím tắt & cử chỉ"
+                title="Hướng dẫn phím tắt & cử chỉ (?)"
+                onClick={() => setShortcuts(true)}
               >
-                <Plus size={18} />
-                Thêm công việc
-              </Button>
-            )}
+                <HelpCircle size={18} />
+              </button>
+              {!readOnly && (
+                <Button
+                  onClick={() => setEditing(true)}
+                  disabled={
+                    !online ||
+                    !listReady ||
+                    members.isPending ||
+                    members.isError
+                  }
+                >
+                  <Plus size={18} />
+                  Thêm công việc
+                </Button>
+              )}
+            </div>
           </div>
           {!online && (
             <p className="todo-offline" role="status">

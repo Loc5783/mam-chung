@@ -69,20 +69,32 @@ function VirtualContainer({
 
     const updateHeight = () => {
       if (containerRef.current) {
-        setViewportHeight(containerRef.current.clientHeight || 600);
+        const h = containerRef.current.clientHeight;
+        if (h > 0) setViewportHeight(h);
       }
     };
 
     updateHeight();
     const el = containerRef.current;
+    let observer: ResizeObserver | null = null;
     if (el) {
       el.addEventListener("scroll", handleScroll, { passive: true });
       window.addEventListener("resize", updateHeight);
+      if (typeof ResizeObserver !== "undefined") {
+        observer = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            const h = entry.contentRect.height;
+            if (h > 0) setViewportHeight(h);
+          }
+        });
+        observer.observe(el);
+      }
     }
 
     return () => {
       if (el) el.removeEventListener("scroll", handleScroll);
       window.removeEventListener("resize", updateHeight);
+      observer?.disconnect();
     };
   }, []);
 
@@ -104,7 +116,7 @@ function VirtualContainer({
       ref={containerRef}
       className={`virtual-task-list max-h-[75vh] overflow-y-auto contain-strict ${className}`.trim()}
       data-testid="virtual-task-list"
-      style={{ willChange: "scroll-position" }}
+      style={{ willChange: "scroll-position", minHeight: "350px" }}
     >
       <div style={{ height: totalHeight, position: "relative" }}>
         <div
