@@ -81,18 +81,18 @@ describe("Backend Error Resilience (Phase B3)", () => {
       };
     };
 
-    function createMockRes(): MockResponse & any {
-      const res: any = {
+    function createMockRes(): MockResponse {
+      const res: MockResponse = {
         statusCode: 200,
+        status: jest.fn((code: number) => {
+          res.statusCode = code;
+          return res;
+        }),
+        json: jest.fn((data: unknown) => {
+          res.body = data as MockResponse["body"];
+          return res;
+        }),
       };
-      res.status = jest.fn((code: number) => {
-        res.statusCode = code;
-        return res;
-      });
-      res.json = jest.fn((data: unknown) => {
-        res.body = data as MockResponse["body"];
-        return res;
-      });
       return res;
     }
 
@@ -104,7 +104,12 @@ describe("Backend Error Resilience (Phase B3)", () => {
       );
       const res = createMockRes();
 
-      errorHandler(castErr, {} as Request, res as Response, jest.fn());
+      errorHandler(
+        castErr,
+        {} as Request,
+        res as unknown as Response,
+        jest.fn(),
+      );
 
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.body?.error.code).toBe("INVALID_IDENTIFIER");
@@ -123,7 +128,7 @@ describe("Backend Error Resilience (Phase B3)", () => {
       };
       const res = createMockRes();
 
-      errorHandler(valErr, {} as Request, res as Response, jest.fn());
+      errorHandler(valErr, {} as Request, res as unknown as Response, jest.fn());
 
       expect(res.status).toHaveBeenCalledWith(422);
       expect(res.body?.error.code).toBe("VALIDATION_ERROR");
@@ -138,7 +143,12 @@ describe("Backend Error Resilience (Phase B3)", () => {
       });
       const res = createMockRes();
 
-      errorHandler(mongoErr, {} as Request, res as Response, jest.fn());
+      errorHandler(
+        mongoErr,
+        {} as Request,
+        res as unknown as Response,
+        jest.fn(),
+      );
 
       expect(res.status).toHaveBeenCalledWith(409);
       expect(res.body?.error.code).toBe("DUPLICATE_KEY");
@@ -155,7 +165,12 @@ describe("Backend Error Resilience (Phase B3)", () => {
       );
       const res = createMockRes();
 
-      errorHandler(versionErr, {} as Request, res as Response, jest.fn());
+      errorHandler(
+        versionErr,
+        {} as Request,
+        res as unknown as Response,
+        jest.fn(),
+      );
 
       expect(res.status).toHaveBeenCalledWith(409);
       expect(res.body?.error.code).toBe("CONFLICT");
@@ -170,7 +185,12 @@ describe("Backend Error Resilience (Phase B3)", () => {
       });
       const res = createMockRes();
 
-      errorHandler(transientErr, {} as Request, res as Response, jest.fn());
+      errorHandler(
+        transientErr,
+        {} as Request,
+        res as unknown as Response,
+        jest.fn(),
+      );
 
       expect(res.status).toHaveBeenCalledWith(409);
       expect(res.body?.error.code).toBe("TRANSIENT_CONFLICT");
