@@ -40,6 +40,75 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
     });
     return;
   }
+  if (error?.name === "CastError") {
+    res.status(400).json({
+      error: {
+        code: "INVALID_IDENTIFIER",
+        message: "Định dạng mã không hợp lệ.",
+        details: [
+          {
+            path: [error.path ?? "id"],
+            message: `Giá trị '${error.value}' không hợp lệ.`,
+          },
+        ],
+      },
+    });
+    return;
+  }
+  if (error?.name === "ValidationError") {
+    const details = error.errors
+      ? Object.keys(error.errors).map((key) => ({
+          path: [key],
+          message: error.errors[key]?.message ?? "Dữ liệu không hợp lệ.",
+        }))
+      : [];
+    res.status(422).json({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Dữ liệu không đúng định dạng.",
+        details,
+      },
+    });
+    return;
+  }
+  if (
+    error?.name === "MongoServerError" &&
+    (error.code === 11000 || error.code === "11000")
+  ) {
+    res.status(409).json({
+      error: {
+        code: "DUPLICATE_KEY",
+        message: "Dữ liệu đã tồn tại trong hệ thống.",
+        details: [],
+      },
+    });
+    return;
+  }
+  if (error?.name === "VersionError") {
+    res.status(409).json({
+      error: {
+        code: "CONFLICT",
+        message: "Dữ liệu đã bị thay đổi bởi người khác, vui lòng tải lại.",
+        details: [],
+      },
+    });
+    return;
+  }
+  if (
+    typeof error?.hasErrorLabel === "function"
+      ? error.hasErrorLabel("TransientTransactionError")
+      : Array.isArray(error?.errorLabels) &&
+        error.errorLabels.includes("TransientTransactionError")
+  ) {
+    res.status(409).json({
+      error: {
+        code: "TRANSIENT_CONFLICT",
+        message: "Hệ thống đang bận, vui lòng thử lại.",
+        details: [],
+      },
+    });
+    return;
+  }
   logger.error({ name: error?.name }, "Lỗi máy chủ");
   res.status(500).json({
     error: {

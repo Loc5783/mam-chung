@@ -464,3 +464,101 @@ it("lateHabits accurately ranks top 5 overdue labels and lists", async () => {
   expect(listHabit).toBeDefined();
   expect(listHabit?.lateCount).toBe(3);
 });
+
+it("streak does not count tasks completed by partner, only actor's completions", async () => {
+  const user = (await User.findById(a))!;
+  const today = todayInZone(new Date(), user.timezone);
+  const [y, m, d] = today.split("-").map(Number);
+  const todayNoon = new Date(Date.UTC(y, m - 1, d, 6));
+  const yestNoon = new Date(Date.UTC(y, m - 1, d - 1, 6));
+
+  // Partner B completed shared tasks yesterday and today
+  await Task.create([
+    {
+      title: "B completed yesterday",
+      coupleId: cid,
+      createdBy: a,
+      completedBy: b,
+      creatorName: "Minh",
+      status: "DONE",
+      completedAt: yestNoon,
+    },
+    {
+      title: "B completed today",
+      coupleId: cid,
+      createdBy: a,
+      completedBy: b,
+      creatorName: "Minh",
+      status: "DONE",
+      completedAt: todayNoon,
+    },
+  ]);
+
+  // Actor A queries: streak should be 0 because A completed none of them!
+  const statsA = await taskStatsService.get(a, { range: "30d", scope: "all" });
+  expect(statsA.streak.current).toBe(0);
+
+  // Now Actor A completes a personal task today
+  await Task.create({
+    title: "A completed today",
+    createdBy: a,
+    completedBy: a,
+    creatorName: "Minh",
+    status: "DONE",
+    completedAt: todayNoon,
+  });
+
+  const statsAAfter = await taskStatsService.get(a, {
+    range: "30d",
+    scope: "all",
+  });
+  expect(statsAAfter.streak.current).toBe(1);
+});
+
+it("lateHabits respects range filter: excludes tasks outside the 7d window when range=7d", async () => {
+  const user = (await User.findById(a))!;
+  const today = todayInZone(new Date(), user.timezone);
+  const [y, m, d] = today.split("-").map(Number);
+
+  // Task overdue from 15 days ago (outside 7d, inside 30d)
+  const fifteenDaysAgo = new Date(Date.UTC(y, m - 1, d - 15, 12))
+    .toISOString()
+    .slice(0, 10);
+  await Task.create({
+    title: "Việc cũ 15 ngày",
+    createdBy: a,
+    creatorName: "Minh",
+    status: "TODO",
+    deadline: fifteenDaysAgo,
+    labels: ["rat-cu"],
+  });
+
+  // Task overdue from 3 days ago (inside 7d)
+  const threeDaysAgo = new Date(Date.UTC(y, m - 1, d - 3, 12))
+    .toISOString()
+    .slice(0, 10);
+  await Task.create({
+    title: "Việc mới 3 ngày",
+    createdBy: a,
+    creatorName: "Minh",
+    status: "TODO",
+    deadline: threeDaysAgo,
+    labels: ["moi-tre"],
+  });
+
+  // When range=7d: only "moi-tre" should appear in lateHabits, NOT "rat-cu"
+  const stats7d = await taskStatsService.get(a, {
+    range: "7d",
+    scope: "personal",
+  });
+  expect(stats7d.lateHabits.some((h) => h.name === "moi-tre")).toBe(true);
+  expect(stats7d.lateHabits.some((h) => h.name === "rat-cu")).toBe(false);
+
+  // When range=30d: both should appear
+  const stats30d = await taskStatsService.get(a, {
+    range: "30d",
+    scope: "personal",
+  });
+  expect(stats30d.lateHabits.some((h) => h.name === "moi-tre")).toBe(true);
+  expect(stats30d.lateHabits.some((h) => h.name === "rat-cu")).toBe(true);
+});

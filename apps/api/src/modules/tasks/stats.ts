@@ -278,9 +278,14 @@ export const taskStatsService = {
       completed: dayMap.get(date) ?? 0,
     }));
 
-    // 3. Streak calculation
+    // 3. Streak calculation (strictly for tasks completed by the actor)
+    const actorCompletedFilter = {
+      ...completedTasksFilter,
+      $or: [{ completedBy: u._id }, { completedBy: null, createdBy: u._id }],
+    };
+
     const streakDaysAgg = await Task.aggregate([
-      { $match: completedTasksFilter },
+      { $match: actorCompletedFilter },
       {
         $group: {
           _id: {
@@ -498,11 +503,26 @@ export const taskStatsService = {
       };
     }
 
-    // 8. lateHabits (top 5 labels / lists frequently overdue)
-    const tasksWithDeadline = await Task.find({
+    // 8. lateHabits (top 5 labels / lists frequently overdue within range)
+    const lateHabitsFilter = {
       ...baseScopeFilter,
       deadline: { $ne: null },
-    }).select(
+      $or: [
+        {
+          status: "DONE",
+          $or: [
+            { completedAt: { $gte: rangeStartInstant, $lte: rangeEndInstant } },
+            { deadline: { $gte: rangeStartStr, $lte: todayStr } },
+          ],
+        },
+        {
+          status: { $ne: "DONE" },
+          deadline: { $gte: rangeStartStr, $lte: todayStr },
+        },
+      ],
+    };
+
+    const tasksWithDeadline = await Task.find(lateHabitsFilter).select(
       "status completedAt deadline deadlineHasTime deadlineTime deadlineTimezone listId labels",
     );
 
