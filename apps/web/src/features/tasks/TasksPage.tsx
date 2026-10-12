@@ -20,7 +20,7 @@ import { useTaskUiStore } from "./store";
 import { useTaskWrite } from "./useTaskWrite";
 import { moveTabFocus } from "../../components/ui/tabs";
 import { useSearchParams } from "react-router-dom";
-import { Plus, ShoppingBag } from "lucide-react";
+import { Plus, ShoppingBag, SlidersHorizontal, RotateCcw } from "lucide-react";
 import {
   Card,
   Button,
@@ -141,6 +141,41 @@ export function TasksPage() {
     setKind = (v: string) => update("kind", v),
     setLabel = (v: string) => update("label", v),
     setView = (v: string) => update("view", v);
+
+  const activeFilterCount = [
+    Boolean(scope && scope !== "all"),
+    Boolean(status),
+    Boolean(priority),
+    Boolean(due),
+    Boolean(from),
+    Boolean(to),
+    Boolean(label),
+    Boolean(sort && sort !== "deadline"),
+    Boolean(search),
+  ].filter(Boolean).length;
+
+  const clearAllFilters = () => {
+    setParams(
+      (previous) => {
+        const next = new URLSearchParams(previous);
+        for (const key of [
+          "scope",
+          "status",
+          "priority",
+          "due",
+          "from",
+          "to",
+          "label",
+          "search",
+          "sort",
+        ]) {
+          next.delete(key);
+        }
+        return next;
+      },
+      { replace: true },
+    );
+  };
   const [page, setPage] = useState(1),
     [editing, setEditing] = useState<Task | true | null>(null),
     [comments, setComments] = useState<Task | null>(null),
@@ -730,7 +765,12 @@ export function TasksPage() {
             xóa. Bấm ? để xem phím tắt.
           </p>
           <div className="task-toolbar">
-            <div role="tablist" onKeyDown={moveTabFocus} aria-label="Cách xem">
+            <div
+              className="task-view-tabs"
+              role="tablist"
+              onKeyDown={moveTabFocus}
+              aria-label="Cách xem"
+            >
               <button
                 role="tab"
                 aria-selected={view === "list"}
@@ -763,47 +803,79 @@ export function TasksPage() {
                 </button>
               ))}
             </div>
-            <TemplatePicker
-              listId={listId}
-              disabled={!online || readOnly}
-              onList={(id) => {
-                setParams(
-                  (previous) => {
-                    const next = new URLSearchParams(previous);
-                    next.set("list", id);
-                    next.set("view", "list");
-                    next.delete("smart");
-                    return next;
-                  },
-                  { replace: true },
-                );
-              }}
-            />
-            <Button
-              className="button-outline"
-              disabled={!user.coupleId && !cid}
-              onClick={() => {
-                setParams(
-                  (previous) => {
-                    const next = new URLSearchParams(previous);
-                    if (kind === "shopping") next.delete("kind");
-                    else next.set("kind", "shopping");
-                    next.set("scope", "shared");
-                    next.delete("smart");
-                    next.delete("list");
-                    return next;
-                  },
-                  { replace: true },
-                );
-              }}
-            >
-              <ShoppingBag size={17} />
-              Mua sắm chung
-            </Button>
+            <div className="task-toolbar-actions">
+              <TemplatePicker
+                listId={listId}
+                disabled={!online || readOnly}
+                onList={(id) => {
+                  setParams(
+                    (previous) => {
+                      const next = new URLSearchParams(previous);
+                      next.set("list", id);
+                      next.set("view", "list");
+                      next.delete("smart");
+                      return next;
+                    },
+                    { replace: true },
+                  );
+                }}
+              />
+              <Button
+                className={`button-outline ${kind === "shopping" ? "is-active" : ""}`}
+                disabled={!user.coupleId && !cid}
+                onClick={() => {
+                  setParams(
+                    (previous) => {
+                      const next = new URLSearchParams(previous);
+                      if (kind === "shopping") next.delete("kind");
+                      else next.set("kind", "shopping");
+                      next.set("scope", "shared");
+                      next.delete("smart");
+                      next.delete("list");
+                      return next;
+                    },
+                    { replace: true },
+                  );
+                }}
+              >
+                <ShoppingBag size={17} />
+                Mua sắm chung
+              </Button>
+            </div>
           </div>
-          <Card>
-            <details className="todo-filters" open>
-              <summary>Lọc và sắp xếp</summary>
+          <Card className="todo-filters-card">
+            <details
+              className="todo-filters"
+              open={activeFilterCount > 0 ? true : undefined}
+            >
+              <summary className="todo-filters-summary">
+                <span className="todo-filters-summary-title">
+                  <SlidersHorizontal size={14} />
+                  <span>Lọc và sắp xếp</span>
+                  {activeFilterCount > 0 && (
+                    <span
+                      className="todo-filter-badge"
+                      aria-label={`${activeFilterCount} bộ lọc đang áp dụng`}
+                    >
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </span>
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    className="todo-clear-filters-btn"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      clearAllFilters();
+                    }}
+                  >
+                    <RotateCcw size={12} />
+                    Đặt lại bộ lọc
+                  </button>
+                )}
+              </summary>
               <div className="history-filters task-filters">
                 <label>
                   Không gian
@@ -916,19 +988,30 @@ export function TasksPage() {
                   />
                 </label>
               </div>
-              <label className="todo-group-picker">
-                Nhóm theo
-                <select
-                  aria-label="Nhóm công việc"
-                  value={groupBy}
-                  onChange={(e) => update("group", e.target.value)}
-                >
-                  <option value="deadline">Hạn chót</option>
-                  <option value="list">Danh sách</option>
-                  <option value="priority">Ưu tiên</option>
-                  <option value="assignee">Người thực hiện</option>
-                </select>
-              </label>
+              <div className="todo-filters-footer">
+                <label className="todo-group-picker">
+                  Nhóm theo
+                  <select
+                    aria-label="Nhóm công việc"
+                    value={groupBy}
+                    onChange={(e) => update("group", e.target.value)}
+                  >
+                    <option value="deadline">Hạn chót</option>
+                    <option value="list">Danh sách</option>
+                    <option value="priority">Ưu tiên</option>
+                    <option value="assignee">Người thực hiện</option>
+                  </select>
+                </label>
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    className="text-button todo-reset-link"
+                    onClick={clearAllFilters}
+                  >
+                    Xóa tất cả điều kiện lọc
+                  </button>
+                )}
+              </div>
             </details>
             {kind === "shopping" && (
               <p>

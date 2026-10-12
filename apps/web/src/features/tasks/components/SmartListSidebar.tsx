@@ -55,6 +55,18 @@ export function SmartListSidebar({
   onToggleArchive: () => void;
   historyReadOnly: boolean;
 }) {
+  const primaryKeys = ["today", "upcoming", "all", "mine", "shared"] as const;
+  const secondaryKeys = ["overdue", "partner", "nodate", "done"] as const;
+  const primaryLists = smartLists.filter(([k]) =>
+    primaryKeys.includes(k as (typeof primaryKeys)[number]),
+  );
+  const secondaryLists = smartLists.filter(([k]) =>
+    secondaryKeys.includes(k as (typeof secondaryKeys)[number]),
+  );
+  const isSecondaryActive = secondaryLists.some(
+    ([k]) => !listId && smart === k,
+  );
+
   return (
     <aside className="todo-sidebar" aria-label="Danh sách công việc">
       <div className="todo-sidebar-title">
@@ -62,7 +74,7 @@ export function SmartListSidebar({
         <b>Góc việc nhỏ</b>
       </div>
       <nav className="todo-smart-nav" aria-label="Danh sách thông minh">
-        {smartLists.map(([key, name]) => (
+        {primaryLists.map(([key, name]) => (
           <button
             key={key}
             aria-current={!listId && smart === key ? "page" : undefined}
@@ -72,6 +84,34 @@ export function SmartListSidebar({
             <small aria-label={`Số việc ${name}`}>{counts?.[key] ?? "—"}</small>
           </button>
         ))}
+        <details
+          className="todo-more-smart-nav"
+          open={isSecondaryActive ? true : undefined}
+        >
+          <summary className="todo-more-smart-summary">
+            <span>Bộ lọc khác</span>
+            <small>
+              {secondaryLists.reduce(
+                (acc, [k]) => acc + (counts?.[k] || 0),
+                0,
+              ) || ""}
+            </small>
+          </summary>
+          <div className="todo-secondary-smart-list">
+            {secondaryLists.map(([key, name]) => (
+              <button
+                key={key}
+                aria-current={!listId && smart === key ? "page" : undefined}
+                onClick={() => onSmart(key)}
+              >
+                <span>{name}</span>
+                <small aria-label={`Số việc ${name}`}>
+                  {counts?.[key] ?? "—"}
+                </small>
+              </button>
+            ))}
+          </div>
+        </details>
       </nav>
       <div className="todo-custom-lists">
         {loading && <p role="status">Đang tải danh sách…</p>}
