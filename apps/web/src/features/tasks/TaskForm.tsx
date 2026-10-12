@@ -11,15 +11,33 @@ import { Task, TaskList, Members, ChecklistItem, priorities } from "./types";
 import { FormattedDescription } from "./components/FormattedDescription";
 const schema = z
   .object({
-    title: z.string().trim().min(1, "Nhập tiêu đề công việc.").max(160),
-    description: z.string().max(2000),
+    title: z.string().trim().min(1, "Nhập tiêu đề công việc.").max(160, "Tiêu đề tối đa 160 ký tự."),
+    description: z.string().max(2000, "Mô tả tối đa 2000 ký tự."),
     scope: z.enum(["personal", "shared"]),
     deadline: z.string(),
     priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]),
     assignedTo: z.string(),
     kind: z.enum(["task", "shopping"]),
     recurrence: z.enum(["none", "daily", "weekly", "monthly"]),
-    labels: z.string(),
+    labels: z
+      .string()
+      .refine(
+        (v) =>
+          v
+            .split(",")
+            .map((s) => s.trim().replace(/^#+/, ""))
+            .filter(Boolean).length <= 10,
+        "Tối đa 10 nhãn.",
+      )
+      .refine(
+        (v) =>
+          v
+            .split(",")
+            .map((s) => s.trim().replace(/^#+/, ""))
+            .filter(Boolean)
+            .every((s) => s.length <= 30),
+        "Mỗi nhãn tối đa 30 ký tự.",
+      ),
   })
   .refine((v) => v.recurrence === "none" || !!v.deadline, {
     path: ["deadline"],
@@ -77,10 +95,14 @@ export function TaskForm({
       ...(list ? { listId: list.id } : {}),
       deadline: v.deadline || null,
       assignedTo: v.assignedTo || null,
-      labels: v.labels
-        .split(",")
-        .map((s) => s.trim())
-        .filter(Boolean),
+      labels: Array.from(
+        new Set(
+          v.labels
+            .split(",")
+            .map((s) => s.trim().replace(/^#+/, ""))
+            .filter(Boolean),
+        ),
+      ),
       checklist,
     };
     return task
@@ -193,6 +215,20 @@ export function TaskForm({
               {errors.deadline && (
                 <span className="form-error">{errors.deadline.message}</span>
               )}
+              {watch("deadline") &&
+                watch("deadline") < new Date().toISOString().slice(0, 10) && (
+                  <span
+                    className="muted"
+                    style={{
+                      display: "block",
+                      marginTop: "4px",
+                      fontSize: "0.85em",
+                      color: "#b45309",
+                    }}
+                  >
+                    Lưu ý: Hạn chót đã qua so với hôm nay.
+                  </span>
+                )}
             </label>
             <label>
               Lặp lại
@@ -211,6 +247,9 @@ export function TaskForm({
           <label>
             Nhãn (ngăn bằng dấu phẩy)
             <input aria-label="Nhãn" {...register("labels")} />
+            {errors.labels && (
+              <span className="form-error">{errors.labels.message}</span>
+            )}
           </label>
           <h3>{watch("kind") === "shopping" ? "Món cần mua" : "Việc con"}</h3>
           <div className="task-checklist">
@@ -250,6 +289,22 @@ export function TaskForm({
               value={text}
               maxLength={200}
               onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (text.trim() && checklist.length < 100) {
+                    setChecklist((a) => [
+                      ...a,
+                      {
+                        id: crypto.randomUUID(),
+                        text: text.trim(),
+                        done: false,
+                      },
+                    ]);
+                    setText("");
+                  }
+                }
+              }}
             />
             <Button
               type="button"

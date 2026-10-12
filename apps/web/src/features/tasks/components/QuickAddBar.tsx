@@ -91,7 +91,7 @@ export function QuickAddBar({
           value={text}
           disabled={disabled || save.isPending}
           onChange={(e) => {
-            setText(e.target.value);
+            setText(e.target.value.normalize("NFC"));
             setOmitted([]);
             setConfirm(false);
             setNow(new Date());
@@ -99,7 +99,9 @@ export function QuickAddBar({
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey && lines.length === 1) {
               e.preventDefault();
-              e.currentTarget.form?.requestSubmit();
+              if (!blocked) {
+                e.currentTarget.form?.requestSubmit();
+              }
             }
           }}
         />
@@ -166,7 +168,20 @@ export function QuickAddBar({
               {message}
             </p>
           ))}
-          {lines.length > 50 && <p role="alert">Tối đa 50 việc mỗi lần.</p>}
+          {lines.length > 50 && (
+            <p role="alert">
+              <span>Tối đa 50 việc mỗi lần.</span>{" "}
+              <button
+                type="button"
+                className="text-link"
+                onClick={() => {
+                  setText(lines.slice(0, 50).join("\n"));
+                }}
+              >
+                Chỉ giữ 50 việc đầu tiên
+              </button>
+            </p>
+          )}
           {lines.length > 1 && (
             <p>{lines.length} việc · kiểm tra trước khi thêm.</p>
           )}

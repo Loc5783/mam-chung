@@ -185,10 +185,14 @@ export function BulkActionBar({
         disabled={blocked || !labels.trim()}
         onClick={() =>
           update.mutate({
-            addLabels: labels
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean),
+            addLabels: Array.from(
+              new Set(
+                labels
+                  .split(",")
+                  .map((s) => s.trim().replace(/^#+/, ""))
+                  .filter(Boolean),
+              ),
+            ).slice(0, 10),
           })
         }
       >

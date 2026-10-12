@@ -81,10 +81,10 @@ describe("Backend Error Resilience (Phase B3)", () => {
       };
     };
 
-    function createMockRes(): MockResponse & Partial<Response> {
-      const res = {
+    function createMockRes(): MockResponse & any {
+      const res: any = {
         statusCode: 200,
-      } as MockResponse & Partial<Response>;
+      };
       res.status = jest.fn((code: number) => {
         res.statusCode = code;
         return res;

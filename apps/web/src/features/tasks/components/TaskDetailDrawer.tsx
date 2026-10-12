@@ -34,7 +34,25 @@ const schema = z
     recurrence: z.enum(["none", "daily", "weekly", "monthly"]),
     assignedTo: z.string(),
     listId: z.string(),
-    labels: z.string(),
+    labels: z
+      .string()
+      .refine(
+        (v) =>
+          v
+            .split(",")
+            .map((s) => s.trim().replace(/^#+/, ""))
+            .filter(Boolean).length <= 10,
+        "Tối đa 10 nhãn.",
+      )
+      .refine(
+        (v) =>
+          v
+            .split(",")
+            .map((s) => s.trim().replace(/^#+/, ""))
+            .filter(Boolean)
+            .every((s) => s.length <= 30),
+        "Mỗi nhãn tối đa 30 ký tự.",
+      ),
   })
   .refine(
     (v) => v.recurrence === "none" || !!v.deadline,
@@ -135,10 +153,14 @@ export function TaskDetailDrawer({
         startDate: v.startDate || null,
         listId: v.listId || null,
         assignedTo: v.assignedTo || null,
-        labels: v.labels
-          .split(",")
-          .map((s) => s.trim())
-          .filter(Boolean),
+        labels: Array.from(
+          new Set(
+            v.labels
+              .split(",")
+              .map((s) => s.trim().replace(/^#+/, ""))
+              .filter(Boolean),
+          ),
+        ),
         deadlineHasTime,
         deadlineTime: deadlineHasTime ? deadlineTime : null,
         deadlineTimezone: deadlineHasTime
@@ -195,7 +217,9 @@ export function TaskDetailDrawer({
     run,
   ]);
   const change = (key: keyof typeof draft, value: string | boolean) => {
-    setDraft((d) => ({ ...d, [key]: value }));
+    const normalized =
+      typeof value === "string" ? value.normalize("NFC") : value;
+    setDraft((d) => ({ ...d, [key]: normalized }));
     setSaved(false);
   };
   const disabled = task.readOnly || save.isPending || busy || !online;
@@ -315,6 +339,20 @@ export function TaskDetailDrawer({
               value={draft.deadline}
               onChange={(e) => change("deadline", e.target.value)}
             />
+            {draft.deadline &&
+              draft.deadline < new Date().toISOString().slice(0, 10) && (
+                <span
+                  className="muted"
+                  style={{
+                    display: "block",
+                    marginTop: "4px",
+                    fontSize: "0.85em",
+                    color: "#b45309",
+                  }}
+                >
+                  Lưu ý: Hạn chót đã qua so với hôm nay.
+                </span>
+              )}
           </label>
           <label className="checkbox-label">
             <input
