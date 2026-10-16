@@ -9,9 +9,11 @@ import { Button } from "../../../components/ui";
 import {
   apiClient,
   errorMessage,
+  parseApiError,
   getSessionEpoch,
 } from "../../../lib/apiClient";
 import { useAuthStore } from "../../auth/store";
+import { useUiStore } from "../../../app/store";
 import { useOnline } from "../lib/useOnline";
 import { Task, TaskList, Members, statuses, priorities } from "../types";
 const schema = z
@@ -114,7 +116,8 @@ export function TaskDetailDrawer({
     ),
     [newItem, setNewItem] = useState(""),
     [failed, setFailed] = useState(false),
-    [saved, setSaved] = useState(false);
+    [saved, setSaved] = useState(false),
+    [isResolvingConflict, setIsResolvingConflict] = useState(false);
   const server = useRef(task),
     alive = useRef(true),
     epoch = useRef(getSessionEpoch());
@@ -191,6 +194,60 @@ export function TaskDetailDrawer({
     },
   });
   const run = save.mutate;
+  const isConflict =
+    save.isError &&
+    (parseApiError(save.error).isConflict ||
+      (typeof save.error === "object" &&
+        save.error !== null &&
+        "response" in save.error &&
+        (save.error as { response?: { status?: number } }).response?.status ===
+          409) ||
+      (typeof save.error === "object" &&
+        save.error !== null &&
+        "status" in save.error &&
+        (save.error as { status?: number }).status === 409));
+
+  const handleViewLatest = async () => {
+    setIsResolvingConflict(true);
+    try {
+      const res = await apiClient.get<Task>(`/tasks/${task.id}`);
+      const latest = res.data;
+      if (latest && latest.id) {
+        server.current = latest;
+        const value = initial(latest);
+        setDraft(value);
+        setBaseline(JSON.stringify(value));
+        setItems(latest.checklist);
+        setItemBaseline(JSON.stringify(latest.checklist));
+        save.reset();
+        setFailed(false);
+        for (const key of ["tasks", "dashboard", "notifications", "couple"])
+          void client.invalidateQueries({ queryKey: [key, user.id] });
+      }
+    } catch (err) {
+      useUiStore.getState().notify(errorMessage(err));
+    } finally {
+      setIsResolvingConflict(false);
+    }
+  };
+
+  const handleKeepMine = async () => {
+    setIsResolvingConflict(true);
+    try {
+      const res = await apiClient.get<Task>(`/tasks/${task.id}`);
+      const latest = res.data;
+      if (latest && typeof latest.revision === "number") {
+        server.current.revision = latest.revision;
+      }
+      save.reset();
+      setFailed(false);
+      run();
+    } catch (err) {
+      useUiStore.getState().notify(errorMessage(err));
+    } finally {
+      setIsResolvingConflict(false);
+    }
+  };
   useEffect(() => {
     if (
       !dirty ||
@@ -222,16 +279,17 @@ export function TaskDetailDrawer({
     setDraft((d) => ({ ...d, [key]: normalized }));
     setSaved(false);
   };
-  const disabled = task.readOnly || save.isPending || busy || !online;
+  const disabled =
+    task.readOnly || save.isPending || busy || !online || isResolvingConflict;
   const safeClose = () => {
-    if (!dirty && !save.isPending && !busy) onClose();
+    if (!dirty && !save.isPending && !busy && !isResolvingConflict) onClose();
   };
   return (
     <Modal
       title="Chi tiết công việc"
       variant="drawer"
       onClose={safeClose}
-      busy={dirty || save.isPending || busy}
+      busy={dirty || save.isPending || busy || isResolvingConflict}
     >
       <div className="todo-detail-context">
         {task.coupleId ? (
@@ -517,10 +575,70 @@ export function TaskDetailDrawer({
         </p>
       )}
       {save.isError && (
-        <p role="alert" className="form-error">
-          {errorMessage(save.error)} Nội dung đang nhập được giữ. Nếu có xung
-          đột, sao chép nội dung rồi đóng và mở lại để tải phiên bản mới.
-        </p>
+        <div
+          role="alert"
+          className="form-error"
+          style={
+            isConflict
+              ? {
+                  border: "1px solid #f59e0b",
+                  backgroundColor: "rgba(245, 158, 11, 0.08)",
+                  borderRadius: "8px",
+                  padding: "12px",
+                  marginTop: "12px",
+                }
+              : undefined
+          }
+        >
+          <p style={{ margin: 0, fontWeight: isConflict ? 600 : "normal" }}>
+            {errorMessage(save.error)} Nội dung đang nhập được giữ.
+          </p>
+          {isConflict ? (
+            <div
+              style={{
+                marginTop: "8px",
+                display: "flex",
+                gap: "8px",
+                flexWrap: "wrap",
+                alignItems: "center",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "0.85em",
+                  color: "var(--color-text-muted, #6b7280)",
+                  width: "100%",
+                  marginBottom: "4px",
+                }}
+              >
+                Công việc vừa được người khác cập nhật. Bạn muốn xem bản mới
+                nhất hay tiếp tục lưu để giữ bản chỉnh sửa của mình?
+              </span>
+              <Button
+                type="button"
+                className="button-outline"
+                disabled={isResolvingConflict || save.isPending}
+                onClick={handleViewLatest}
+              >
+                {isResolvingConflict ? "Đang xử lý…" : "Xem bản mới"}
+              </Button>
+              <Button
+                type="button"
+                disabled={
+                  isResolvingConflict || save.isPending || !parsed.success
+                }
+                onClick={handleKeepMine}
+              >
+                {isResolvingConflict ? "Đang xử lý…" : "Giữ bản của tôi"}
+              </Button>
+            </div>
+          ) : (
+            <p style={{ margin: "4px 0 0 0", fontSize: "0.85em" }}>
+              Nếu có xung đột, sao chép nội dung rồi đóng và mở lại để tải phiên
+              bản mới.
+            </p>
+          )}
+        </div>
       )}
       <div className="todo-detail-footer">
         {onUndo && (

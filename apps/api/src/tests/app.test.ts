@@ -2,7 +2,8 @@ process.env.NODE_ENV = "test";
 process.env.MONGODB_URI = "mongodb://127.0.0.1:27017/test?replicaSet=rs0";
 process.env.JWT_SECRET = "test-secret-longer-than-thirty-two-characters";
 import request from "supertest";
-import { app } from "../app";
+import { app, createApp } from "../app";
+import { env } from "../config/env";
 import { requireMoney, splitEqual } from "../utils/money";
 describe("Nền tảng API", () => {
   test("Swagger gọi đúng tiền tố API cho tất cả nhóm nghiệp vụ", async () => {
@@ -54,5 +55,57 @@ describe("Nền tảng API", () => {
       { userId: "a", shareAmount: 51 },
       { userId: "b", shareAmount: 50 },
     ]);
+  });
+  type MutableEnv = {
+    NODE_ENV: "development" | "test" | "production";
+    ENABLE_API_DOCS: boolean;
+  };
+  const envMutable = env as unknown as MutableEnv;
+
+  test("production: /api/health chỉ trả { status: ... }, không lộ phase hay thông tin nội bộ", async () => {
+    const originalEnv = env.NODE_ENV;
+    envMutable.NODE_ENV = "production";
+    try {
+      const prodApp = createApp();
+      const res = await request(prodApp).get("/api/health");
+      expect([200, 503]).toContain(res.status);
+      expect(res.body.status).toBeDefined();
+      expect(res.body.phase).toBeUndefined();
+      expect(res.body.database).toBeUndefined();
+      expect(res.body.development).toBeUndefined();
+    } finally {
+      envMutable.NODE_ENV = originalEnv;
+    }
+  });
+  test("production: /api/docs và /api/openapi.json mặc định trả 404 khi không bật ENABLE_API_DOCS", async () => {
+    const originalEnv = env.NODE_ENV;
+    const originalDocs = env.ENABLE_API_DOCS;
+    envMutable.NODE_ENV = "production";
+    envMutable.ENABLE_API_DOCS = false;
+    try {
+      const prodApp = createApp();
+      const docsRes = await request(prodApp).get("/api/docs");
+      expect(docsRes.status).toBe(404);
+
+      const openapiRes = await request(prodApp).get("/api/openapi.json");
+      expect(openapiRes.status).toBe(404);
+    } finally {
+      envMutable.NODE_ENV = originalEnv;
+      envMutable.ENABLE_API_DOCS = originalDocs;
+    }
+  });
+  test("production: /api/docs mở lại khi ENABLE_API_DOCS=true", async () => {
+    const originalEnv = env.NODE_ENV;
+    const originalDocs = env.ENABLE_API_DOCS;
+    envMutable.NODE_ENV = "production";
+    envMutable.ENABLE_API_DOCS = true;
+    try {
+      const prodApp = createApp();
+      const openapiRes = await request(prodApp).get("/api/openapi.json");
+      expect(openapiRes.status).toBe(200);
+    } finally {
+      envMutable.NODE_ENV = originalEnv;
+      envMutable.ENABLE_API_DOCS = originalDocs;
+    }
   });
 });

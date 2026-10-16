@@ -9,6 +9,7 @@
     "node": ">=20"
   },
   "scripts": {
+    "dev": "node scripts/dev-local.cjs",
     "dev:web": "npm run dev -w @mam-chung/web",
     "dev:api": "npm run dev -w @mam-chung/api",
     "lint": "npm run lint --workspaces",
@@ -22,7 +23,9 @@
     "qa:local": "node scripts/qa-local.cjs",
     "test:workflows": "npm run test -w @mam-chung/api -- --runTestsByPath src/tests/workflows.test.ts --coverage=false",
     "test:ops": "node --test scripts/tests/*.test.cjs",
+    "check:headers": "node scripts/check-security-headers.cjs",
     "prepare:production": "node scripts/prepare-production.cjs",
+    "admin:reset-password": "npm run admin:reset-password -w @mam-chung/api --",
     "check:backup": "node scripts/check-backup-local.cjs"
   },
   "devDependencies": {

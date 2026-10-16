@@ -8,6 +8,11 @@ const schema = z.object({
   MONGODB_URI: z.string().min(1),
   CORS_ORIGIN: z.string().url().default("http://127.0.0.1:5173"),
   JWT_SECRET: z.string().min(32),
+  ENABLE_API_DOCS: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .transform((val) => val === true || val === "true" || val === "1")
+    .default(false),
 });
 export function parseEnvironment(input: Record<string, string | undefined>) {
   const env = schema.parse(input);

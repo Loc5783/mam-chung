@@ -1,8 +1,24 @@
 {
- email {$ACME_EMAIL}
+	email {$ACME_EMAIL}
 }
 {$DOMAIN} {
- encode zstd gzip
- header Strict-Transport-Security "max-age=31536000"
- reverse_proxy web:80
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob:; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; worker-src 'self'; manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none';"
+	}
+
+	reverse_proxy web:80 {
+		header_down -Strict-Transport-Security
+		header_down -X-Content-Type-Options
+		header_down -X-Frame-Options
+		header_down -Referrer-Policy
+		header_down -Permissions-Policy
+		header_down -Content-Security-Policy
+	}
 }

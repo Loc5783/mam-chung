@@ -61,7 +61,10 @@ curl -fsS https://app.tenmiencuaban.vn/healthz
 curl -fsS https://app.tenmiencuaban.vn/api/health
 ```
 
-`healthz` là nginx, không thay thế readiness database. API phải trả status ok/database connected/development false. Phase vẫn10 vì chỉ chuẩn bị triển khai; không nâng mốc để giả định đã chạy production. Kiểm tra HTTP tự chuyển sang HTTPS, cookie refresh HttpOnly/Secure/SameSite=Strict, đăng ký/đăng nhập/tải lại/đăng xuất, ví và rollback, riêng tư giữa hai người, quỹ/công nợ, task, Fitness, PWA. Chỉ dùng dữ liệu giả cho vòng nghiệm thu. Swagger ở /api/docs.
+- `healthz` là nginx, không thay thế readiness database.
+- `/api/health`: Ở production, API chỉ trả về `{ "status": "ok" }` (mã 200 khi kết nối MongoDB tốt, mã 503 khi mất kết nối database). Để bảo mật, API ẩn toàn bộ phase, tên môi trường và thông tin phiên bản nội bộ.
+- **Swagger / OpenAPI (`/api/docs`)**: Mặc định ở `NODE_ENV=production`, trang tài liệu `/api/docs` bị vô hiệu hóa (trả mã 404). Nếu người quản trị cần mở lại trang tài liệu này trên máy chủ thật, đặt biến môi trường `ENABLE_API_DOCS=true` trong file `.env.production`.
+- Kiểm tra HTTP tự chuyển sang HTTPS, cookie refresh HttpOnly/Secure/SameSite=Strict, đăng ký/đăng nhập/tải lại/đăng xuất, ví và rollback, riêng tư giữa hai người, quỹ/công nợ, task, Fitness, PWA. Chỉ dùng dữ liệu giả cho vòng nghiệm thu.
 
 ## 4. Sao lưu định kỳ
 
@@ -115,6 +118,35 @@ Khôi phục production cần maintenance, dừng ghi, bảo toàn bản hiện 
 Trước cập nhật: lấy bản backup mới, thử restore, lưu commit/image/secret hiện hành. Khởi động lại từ source mới bằng up --build -d; không xóa volume. Kiểm tra readiness và các luồng giả sau cập nhật. Nếu có thay đổi schema/data thì rollback image có thể không đủ: cần kế hoạch migration và phục hồi dữ liệu.
 
 Log service giới hạn10MB×3 mỗi container; theo dõi dung lượng backups/database, health, chứng chỉ, rate limit và lỗi DB. Không có lịch tự cập nhật image đang chạy; kiểm tra image/security định kỳ và chốt digest khi phát hành thực. Một replica Mongo duy nhất không thay thế HA, backup ngoài máy hoặc phục hồi đã diễn tập.
+
+## 7. Quên mật khẩu và đặt lại mật khẩu người dùng
+
+Ứng dụng phục vụ nhóm nhỏ (3–5 cặp), không dùng dịch vụ gửi email bên ngoài nhằm tối giản chi phí và tránh rò rỉ qua email trung gian. Khi người dùng quên mật khẩu, người quản trị máy chủ thực hiện cấp lại mật khẩu tạm thông qua công cụ CLI nội bộ.
+
+### Lệnh chạy trên máy chủ Production
+
+```sh
+docker compose --env-file .env.production -f docker-compose.prod.yml exec api node apps/api/dist/scripts/admin-reset-password.js --email <email_nguoi_dung>
+```
+
+### Lệnh chạy ở môi trường phát triển (Local/Dev)
+
+```sh
+npm run admin:reset-password -- --email <email_nguoi_dung>
+```
+
+### Quy trình và nguyên tắc an toàn
+
+1. **Xác minh người yêu cầu**: Luôn xác minh đúng người thân/bạn bè yêu cầu qua kênh tin cậy trực tiếp trước khi chạy lệnh.
+2. **Cơ chế hoạt động**:
+   - Tìm kiếm người dùng theo email (chuẩn hóa không phân biệt chữ hoa/thường, cắt khoảng trắng).
+   - Tự động sinh mật khẩu tạm thời ngẫu nhiên đạt chuẩn CSPRNG (độ dài ≥ 16 ký tự, có đủ chữ và số).
+   - Băm mật khẩu bằng thuật toán bcrypt (cost 12) và lưu vào database.
+   - Thu hồi toàn bộ refresh token và phiên làm việc trước đó trên tất cả thiết bị; mở khóa tài khoản nếu đang bị tạm khóa do nhập sai trước đó.
+3. **Bảo mật mật khẩu tạm**:
+   - Mật khẩu tạm chỉ in ra màn hình terminal **một lần duy nhất**, không ghi vào hệ thống log của máy chủ.
+   - Người quản trị gửi mật khẩu tạm này qua tin nhắn riêng tư an toàn cho người dùng.
+   - Nhắc người dùng đăng nhập và truy cập trang **Cài đặt** để đổi sang mật khẩu riêng của mình ngay lập tức.
 
 ## Bằng chứng kiểm tra và nguồn
 

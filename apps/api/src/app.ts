@@ -58,6 +58,12 @@ export function createApp() {
   );
   app.get("/api/health", (_req, res) => {
     const connected = mongoose.connection.readyState === 1;
+    if (env.NODE_ENV === "production") {
+      res.status(connected ? 200 : 503).json({
+        status: connected ? "ok" : "not_ready",
+      });
+      return;
+    }
     res.status(connected ? 200 : 503).json({
       status: connected ? "ok" : "not_ready",
       database: connected ? "connected" : "disconnected",
@@ -65,8 +71,11 @@ export function createApp() {
       development: env.NODE_ENV === "development",
     });
   });
-  app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapi));
-  app.get("/api/openapi.json", (_req, res) => res.json(openapi));
+  const showDocs = env.NODE_ENV !== "production" || env.ENABLE_API_DOCS;
+  if (showDocs) {
+    app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(openapi));
+    app.get("/api/openapi.json", (_req, res) => res.json(openapi));
+  }
   app.use("/api/auth", authRoutes());
   app.use("/api/users", userRoutes());
   app.use("/api", coupleRoutes());

@@ -14,6 +14,7 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run check:pwa
+      - run: npm run check:headers
       - run: npm run test:ops
       - run: npm run format:check
 

@@ -8,7 +8,13 @@ import { inTransaction } from "../../utils/transaction";
 import { UserDocument, publicUser } from "../users/model";
 import { userRepository } from "../users/repository";
 import { tokenRepository } from "./repository";
-import { registerSchema, loginSchema, changePasswordSchema } from "./schema";
+import {
+  registerSchema,
+  loginSchema,
+  changePasswordSchema,
+  emailSchema,
+} from "./schema";
+import { logger } from "../../config/logger";
 const hashToken = (token: string) =>
   createHash("sha256").update(token).digest("hex");
 const unauthorized = () =>
@@ -202,4 +208,45 @@ export const authService = {
       await tokenRepository.revoke(userId, session);
     });
   },
+  async adminResetPassword(rawEmail: string) {
+    const email = emailSchema.parse(rawEmail);
+    const user = await userRepository.byEmail(email);
+    if (!user) {
+      throw new AppError(
+        404,
+        "USER_NOT_FOUND",
+        "Không tìm thấy người dùng với email này.",
+      );
+    }
+    let temporaryPassword = randomBytes(16).toString("base64url");
+    if (!/(?=.*[A-Za-z])(?=.*\d)/.test(temporaryPassword)) {
+      temporaryPassword += "1aA";
+    }
+    const passwordHash = await bcrypt.hash(temporaryPassword, 12);
+    await inTransaction(async (session) => {
+      const updated = await userRepository.credentials(
+        user.id as string,
+        user.securityVersion,
+        passwordHash,
+        session,
+      );
+      if (!updated) {
+        throw new AppError(
+          409,
+          "CONCURRENT_MODIFICATION",
+          "Không thể đặt lại mật khẩu do dữ liệu thay đổi cùng lúc. Vui lòng thử lại.",
+        );
+      }
+      await tokenRepository.revoke(user.id as string, session);
+    });
+    logger.info(
+      { userId: user.id, email: user.email },
+      "Admin reset password successfully executed",
+    );
+    return {
+      user: publicUser(user),
+      temporaryPassword,
+    };
+  },
 };
+

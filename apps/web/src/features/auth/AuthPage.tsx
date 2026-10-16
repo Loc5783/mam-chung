@@ -51,7 +51,8 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
   const destination =
     typeof location.state?.from === "string" &&
     location.state.from.startsWith("/") &&
-    !location.state.from.startsWith("//")
+    !location.state.from.startsWith("//") &&
+    !location.state.from.includes("\\")
       ? location.state.from
       : "/";
   if (status === "authenticated") return <Navigate to={destination} replace />;
@@ -220,6 +221,19 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
               {registerMode ? "Đăng nhập" : "Đăng ký ngay"}
             </Link>
           </p>
+          {!registerMode && (
+            <p
+              className="auth-forgot-hint"
+              style={{
+                fontSize: "0.85rem",
+                color: "var(--color-text-muted, #64748b)",
+                marginTop: "0.5rem",
+                textAlign: "center",
+              }}
+            >
+              Quên mật khẩu? Nhờ người quản trị đặt lại giúp bạn.
+            </p>
+          )}
         </div>
       </main>
     </div>

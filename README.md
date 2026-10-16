@@ -8,7 +8,7 @@ Dùng Node.js 24 LTS và npm cho bản triển khai mới.
 
 ```powershell
 npm ci
-npm run dev:local
+npm run dev
 ```
 
 Mở **http://127.0.0.1:5180/register** để tạo tài khoản thật trong bản local. Swagger tại http://127.0.0.1:4000/api/docs.
@@ -73,7 +73,7 @@ Worker chỉ lưu danh sách tài nguyên công khai của bản build. Khi khô
 
 Các trang được tải theo nhu cầu, thư viện biểu đồ tách riêng. Worker tải nền toàn bộ tài nguyên công khai khi cài nên việc chia gói giảm tải lúc mở trang, không giảm tổng dung lượng tải của lần cài PWA. Chưa đo Lighthouse/Web Vitals trên thiết bị thật.
 
-Sau khi `npm run dev:local` chạy, mở cửa sổ dòng lệnh thứ hai:
+Sau khi `npm run dev` chạy, mở cửa sổ dòng lệnh thứ hai:
 
 ```powershell
 npm run seed:demo:local
@@ -172,7 +172,6 @@ Apply tự sao lưu tasks/task_lists dưới `.local/task-migration-backups`. N�
 ### To-do List — Giai đoạn C
 
 Trang `/tasks` có sidebar danh sách thông minh, tiến độ hôm nay, nhóm việc, checkbox/hoàn tác5 giây, drawer tự lưu và tạo/lưu trữ/mở lại danh sách. Chặn ghi ngoại tuyến, rollback khi API lỗi. Natural-language quick add và kéo thả thuộc D; lịch/Focus/nhắc nhẹ thuộc E. Báo cáo và kiểm tra tay: [TASKS_PHASE_C.md](docs/TASKS_PHASE_C.md).
-
 
 ### Công việc — thêm nhanh và tương tác
 

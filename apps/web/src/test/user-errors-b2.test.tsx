@@ -75,6 +75,15 @@ describe("Phase B2: Vá các lỗi người dùng có thể mắc (Frontend Erro
   beforeEach(() => {
     vi.restoreAllMocks();
     useAuthStore.getState().setSession("test-token", mockUser);
+    vi.spyOn(apiClient, "get").mockImplementation(async (url: string) => {
+      if (url.includes("/activity")) {
+        return { data: { items: [] } };
+      }
+      if (url.startsWith("/tasks/")) {
+        return { data: mockTask };
+      }
+      return { data: {} };
+    });
   });
 
   describe("(1) QuickAddBar: Dán nhiều dòng, giới hạn 50 việc, và cắt việc an toàn", () => {
@@ -93,26 +102,39 @@ describe("Phase B2: Vá các lỗi người dùng có thể mắc (Frontend Erro
       );
 
       const textarea = screen.getByLabelText("Thêm nhanh công việc");
-      const lines55 = Array.from({ length: 55 }, (_, i) => `Công việc số ${i + 1}`).join("\r\n");
+      const lines55 = Array.from(
+        { length: 55 },
+        (_, i) => `Công việc số ${i + 1}`,
+      ).join("\r\n");
       fireEvent.change(textarea, { target: { value: lines55 } });
 
-      expect(await screen.findByText("Tối đa 50 việc mỗi lần.")).toBeInTheDocument();
+      expect(
+        await screen.findByText("Tối đa 50 việc mỗi lần."),
+      ).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Thêm" })).toBeDisabled();
 
       // Bấm nút "Chỉ giữ 50 việc đầu tiên"
-      const trimButton = screen.getByRole("button", { name: "Chỉ giữ 50 việc đầu tiên" });
+      const trimButton = screen.getByRole("button", {
+        name: "Chỉ giữ 50 việc đầu tiên",
+      });
       fireEvent.click(trimButton);
 
       // Sau khi bấm, cảnh báo >50 biến mất và nút Thêm mở lại
       await waitFor(() => {
-        expect(screen.queryByText("Tối đa 50 việc mỗi lần.")).not.toBeInTheDocument();
+        expect(
+          screen.queryByText("Tối đa 50 việc mỗi lần."),
+        ).not.toBeInTheDocument();
         expect(screen.getByRole("button", { name: "Thêm" })).not.toBeDisabled();
-        expect(screen.getByText("50 việc · kiểm tra trước khi thêm.")).toBeInTheDocument();
+        expect(
+          screen.getByText("50 việc · kiểm tra trước khi thêm."),
+        ).toBeInTheDocument();
       });
     });
 
     it("bỏ qua dòng trống, khoảng trắng thừa, và nhận diện đúng các nhãn/ưu tiên trên từng dòng", async () => {
-      const postSpy = vi.spyOn(apiClient, "post").mockResolvedValue({ data: {} });
+      const postSpy = vi
+        .spyOn(apiClient, "post")
+        .mockResolvedValue({ data: {} });
 
       renderWithProviders(
         <QuickAddBar
@@ -129,13 +151,18 @@ describe("Phase B2: Vá các lỗi người dùng có thể mắc (Frontend Erro
 
       const textarea = screen.getByLabelText("Thêm nhanh công việc");
       // Gồm dòng trống, khoảng trắng, Windows \r\n, nhãn # và ưu tiên !
-      const rawText = "   \r\nĐi chợ mua cá #bếp !cao\r\n\r\n   \r\nQuét dọn phòng khách #nhà\r\n   ";
+      const rawText =
+        "   \r\nĐi chợ mua cá #bếp !cao\r\n\r\n   \r\nQuét dọn phòng khách #nhà\r\n   ";
       fireEvent.change(textarea, { target: { value: rawText } });
 
-      expect(screen.getByText("2 việc · kiểm tra trước khi thêm.")).toBeInTheDocument();
+      expect(
+        screen.getByText("2 việc · kiểm tra trước khi thêm."),
+      ).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Thêm" }));
 
-      expect(await screen.findByRole("heading", { name: "Tạo 2 việc?" })).toBeInTheDocument();
+      expect(
+        await screen.findByRole("heading", { name: "Tạo 2 việc?" }),
+      ).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: "Xác nhận thêm" }));
 
       await waitFor(() => {
@@ -143,7 +170,10 @@ describe("Phase B2: Vá các lỗi người dùng có thể mắc (Frontend Erro
           "/tasks/quick-add",
           expect.objectContaining({
             items: expect.arrayContaining([
-              expect.objectContaining({ title: "Đi chợ mua cá", priority: "HIGH" }),
+              expect.objectContaining({
+                title: "Đi chợ mua cá",
+                priority: "HIGH",
+              }),
               expect.objectContaining({ title: "Quét dọn phòng khách" }),
             ]),
           }),
@@ -154,16 +184,19 @@ describe("Phase B2: Vá các lỗi người dùng có thể mắc (Frontend Erro
 
   describe("(2) TaskForm: Xử lý nhãn, hạn chót quá khứ, phím Enter trong checklist và giữ nháp khi lỗi", () => {
     it("tự động gỡ dấu # ở đầu nhãn và loại bỏ nhãn trùng lặp khi lưu", async () => {
-      const postSpy = vi.spyOn(apiClient, "post").mockResolvedValue({ data: { id: "new-task" } });
+      const postSpy = vi
+        .spyOn(apiClient, "post")
+        .mockResolvedValue({ data: { id: "new-task" } });
       const onClose = vi.fn();
 
-      renderWithProviders(
-        <TaskForm members={mockMembers} onClose={onClose} />,
-      );
+      renderWithProviders(<TaskForm members={mockMembers} onClose={onClose} />);
 
       await userEvent.type(screen.getByLabelText("Tiêu đề"), "Mua nguyên liệu");
       // Người dùng nhập lẫn lộn dấu # và nhãn trùng
-      await userEvent.type(screen.getByLabelText("Nhãn"), "#chợ, chợ, #nấu-ăn, ##chợ");
+      await userEvent.type(
+        screen.getByLabelText("Nhãn"),
+        "#chợ, chợ, #nấu-ăn, ##chợ",
+      );
       await userEvent.click(screen.getByRole("button", { name: "Lưu" }));
 
       await waitFor(() => {
@@ -178,14 +211,17 @@ describe("Phase B2: Vá các lỗi người dùng có thể mắc (Frontend Erro
     });
 
     it("chặn gửi và báo lỗi rõ ràng nếu nhập quá 10 nhãn", async () => {
-      const postSpy = vi.spyOn(apiClient, "post").mockResolvedValue({ data: {} });
-      renderWithProviders(
-        <TaskForm members={mockMembers} onClose={vi.fn()} />,
-      );
+      const postSpy = vi
+        .spyOn(apiClient, "post")
+        .mockResolvedValue({ data: {} });
+      renderWithProviders(<TaskForm members={mockMembers} onClose={vi.fn()} />);
 
       await userEvent.type(screen.getByLabelText("Tiêu đề"), "Việc nhiều nhãn");
       // 11 nhãn
-      await userEvent.type(screen.getByLabelText("Nhãn"), "n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11");
+      await userEvent.type(
+        screen.getByLabelText("Nhãn"),
+        "n1, n2, n3, n4, n5, n6, n7, n8, n9, n10, n11",
+      );
       await userEvent.click(screen.getByRole("button", { name: "Lưu" }));
 
       expect(await screen.findByText("Tối đa 10 nhãn.")).toBeInTheDocument();
@@ -193,10 +229,10 @@ describe("Phase B2: Vá các lỗi người dùng có thể mắc (Frontend Erro
     });
 
     it("bấm Enter trong ô 'Nội dung việc con' sẽ thêm mục checklist thay vì submit toàn bộ form", async () => {
-      const postSpy = vi.spyOn(apiClient, "post").mockResolvedValue({ data: {} });
-      renderWithProviders(
-        <TaskForm members={mockMembers} onClose={vi.fn()} />,
-      );
+      const postSpy = vi
+        .spyOn(apiClient, "post")
+        .mockResolvedValue({ data: {} });
+      renderWithProviders(<TaskForm members={mockMembers} onClose={vi.fn()} />);
 
       const checklistInput = screen.getByLabelText("Nội dung việc con");
       await userEvent.type(checklistInput, "Rửa rau{enter}");
@@ -210,9 +246,7 @@ describe("Phase B2: Vá các lỗi người dùng có thể mắc (Frontend Erro
     });
 
     it("hiển thị lưu ý nhẹ khi hạn chót ở quá khứ", async () => {
-      renderWithProviders(
-        <TaskForm members={mockMembers} onClose={vi.fn()} />,
-      );
+      renderWithProviders(<TaskForm members={mockMembers} onClose={vi.fn()} />);
 
       const deadlineInput = screen.getByLabelText("Hạn chót");
       fireEvent.change(deadlineInput, { target: { value: "2020-01-01" } });
@@ -232,12 +266,16 @@ describe("Phase B2: Vá các lỗi người dùng có thể mắc (Frontend Erro
       });
       const onClose = vi.fn();
 
-      renderWithProviders(
-        <TaskForm members={mockMembers} onClose={onClose} />,
-      );
+      renderWithProviders(<TaskForm members={mockMembers} onClose={onClose} />);
 
-      await userEvent.type(screen.getByLabelText("Tiêu đề"), "Việc quan trọng cần giữ");
-      await userEvent.type(screen.getByLabelText("Mô tả"), "Chi tiết không được mất");
+      await userEvent.type(
+        screen.getByLabelText("Tiêu đề"),
+        "Việc quan trọng cần giữ",
+      );
+      await userEvent.type(
+        screen.getByLabelText("Mô tả"),
+        "Chi tiết không được mất",
+      );
       await userEvent.click(screen.getByRole("button", { name: "Lưu" }));
 
       // Form hiện thông báo lỗi
@@ -245,18 +283,27 @@ describe("Phase B2: Vá các lỗi người dùng có thể mắc (Frontend Erro
       // Modal không bị đóng
       expect(onClose).not.toHaveBeenCalled();
       // Dữ liệu người dùng gõ vẫn giữ nguyên
-      expect(screen.getByLabelText("Tiêu đề")).toHaveValue("Việc quan trọng cần giữ");
-      expect(screen.getByLabelText("Mô tả")).toHaveValue("Chi tiết không được mất");
+      expect(screen.getByLabelText("Tiêu đề")).toHaveValue(
+        "Việc quan trọng cần giữ",
+      );
+      expect(screen.getByLabelText("Mô tả")).toHaveValue(
+        "Chi tiết không được mất",
+      );
     });
   });
 
   describe("(3) TaskDetailDrawer: Xử lý xung đột 409, ngày bắt đầu sau hạn chót, và chống vô tình đóng", () => {
-    it("giữ nguyên nội dung và thông báo khi gặp xung đột sửa đổi (409 revision)", async () => {
+    it("giữ nguyên nội dung và hiển thị các lựa chọn giải quyết khi gặp xung đột sửa đổi (409 revision)", async () => {
       vi.spyOn(apiClient, "put").mockRejectedValue({
         isAxiosError: true,
         response: {
           status: 409,
-          data: { error: { code: "CONFLICT", message: "Công việc đã được người khác cập nhật." } },
+          data: {
+            error: {
+              code: "CONFLICT",
+              message: "Công việc đã được người khác cập nhật.",
+            },
+          },
         },
       });
       const onClose = vi.fn();
@@ -273,18 +320,180 @@ describe("Phase B2: Vá các lỗi người dùng có thể mắc (Frontend Erro
       );
 
       const titleInput = screen.getByLabelText("Tiêu đề công việc");
-      fireEvent.change(titleInput, { target: { value: "Tiêu đề mới vừa sửa" } });
+      fireEvent.change(titleInput, {
+        target: { value: "Tiêu đề mới vừa sửa" },
+      });
 
-      const saveNowButton = await screen.findByRole("button", { name: "Lưu ngay" });
+      const saveNowButton = await screen.findByRole("button", {
+        name: "Lưu ngay",
+      });
       fireEvent.click(saveNowButton);
 
       await waitFor(() => {
-        expect(screen.getByRole("alert")).toHaveTextContent("Nội dung đang nhập được giữ");
+        expect(screen.getByRole("alert")).toHaveTextContent(
+          "Nội dung đang nhập được giữ",
+        );
       });
+      // Hiển thị cả 2 lựa chọn giải quyết xung đột
+      expect(
+        screen.getByRole("button", { name: "Xem bản mới" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Giữ bản của tôi" }),
+      ).toBeInTheDocument();
+
       // Drawer không bị đóng
       expect(onClose).not.toHaveBeenCalled();
       // Nội dung người dùng gõ vẫn còn nguyên
-      expect(screen.getByLabelText("Tiêu đề công việc")).toHaveValue("Tiêu đề mới vừa sửa");
+      expect(screen.getByLabelText("Tiêu đề công việc")).toHaveValue(
+        "Tiêu đề mới vừa sửa",
+      );
+    });
+
+    it("cho phép chọn 'Xem bản mới' để tải lại dữ liệu mới nhất từ server và bỏ bản nháp", async () => {
+      vi.spyOn(apiClient, "put").mockRejectedValue({
+        isAxiosError: true,
+        response: {
+          status: 409,
+          data: {
+            error: {
+              code: "CONFLICT",
+              message: "Công việc đã được người khác cập nhật.",
+            },
+          },
+        },
+      });
+      const serverUpdatedTask: Task = {
+        ...mockTask,
+        title: "Tiêu đề người khác vừa lưu",
+        revision: 3,
+      };
+      vi.spyOn(apiClient, "get").mockImplementation(async (url: string) => {
+        if (url === `/tasks/${mockTask.id}`) {
+          return { data: serverUpdatedTask };
+        }
+        return { data: { items: [] } };
+      });
+
+      renderWithProviders(
+        <TaskDetailDrawer
+          task={mockTask}
+          members={mockMembers}
+          lists={[]}
+          onClose={vi.fn()}
+          onStatus={vi.fn()}
+          onComments={vi.fn()}
+        />,
+      );
+
+      const titleInput = screen.getByLabelText("Tiêu đề công việc");
+      fireEvent.change(titleInput, {
+        target: { value: "Bản nháp của tôi đang dở" },
+      });
+
+      const saveNowButton = await screen.findByRole("button", {
+        name: "Lưu ngay",
+      });
+      fireEvent.click(saveNowButton);
+
+      // Chờ banner xung đột xuất hiện
+      const viewLatestBtn = await screen.findByRole("button", {
+        name: "Xem bản mới",
+      });
+      fireEvent.click(viewLatestBtn);
+
+      // Sau khi bấm Xem bản mới: dữ liệu được cập nhật thành bản từ server
+      await waitFor(() => {
+        expect(screen.getByLabelText("Tiêu đề công việc")).toHaveValue(
+          "Tiêu đề người khác vừa lưu",
+        );
+      });
+      // Banner lỗi xung đột biến mất
+      expect(
+        screen.queryByText("Công việc đã được người khác cập nhật."),
+      ).not.toBeInTheDocument();
+    });
+
+    it("cho phép chọn 'Giữ bản của tôi' để lấy revision mới nhất và ghi đè nội dung draft lên server", async () => {
+      const putSpy = vi.spyOn(apiClient, "put");
+      putSpy.mockRejectedValueOnce({
+        isAxiosError: true,
+        response: {
+          status: 409,
+          data: {
+            error: {
+              code: "CONFLICT",
+              message: "Công việc đã được người khác cập nhật.",
+            },
+          },
+        },
+      });
+
+      const serverUpdatedTask: Task = {
+        ...mockTask,
+        title: "Bản người khác sửa",
+        revision: 4,
+      };
+      vi.spyOn(apiClient, "get").mockImplementation(async (url: string) => {
+        if (url === `/tasks/${mockTask.id}`) {
+          return { data: serverUpdatedTask };
+        }
+        return { data: { items: [] } };
+      });
+
+      renderWithProviders(
+        <TaskDetailDrawer
+          task={mockTask}
+          members={mockMembers}
+          lists={[]}
+          onClose={vi.fn()}
+          onStatus={vi.fn()}
+          onComments={vi.fn()}
+        />,
+      );
+
+      const titleInput = screen.getByLabelText("Tiêu đề công việc");
+      fireEvent.change(titleInput, {
+        target: { value: "Tiêu đề của tôi muốn giữ" },
+      });
+
+      const saveNowButton = await screen.findByRole("button", {
+        name: "Lưu ngay",
+      });
+      fireEvent.click(saveNowButton);
+
+      // Chờ banner xung đột xuất hiện
+      const keepMineBtn = await screen.findByRole("button", {
+        name: "Giữ bản của tôi",
+      });
+
+      // Lần PUT thứ 2 sẽ thành công với revision 4
+      putSpy.mockResolvedValueOnce({
+        data: {
+          ...mockTask,
+          title: "Tiêu đề của tôi muốn giữ",
+          revision: 5,
+        },
+      });
+
+      fireEvent.click(keepMineBtn);
+
+      await waitFor(() => {
+        expect(putSpy).toHaveBeenCalledTimes(2);
+        expect(putSpy).toHaveBeenLastCalledWith(
+          `/tasks/${mockTask.id}`,
+          expect.objectContaining({
+            title: "Tiêu đề của tôi muốn giữ",
+            revision: 4,
+          }),
+        );
+      });
+
+      // Trạng thái đã lưu thành công và tiêu đề người dùng được giữ nguyên
+      await screen.findByText("Đã lưu");
+      expect(screen.getByLabelText("Tiêu đề công việc")).toHaveValue(
+        "Tiêu đề của tôi muốn giữ",
+      );
     });
 
     it("chặn lưu và báo lỗi khi ngày bắt đầu sau hạn chót", async () => {
@@ -333,7 +542,9 @@ describe("Phase B2: Vá các lỗi người dùng có thể mắc (Frontend Erro
       );
 
       const labelsInput = screen.getByPlaceholderText("nhà, cuối-tuần");
-      fireEvent.change(labelsInput, { target: { value: "#nhà, #chợ, #cuối-tuần" } });
+      fireEvent.change(labelsInput, {
+        target: { value: "#nhà, #chợ, #cuối-tuần" },
+      });
 
       const tagButton = screen.getByRole("button", { name: "Gắn nhãn" });
       fireEvent.click(tagButton);
@@ -373,10 +584,14 @@ describe("Phase B2: Vá các lỗi người dùng có thể mắc (Frontend Erro
         />,
       );
 
-      const completeButton = screen.getByRole("button", { name: "Hoàn thành đã chọn" });
+      const completeButton = screen.getByRole("button", {
+        name: "Hoàn thành đã chọn",
+      });
       fireEvent.click(completeButton);
 
-      expect(await screen.findByRole("alert")).toHaveTextContent("Không thể cập nhật hàng loạt.");
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Không thể cập nhật hàng loạt.",
+      );
       // onClear KHÔNG được gọi khi mutation lỗi -> bảo toàn danh sách việc đang chọn
       expect(onClear).not.toHaveBeenCalled();
     });

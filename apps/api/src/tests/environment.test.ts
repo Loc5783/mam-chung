@@ -59,3 +59,20 @@ test("production canonicalizes origin for browser CORS matching", () => {
     }).CORS_ORIGIN,
   ).toBe("https://app.example.com");
 });
+
+test("ENABLE_API_DOCS defaults to false and parses strings/booleans correctly", () => {
+  expect(parseEnvironment(production).ENABLE_API_DOCS).toBe(false);
+  expect(
+    parseEnvironment({ ...production, ENABLE_API_DOCS: "true" })
+      .ENABLE_API_DOCS,
+  ).toBe(true);
+  expect(
+    parseEnvironment({ ...production, ENABLE_API_DOCS: "1" })
+      .ENABLE_API_DOCS,
+  ).toBe(true);
+  expect(
+    parseEnvironment({ ...production, ENABLE_API_DOCS: "false" })
+      .ENABLE_API_DOCS,
+  ).toBe(false);
+});
+

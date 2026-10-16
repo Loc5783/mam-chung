@@ -12,6 +12,7 @@ import { User } from "../../users/model";
 import { RefreshToken } from "../model";
 import { authService } from "../service";
 import { userService } from "../../users/service";
+import { logger } from "../../../config/logger";
 let replica: MongoMemoryReplSet;
 let app: ReturnType<typeof createApp>;
 const account = {
@@ -532,3 +533,128 @@ test("đăng nhập sai trả chậm không cộng lỗi vào mật khẩu vừa
     spy.mockRestore();
   }
 });
+
+describe("adminResetPassword (quản trị đặt lại mật khẩu không cần email)", () => {
+  test("đặt lại thành công: mật khẩu tạm đăng nhập được, mật khẩu cũ bị từ chối, refresh token cũ bị thu hồi, không lộ mật khẩu trong log", async () => {
+    const created = await register();
+    expect(created.status).toBe(201);
+    const oldCookie = cookie(created);
+
+    const logSpy = jest.spyOn(logger, "info");
+
+    const result = await authService.adminResetPassword(
+      "  MINH@EXAMPLE.TEST  ",
+    );
+    expect(result.user.email).toBe(account.email);
+    expect(result.temporaryPassword).toBeDefined();
+    expect(result.temporaryPassword.length).toBeGreaterThanOrEqual(16);
+    expect(/(?=.*[A-Za-z])(?=.*\d)/.test(result.temporaryPassword)).toBe(true);
+
+    // Mật khẩu tạm không được xuất hiện trong log
+    expect(logSpy).toHaveBeenCalled();
+    const loggedCalls = logSpy.mock.calls;
+    for (const call of loggedCalls) {
+      const serialized = JSON.stringify(call);
+      expect(serialized).not.toContain(result.temporaryPassword);
+    }
+    logSpy.mockRestore();
+
+    // Mật khẩu cũ bị từ chối
+    await expect(
+      authService.login({
+        email: account.email,
+        password: account.password,
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_CREDENTIALS" });
+
+    // Refresh token cũ bị thu hồi
+    const refreshRes = await request(app)
+      .post("/api/auth/refresh")
+      .set("Cookie", oldCookie);
+    expect(refreshRes.status).toBe(401);
+
+    // Access token cũ không còn hợp lệ do securityVersion đã tăng
+    expect((await me(created.body.accessToken)).status).toBe(401);
+
+    // Đăng nhập được bằng mật khẩu tạm
+    const loginRes = await authService.login({
+      email: account.email,
+      password: result.temporaryPassword,
+    });
+    expect(loginRes.user.email).toBe(account.email);
+    expect(loginRes.accessToken).toBeDefined();
+
+    // Đổi mật khẩu từ mật khẩu tạm sang mật khẩu mới bình thường
+    await authService.changePassword(loginRes.user.id, {
+      currentPassword: result.temporaryPassword,
+      newPassword: "BrandNewPassword2026!",
+    });
+
+    // Mật khẩu mới hoạt động
+    const finalLogin = await authService.login({
+      email: account.email,
+      password: "BrandNewPassword2026!",
+    });
+    expect(finalLogin.user.email).toBe(account.email);
+  });
+
+  test("email không tồn tại → ném lỗi USER_NOT_FOUND (404), không thay đổi gì", async () => {
+    await register();
+    await expect(
+      authService.adminResetPassword("nonexistent@example.test"),
+    ).rejects.toMatchObject({
+      code: "USER_NOT_FOUND",
+      status: 404,
+    });
+  });
+
+  test("email không hợp lệ cú pháp → ném lỗi validation", async () => {
+    await expect(
+      authService.adminResetPassword("invalid-email-format"),
+    ).rejects.toThrow();
+  });
+});
+
+describe("bcrypt v6 tương thích ngược với hash tạo từ bcrypt v5", () => {
+  // Hash cố định $2b$12$ sinh bởi bcrypt 5.1.1 với mật khẩu "OldBcrypt5Password123!"
+  const LEGACY_BCRYPT5_PASSWORD = "OldBcrypt5Password123!";
+  const LEGACY_BCRYPT5_HASH =
+    "$2b$12$9GOVamvMYgMNUzjCotWdtu0wMXX17u8P03qRygXS4xgdrUPycW2S.";
+
+  test("bcrypt.compare xác thực thành công hash cố định sinh từ bcrypt v5", async () => {
+    expect(bcrypt.getRounds(LEGACY_BCRYPT5_HASH)).toBe(12);
+    expect(
+      await bcrypt.compare(LEGACY_BCRYPT5_PASSWORD, LEGACY_BCRYPT5_HASH),
+    ).toBe(true);
+    expect(
+      await bcrypt.compare("WrongPassword123!", LEGACY_BCRYPT5_HASH),
+    ).toBe(false);
+  });
+
+  test("người dùng mang hash từ phiên bản cũ đăng nhập bình thường qua authService.login", async () => {
+    const legacyUser = await User.create({
+      name: "Tài khoản cũ",
+      email: "legacy-v5@example.test",
+      passwordHash: LEGACY_BCRYPT5_HASH,
+    });
+    expect(legacyUser).toBeDefined();
+
+    // Đăng nhập thành công với mật khẩu đúng
+    const loginResult = await authService.login({
+      email: "legacy-v5@example.test",
+      password: LEGACY_BCRYPT5_PASSWORD,
+    });
+    expect(loginResult.user.email).toBe("legacy-v5@example.test");
+    expect(loginResult.accessToken).toBeDefined();
+
+    // Mật khẩu sai vẫn bị từ chối
+    await expect(
+      authService.login({
+        email: "legacy-v5@example.test",
+        password: "SaiMatKhau123!",
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_CREDENTIALS" });
+  });
+});
+
+
