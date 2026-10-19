@@ -6,6 +6,7 @@ export type Profile = {
   avatar: string | null;
   timezone: string;
   coupleId: string | null;
+  role?: "user" | "admin";
   createdAt: string;
 };
 type AuthState = {

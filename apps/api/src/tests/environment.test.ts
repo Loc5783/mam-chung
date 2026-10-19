@@ -67,12 +67,10 @@ test("ENABLE_API_DOCS defaults to false and parses strings/booleans correctly", 
       .ENABLE_API_DOCS,
   ).toBe(true);
   expect(
-    parseEnvironment({ ...production, ENABLE_API_DOCS: "1" })
-      .ENABLE_API_DOCS,
+    parseEnvironment({ ...production, ENABLE_API_DOCS: "1" }).ENABLE_API_DOCS,
   ).toBe(true);
   expect(
     parseEnvironment({ ...production, ENABLE_API_DOCS: "false" })
       .ENABLE_API_DOCS,
   ).toBe(false);
 });
-

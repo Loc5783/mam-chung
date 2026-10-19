@@ -15,4 +15,3 @@ describe("motion formatting", () => {
     expect(formatPercent(12.5, 1)).toBe("12,5%");
   });
 });
-

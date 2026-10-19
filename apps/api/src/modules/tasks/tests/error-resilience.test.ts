@@ -128,7 +128,12 @@ describe("Backend Error Resilience (Phase B3)", () => {
       };
       const res = createMockRes();
 
-      errorHandler(valErr, {} as Request, res as unknown as Response, jest.fn());
+      errorHandler(
+        valErr,
+        {} as Request,
+        res as unknown as Response,
+        jest.fn(),
+      );
 
       expect(res.status).toHaveBeenCalledWith(422);
       expect(res.body?.error.code).toBe("VALIDATION_ERROR");

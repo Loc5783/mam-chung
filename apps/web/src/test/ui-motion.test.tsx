@@ -47,7 +47,11 @@ describe("UI Motion Components", () => {
 
     // Simulate pointer move
     if (section) {
-      fireEvent.pointerMove(section, { clientX: 100, clientY: 150, pointerType: "mouse" });
+      fireEvent.pointerMove(section, {
+        clientX: 100,
+        clientY: 150,
+        pointerType: "mouse",
+      });
     }
     expect(section).toBeInTheDocument();
   });

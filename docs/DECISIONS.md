@@ -155,7 +155,6 @@
 - Chặn ghi khi navigator.onLine=false bằng networkMode always + kiểm tra trước request; không xếp hàng chờ online. Giữ dữ liệu đang nhập khi request thất bại. Connection thật có thể mất dù navigator báo online, API lỗi vẫn giữ draft/rollback.
 - Drawer C có tiêu đề/mô tả plain text, trạng thái, ưu tiên, ngày bắt đầu/hạn/giờ, ước lượng, lặp cơ bản, danh sách, nhãn, giao việc và checklist. Rich text, reminder, activity riêng, chuyển scope/duplicate/nudge/templates/Focus/calendar thuộc E. D kéo thả/bulk/phím tắt/swipe/quick parser; F tối ưu và QA/a11y toàn diện.
 
-
 ## 2026-10-06 — Tasks phase D
 
 Quick add parses Vietnamese deterministically in the user timezone and always previews recognized chips. Ambiguous member/list instructions block submission; a literal mode preserves the original title. A single item keeps the existing create API, multiline batches share the create service in one transaction (max 100). Weekly weekday recurrence reuses the existing weekly service and an explicit start deadline.
@@ -192,6 +191,7 @@ Bulk addLabels merges labels rather than replacing them and rejects any resultin
 ## 2026-10-09: Giai đoạn D — Biểu đồ Recharts 0% → 100% và Các thành phần tiến độ chuyển động
 
 ### Bối cảnh & Yêu cầu
+
 - Dự án sử dụng Recharts v2.13.0 với nhiều biểu đồ trước đây bị tắt hoạt ảnh (`isAnimationActive={false}`) để tránh lỗi hiển thị và giật khung hình.
 - Cần kích hoạt hoạt ảnh mềm mại khi cuộn tới (`useInView`), quét từ 0% → 100% theo chiều kim đồng hồ cho Donut, vẽ đường mượt mà cho Line chart, cột mọc từ dưới lên kèm bo góc cho Bar chart.
 - Cần tương tác 2 chiều giữa chú thích (legend) và lát bánh biểu đồ Donut: rê vào mục chú thích thì lát bánh sáng lên, rê vào lát bánh thì miếng bánh phóng nhẹ `outerRadius + 6` và các lát khác mờ đi (`opacity: 0.45`).
@@ -199,6 +199,7 @@ Bulk addLabels merges labels rather than replacing them and rejects any resultin
 - Thanh tiến độ `ProgressBar` và vòng tròn `ProgressRing` chuyển sang điều khiển bằng `transform: scaleX(...)` và SVG `stroke-dashoffset` thay vì animate `width` để loại bỏ reflow layout.
 
 ### Thiết kế & Thành phần triển khai
+
 1. `src/components/charts/`:
    - `AnimatedDonut.tsx`: Bọc Recharts Pie, quét chiều kim đồng hồ `startAngle={90}` `endAngle={-270}`, duration 1100ms, hover pop nhẹ bằng `Sector`, tâm đếm tăng số tiền/số đếm bằng `useCountUp`.
    - `AnimatedLine.tsx`: Bọc LineChart với hoạt ảnh vẽ đường sang phải, `activeDot` có drop-shadow pulse mượt mà và tooltip êm ái.
@@ -215,6 +216,7 @@ Bulk addLabels merges labels rather than replacing them and rejects any resultin
    - `PlanningPanel.tsx`: Refactor `Progress` component sang `transform: scaleX(...)` thay vì animate `width`.
 
 ### Kết quả kiểm tra & Đo lường
+
 - Toàn bộ test suite: **20/20 test files PASS, 265/265 tests PASS**.
 - Typecheck & Lint: **0 errors, 0 warnings**.
 - Bundle size: Thêm ~2.5 KB gzip cho toàn bộ wrapper biểu đồ và module charts, tổng ngân sách an toàn tuyệt đối.
@@ -222,12 +224,14 @@ Bulk addLabels merges labels rather than replacing them and rejects any resultin
 ## 2026-10-09: Giai đoạn E — Chuyển trang (Route Transitions), Danh sách xuất hiện lần lượt (Stagger), và Số đếm tăng dần (Count-Up)
 
 ### Bối cảnh & Yêu cầu
+
 - Nội dung chính (`#main-content`) khi chuyển trang cần mờ vào và trượt nhẹ lên (`opacity: 0 -> 1`, `translateY: 10px -> 0`, thời lượng 420ms, easing ease-out). Sidebar và topbar đứng yên.
 - Khi chuyển route, tự động cuộn lên đầu vùng nội dung mượt mà (`smooth scroll`), trừ khi có hash anchor.
 - Các số tiền lớn ở Dashboard và các module (Tổng số dư, Thu nhập, Chi tiêu, Quỹ chung, Số buổi tập) cần tween đếm số tăng dần (`useCountUp`) với phông chữ `tabular-nums` chống giật layout.
 - Danh sách công việc, danh sách ví, giao dịch gần đây, danh sách quỹ xuất hiện lần lượt với độ trễ tăng dần (`stagger`). Giới hạn tối đa 12 phần tử đầu để không làm người dùng phải chờ đợi.
 
 ### Thiết kế & Thành phần triển khai
+
 1. `src/lib/motion/CountUp.tsx`:
    - Component tiện ích bọc `useCountUp` với `tabular-nums` chuẩn accessibility, hỗ trợ định dạng tiền tệ và số lượng.
 2. `src/styles/motion.css`:
@@ -242,6 +246,7 @@ Bulk addLabels merges labels rather than replacing them and rejects any resultin
    - `FitnessPage.tsx`: 7 thẻ chỉ số tập luyện dùng `CountUp` và `.stagger-item`.
 
 ### Kết quả kiểm tra & Đo lường
+
 - Vitest: **21/21 test files PASS**, **268/268 tests PASS**.
 - Lint & Typecheck: **0 errors, 0 warnings**.
 - Bundle size: Thêm ~0.9 KB gzip cho toàn bộ tính năng chuyển trang, stagger và CountUp component.
@@ -249,6 +254,7 @@ Bulk addLabels merges labels rather than replacing them and rejects any resultin
 ## 2026-10-09: Giai đoạn F — Tương tác vi mô (Micro-interactions), Trạng thái rỗng (Empty States) & Tối ưu hóa hiệu năng
 
 ### Bối cảnh & Yêu cầu
+
 - **Empty States**: Biểu tượng mầm cây (`Sprout`) trong toàn bộ trạng thái rỗng bồng bềnh nhẹ nhàng theo phương thẳng đứng (`translateY(-4px) -> 0`, chu kỳ 3.2s, ease-in-out vô hạn).
 - **To-Do Tick & Sprout Burst**: Khi đánh dấu hoàn thành công việc:
   - Checkbox nảy nhẹ theo đường cong đàn hồi (`scale: 1 -> 1.06`).
@@ -260,6 +266,7 @@ Bulk addLabels merges labels rather than replacing them and rejects any resultin
 - **Khả năng tiếp cận & Giảm chuyển động (Reduced Motion)**: Tắt toàn bộ hoạt ảnh lặp, chuyển sang gạch ngang tĩnh và cập nhật tức thời khi bật `data-motion="reduced"` hoặc cài đặt hệ điều hành.
 
 ### Thiết kế & Triển khai chi tiết
+
 1. `src/styles/motion.css`:
    - `@keyframes motion-float-gentle`: Áp dụng cho `.empty-state > svg` và `.empty-state-icon`.
    - `.todo-checkbox-wrap`, `.todo-sprout-burst`, `.todo-strike-text`: Hệ thống tương tác vi mô cây mầm hoàn thành công việc.
@@ -280,6 +287,7 @@ Bulk addLabels merges labels rather than replacing them and rejects any resultin
    - Làm tròn số nguyên trong quá trình tween `Math.round(nextVal)` và khi truyền vào hàm định dạng, ngăn ngừa lỗi định dạng tiền tệ có phần thập phân ngẫu nhiên.
 
 ### Kết quả kiểm tra & Đo lường
+
 - Toàn bộ test suite: **21/21 test files PASS**, **268/268 tests PASS**.
 - Linter & TypeScript: **0 lỗi, 0 cảnh báo**.
 - Production Build: Hoàn thành sạch sẽ trong 15s - 33s.
@@ -288,8 +296,9 @@ Bulk addLabels merges labels rather than replacing them and rejects any resultin
 ## Rà soát toàn diện Frontend (Frontend Audit & Polish)
 
 Đã tiến hành rà soát kỹ lưỡng toàn bộ mã nguồn `apps/web/src` và khắc phục các điểm tồn đọng:
+
 1. **Biểu đồ `AnimatedDonut` - Nhãn callout đa ngữ cảnh**:
-   - Trước đây nhãn hiển thị tại callout box bị cố định chuỗi `"Số tiền :"`, gây phi lý khi dùng cho biểu đồ tập luyện (`FitnessPage` hiển thị *"Số tiền : 12 set"*).
+   - Trước đây nhãn hiển thị tại callout box bị cố định chuỗi `"Số tiền :"`, gây phi lý khi dùng cho biểu đồ tập luyện (`FitnessPage` hiển thị _"Số tiền : 12 set"_).
    - Đã cập nhật `AnimatedDonut.tsx` nhận `tooltipFormatter` hoặc suy diễn từ `centerLabel` / `nameKey` linh hoạt. Khi xem biểu đồ rep tập luyện sẽ hiển thị đúng định dạng `1-5 reps : 12 set (40%)`.
 2. **Đồng bộ hóa hiệu ứng nhịp tim đôi lứa (`motion-heart-beat`)**:
    - Bổ sung `className="motion-heart-beat"` cho các icon `<Heart size={22} />` tại phần tổng quan đôi lứa ở `AccountHome.tsx` và `CouplePage.tsx`, đảm bảo trải nghiệm thị giác nhất quán trên toàn bộ ứng dụng.

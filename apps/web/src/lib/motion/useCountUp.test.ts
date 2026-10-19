@@ -82,12 +82,9 @@ describe("useCountUp", () => {
   it("cleans up animation frame on unmount", () => {
     const cancelMock = vi.spyOn(window, "cancelAnimationFrame");
 
-    const { unmount } = renderHook(() =>
-      useCountUp(500, { duration: 1000 }),
-    );
+    const { unmount } = renderHook(() => useCountUp(500, { duration: 1000 }));
 
     unmount();
     expect(cancelMock).toHaveBeenCalled();
   });
 });
-

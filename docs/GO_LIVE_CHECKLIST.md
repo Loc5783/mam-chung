@@ -127,23 +127,45 @@ Ngay trên VPS hoặc trên máy tính cá nhân của bạn, kiểm tra xem má
 
 ---
 
-## BƯỚC 8: DIỄN TẬP ĐẶT LẠI MẬT KHẨU BẰNG CLI (KHI QUÊN MẬT KHẨU)
+## BƯỚC 8: CẤP QUYỀN QUẢN TRỊ VIÊN & KHÓA CỔNG ĐĂNG KÝ
 
-Khi có người trong nhóm (hoặc chính bạn) quên mật khẩu, chạy lệnh sau trong terminal VPS:
+1. **Cấp quyền Admin cho tài khoản của bạn (Chủ dự án):**
+   Chạy lệnh CLI trực tiếp trên VPS:
+   ```sh
+   docker compose --env-file .env.production -f docker-compose.prod.yml exec api node apps/api/dist/scripts/admin-grant.js --email <email_cua_ban>
+   ```
+2. **Kiểm tra giao diện Quản trị:**
+   - Tải lại trang web Mầm Chung trên trình duyệt: Thanh Sidebar bên trái sẽ xuất hiện mục **Quản trị** (`/admin`).
+   - Bấm vào mục **Quản trị** để xem 5 tab: **Tổng quan**, **Tài khoản**, **Không gian chung**, **Cài đặt**, **Nhật ký**.
+   - Kiểm tra tài khoản của đối phương (không có quyền admin): Đăng nhập không thấy mục Quản trị trên sidebar, cố tình gõ `/admin` trên URL sẽ tự động bị đá về trang chủ `/`.
+3. **Đóng cổng đăng ký tài khoản mới khi hoàn tất mời bạn bè:**
+   - Sau khi các cặp đôi (3–5 cặp) đã tạo xong tài khoản:
+     Vào **Quản trị** > **Cài đặt** > Bấm tắt **Cho phép đăng ký tài khoản mới** (nhập mật khẩu admin để xác nhận).
+   - Kiểm tra: Mở tab ẩn danh truy cập `https://app.tenmiencuaban.vn/register` sẽ thấy banner dịu dàng _"Hiện chưa mở đăng ký. Vui lòng quay lại sau hoặc liên hệ quản trị viên"_ và form tạo tài khoản bị khóa hoàn toàn.
+4. **Kiểm tra Rate Limiter của Admin:**
+   - Các route `/api/admin/*` được bảo vệ độc lập ở mức 60 lượt gọi/phút/IP.
 
-```sh
-docker compose --env-file .env.production -f docker-compose.prod.yml exec api node apps/api/dist/scripts/admin-reset-password.js --email <email_nguoi_quen_mat_khau>
-```
+---
+
+## BƯỚC 9: DIỄN TẬP ĐẶT LẠI MẬT KHẨU BẰNG CLI (KHI QUÊN MẬT KHẨU)
+
+Khi có người trong nhóm (hoặc chính bạn) quên mật khẩu, bạn có 2 cách xử lý:
+
+- **Cách 1 (Qua giao diện Web):** Vào **Quản trị** > **Tài khoản** > Bấm **Mật khẩu** > Nhập mật khẩu admin > Copy mật khẩu tạm gửi riêng cho họ.
+- **Cách 2 (Qua Terminal VPS):** Chạy lệnh CLI:
+  ```sh
+  docker compose --env-file .env.production -f docker-compose.prod.yml exec api node apps/api/dist/scripts/admin-reset-password.js --email <email_nguoi_quen_mat_khau>
+  ```
 
 **Quy trình chuẩn:**
 
-1. Màn hình terminal sẽ in ra duy nhất một dòng chứa mật khẩu tạm thời ngẫu nhiên (ví dụ: `k8Fq#9xL2pW!vZaM`).
+1. Màn hình sẽ hiển thị duy nhất một lần mật khẩu tạm thời ngẫu nhiên (ví dụ: `k8Fq#9xL2pW!vZaM`).
 2. Bạn gửi mật khẩu này qua tin nhắn riêng (Zalo/Telegram cá nhân) cho họ.
 3. Nhắc họ đăng nhập vào web ngay, vào **Cài đặt** > **Đổi mật khẩu** sang mật khẩu riêng của họ.
 
 ---
 
-## BƯỚC 9: DIỄN TẬP SAO LƯU & KHÔI PHỤC THỬ NGHIỆM
+## BƯỚC 10: DIỄN TẬP SAO LƯU & KHÔI PHỤC THỬ NGHIỆM
 
 Hệ thống đã có service backup tự động chạy ngầm mỗi 24 giờ. Tuy nhiên, trước khi dùng thật, bạn **bắt buộc phải diễn tập khôi phục 1 lần**:
 
@@ -165,7 +187,7 @@ Hệ thống đã có service backup tự động chạy ngầm mỗi 24 giờ. 
 
 ---
 
-## BƯỚC 10: QUY TRÌNH NÂNG CẤP KHI CÓ BẢN CODE MỚI
+## BƯỚC 11: QUY TRÌNH NÂNG CẤP KHI CÓ BẢN CODE MỚI
 
 Mỗi khi bạn commit code mới lên GitHub và muốn cập nhật web trên VPS:
 

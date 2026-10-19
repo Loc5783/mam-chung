@@ -59,11 +59,22 @@ export const userRepository = {
       { new: true },
     );
   },
-  resetLogin: (id: string, version: number, session: ClientSession) =>
+  resetLogin: (
+    id: string,
+    version: number,
+    session?: ClientSession,
+    updateLastLogin: boolean = false,
+  ) =>
     User.updateOne(
       { _id: id, securityVersion: version, deletedAt: null },
-      { $set: { loginAttempts: 0, lockUntil: null } },
-      { session },
+      {
+        $set: {
+          loginAttempts: 0,
+          lockUntil: null,
+          ...(updateLastLogin ? { lastLoginAt: new Date() } : {}),
+        },
+      },
+      { ...(session ? { session } : {}) },
     ),
   profile: (
     id: string,

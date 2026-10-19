@@ -26,6 +26,9 @@
     "check:headers": "node scripts/check-security-headers.cjs",
     "prepare:production": "node scripts/prepare-production.cjs",
     "admin:reset-password": "npm run admin:reset-password -w @mam-chung/api --",
+    "admin:grant": "npm run admin:grant -w @mam-chung/api --",
+    "admin:revoke": "npm run admin:revoke -w @mam-chung/api --",
+    "admin:list": "npm run admin:list -w @mam-chung/api --",
     "check:backup": "node scripts/check-backup-local.cjs"
   },
   "devDependencies": {

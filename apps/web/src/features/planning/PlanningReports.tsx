@@ -102,8 +102,18 @@ export function PlanningReports() {
                 <AnimatedBar
                   data={chart}
                   bars={[
-                    { key: "income", name: "Thu nhập", color: "#7E9B57", radius: [5, 5, 0, 0] },
-                    { key: "expense", name: "Chi tiêu", color: "#E38FA9", radius: [5, 5, 0, 0] },
+                    {
+                      key: "income",
+                      name: "Thu nhập",
+                      color: "#7E9B57",
+                      radius: [5, 5, 0, 0],
+                    },
+                    {
+                      key: "expense",
+                      name: "Chi tiêu",
+                      color: "#E38FA9",
+                      radius: [5, 5, 0, 0],
+                    },
                   ]}
                   xAxisKey="month"
                   xAxisFormatter={(v) => `${v.slice(5)}/${v.slice(2, 4)}`}

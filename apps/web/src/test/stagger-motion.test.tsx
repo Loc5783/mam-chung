@@ -11,7 +11,7 @@ describe("Phase E: Stagger & CountUp & Route Transitions", () => {
           duration={0}
           format={(n) => `${n.toLocaleString("vi-VN")} đ`}
           className="stat-number"
-        />
+        />,
       );
 
       const el = screen.getByText(/1\.500\.000 đ/);

@@ -1,12 +1,12 @@
 /* Central motion tokens and animation utilities for Mầm Chung */
 :root {
   /* Durations */
-  --dur-instant: 90ms;   /* Button tap, ripple */
-  --dur-fast: 160ms;     /* Hover, focus */
-  --dur-base: 240ms;     /* Open/close, small toggle */
-  --dur-slow: 420ms;     /* Modal, drawer, route transition */
-  --dur-chart: 1100ms;   /* Chart sweep/reveal */
-  --dur-count: 900ms;    /* Number counter */
+  --dur-instant: 90ms; /* Button tap, ripple */
+  --dur-fast: 160ms; /* Hover, focus */
+  --dur-base: 240ms; /* Open/close, small toggle */
+  --dur-slow: 420ms; /* Modal, drawer, route transition */
+  --dur-chart: 1100ms; /* Chart sweep/reveal */
+  --dur-count: 900ms; /* Number counter */
 
   /* Easing */
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
@@ -22,8 +22,8 @@
   /* Shadows */
   --shadow-rest: 0 1px 2px rgba(43, 51, 36, 0.06);
   --shadow-hover-green: 0 8px 20px rgba(126, 155, 87, 0.28);
-  --shadow-hover-pink: 0 8px 20px rgba(227, 143, 169, 0.30);
-  --shadow-card-hover: 0 12px 28px rgba(43, 51, 36, 0.10);
+  --shadow-hover-pink: 0 8px 20px rgba(227, 143, 169, 0.3);
+  --shadow-card-hover: 0 12px 28px rgba(43, 51, 36, 0.1);
 }
 
 /* Reduced motion handling: OS preference (unless forced 'full') or explicit data-motion="reduced" */
@@ -124,7 +124,8 @@
 }
 
 @keyframes motion-heart-beat {
-  0%, 100% {
+  0%,
+  100% {
     transform: scale(1);
   }
   25% {
@@ -186,7 +187,9 @@
   border-radius: 10px;
   cursor: pointer;
   background: white;
-  transition: border-color var(--dur-fast) var(--ease-out), background-color var(--dur-fast) var(--ease-out);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
 }
 
 .motion-option:hover {
@@ -223,10 +226,11 @@
   position: relative;
   overflow: hidden;
   box-shadow: var(--shadow-rest);
-  transition: transform var(--dur-fast) var(--ease-out),
-              box-shadow var(--dur-fast) var(--ease-out),
-              background-color var(--dur-fast) var(--ease-out),
-              border-color var(--dur-fast) var(--ease-out);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -292,9 +296,10 @@
 
 /* Icon button hover & micro-interactions */
 .icon-button {
-  transition: transform var(--dur-fast) var(--ease-out),
-              background-color var(--dur-fast) var(--ease-out),
-              color var(--dur-fast) var(--ease-out);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
   border-radius: 50%;
 }
 
@@ -332,8 +337,9 @@
 
 /* Notification Bell hover motion */
 .notification-bell {
-  transition: transform var(--dur-fast) var(--ease-out),
-              color var(--dur-fast) var(--ease-out);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out);
   border-radius: 50%;
 }
 
@@ -353,7 +359,8 @@
 }
 
 @keyframes motion-bell-ring {
-  0%, 100% {
+  0%,
+  100% {
     transform: rotate(0deg);
   }
   20% {
@@ -373,9 +380,10 @@
 /* Quick add floating button (+) */
 .quick-add {
   box-shadow: 0 6px 18px rgba(126, 155, 87, 0.32);
-  transition: transform var(--dur-fast) var(--ease-spring),
-              box-shadow var(--dur-fast) var(--ease-out),
-              background-color var(--dur-fast) var(--ease-out);
+  transition:
+    transform var(--dur-fast) var(--ease-spring),
+    box-shadow var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -399,9 +407,10 @@
    ========================================================================== */
 .card {
   position: relative;
-  transition: transform var(--dur-fast) var(--ease-out),
-              box-shadow var(--dur-fast) var(--ease-out),
-              border-color var(--dur-fast) var(--ease-out);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -448,9 +457,10 @@
 .sidebar nav a {
   position: relative;
   overflow: hidden;
-  transition: color var(--dur-fast) var(--ease-out),
-              background-color var(--dur-fast) var(--ease-out),
-              transform var(--dur-fast) var(--ease-out);
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 .sidebar nav a svg {
@@ -510,9 +520,10 @@
 .fitness-template-item,
 .fitness-session,
 .fitness-pr {
-  transition: background-color var(--dur-fast) var(--ease-out),
-              border-color var(--dur-fast) var(--ease-out),
-              transform var(--dur-fast) var(--ease-out);
+  transition:
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -542,9 +553,10 @@
 input:not([type="checkbox"]):not([type="radio"]),
 select,
 textarea {
-  transition: border-color var(--dur-fast) var(--ease-out),
-              box-shadow var(--dur-fast) var(--ease-out),
-              background-color var(--dur-fast) var(--ease-out);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
 }
 
 input:not([type="checkbox"]):not([type="radio"]):hover,
@@ -563,9 +575,10 @@ textarea:focus {
 
 /* Circular task checkbox feedback */
 .task-check {
-  transition: transform var(--dur-fast) var(--ease-out),
-              border-color var(--dur-fast) var(--ease-out),
-              background-color var(--dur-fast) var(--ease-out);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -615,8 +628,9 @@ textarea:focus {
 }
 
 .avatar {
-  transition: transform var(--dur-fast) var(--ease-out),
-              box-shadow var(--dur-fast) var(--ease-out);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -658,7 +672,8 @@ textarea:focus {
 }
 
 @keyframes motion-leaf-sway {
-  0%, 100% {
+  0%,
+  100% {
     transform: rotate(0deg);
   }
   30% {
@@ -709,7 +724,9 @@ textarea:focus {
 }
 
 .donut-slice-active path {
-  transition: transform var(--dur-fast) var(--ease-out), filter var(--dur-fast) var(--ease-out);
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    filter var(--dur-fast) var(--ease-out);
 }
 
 .chart-legend-row:hover {
@@ -810,7 +827,8 @@ textarea:focus {
 
 /* 1. EmptyState: Gentle plant float */
 @keyframes motion-float-gentle {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {
@@ -835,9 +853,10 @@ textarea:focus {
 }
 
 .todo-checkbox {
-  transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1),
-              background-color 180ms ease,
-              border-color 180ms ease;
+  transition:
+    transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    background-color 180ms ease,
+    border-color 180ms ease;
 }
 
 .todo-checkbox:active {
@@ -892,11 +911,17 @@ textarea:focus {
 .todo-strike-text {
   position: relative;
   display: inline;
-  background-image: linear-gradient(to right, var(--ink-muted) 0%, var(--ink-muted) 100%);
+  background-image: linear-gradient(
+    to right,
+    var(--ink-muted) 0%,
+    var(--ink-muted) 100%
+  );
   background-size: 0% 1.5px;
   background-repeat: no-repeat;
   background-position: left 55%;
-  transition: background-size 240ms cubic-bezier(0.16, 1, 0.3, 1), color 240ms var(--ease-out);
+  transition:
+    background-size 240ms cubic-bezier(0.16, 1, 0.3, 1),
+    color 240ms var(--ease-out);
 }
 
 .todo-row.is-done .todo-strike-text {
@@ -1002,7 +1027,3 @@ textarea:focus {
     opacity: 0;
   }
 }
-
-
-
-

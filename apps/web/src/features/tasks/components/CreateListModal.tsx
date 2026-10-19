@@ -31,11 +31,7 @@ export function CreateListModal({
   );
 
   return (
-    <Modal
-      title="Danh sách mới"
-      onClose={onClose}
-      busy={createList.isPending}
-    >
+    <Modal title="Danh sách mới" onClose={onClose} busy={createList.isPending}>
       <form
         className="settings-form"
         onSubmit={(e) => {

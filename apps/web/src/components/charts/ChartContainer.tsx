@@ -1,8 +1,10 @@
 import { useRef, type ReactNode, type HTMLAttributes } from "react";
 import { useInView } from "../../lib/motion";
 
-export interface ChartContainerProps
-  extends Omit<HTMLAttributes<HTMLDivElement>, "children"> {
+export interface ChartContainerProps extends Omit<
+  HTMLAttributes<HTMLDivElement>,
+  "children"
+> {
   children: (inView: boolean) => ReactNode;
   minHeight?: number | string;
   className?: string;

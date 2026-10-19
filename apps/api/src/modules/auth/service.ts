@@ -14,6 +14,7 @@ import {
   changePasswordSchema,
   emailSchema,
 } from "./schema";
+import { AppSettings } from "../admin/models";
 import { logger } from "../../config/logger";
 const hashToken = (token: string) =>
   createHash("sha256").update(token).digest("hex");
@@ -55,6 +56,14 @@ async function issue(
 export const authService = {
   async register(input: { name: string; email: string; password: string }) {
     input = registerSchema.parse(input);
+    const settings = await AppSettings.findOne({ key: "global" });
+    if (settings && !settings.registrationOpen) {
+      throw new AppError(
+        403,
+        "REGISTRATION_CLOSED",
+        "Hiện tại hệ thống tạm ngưng tiếp nhận đăng ký mới.",
+      );
+    }
     const passwordHash = await bcrypt.hash(input.password, 12);
     try {
       return await inTransaction(async (session) => {
@@ -111,6 +120,13 @@ export const authService = {
         );
       throw mismatch();
     }
+    if (user.disabledAt) {
+      throw new AppError(
+        403,
+        "ACCOUNT_DISABLED",
+        "Tài khoản của bạn đang bị tạm khóa. Hãy liên hệ người quản trị.",
+      );
+    }
     return inTransaction(async (session) => {
       const current = await userRepository.touch(
         user.id as string,
@@ -118,6 +134,13 @@ export const authService = {
         session,
       );
       if (!current) throw unauthorized();
+      if (current.disabledAt) {
+        throw new AppError(
+          403,
+          "ACCOUNT_DISABLED",
+          "Tài khoản của bạn đang bị tạm khóa. Hãy liên hệ người quản trị.",
+        );
+      }
       if (current.lockUntil && current.lockUntil > new Date())
         throw new AppError(
           423,
@@ -128,7 +151,9 @@ export const authService = {
         current.id as string,
         current.securityVersion,
         session,
+        true,
       );
+      current.lastLoginAt = new Date();
       return issue(current, session);
     });
   },
@@ -142,6 +167,13 @@ export const authService = {
       const user = await userRepository.byId(token.userId.toString(), session);
       if (!user || user.securityVersion !== token.securityVersion)
         throw unauthorized();
+      if (user.disabledAt) {
+        throw new AppError(
+          403,
+          "ACCOUNT_DISABLED",
+          "Tài khoản của bạn đang bị tạm khóa. Hãy liên hệ người quản trị.",
+        );
+      }
       if (token.consumedAt) {
         await userRepository.invalidate(user.id as string, session);
         await tokenRepository.revoke(user.id as string, session);
@@ -154,6 +186,7 @@ export const authService = {
       );
       if (
         !current ||
+        current.disabledAt ||
         !(await tokenRepository.consume(token.id as string, session))
       )
         throw unauthorized();
@@ -249,4 +282,3 @@ export const authService = {
     };
   },
 };
-

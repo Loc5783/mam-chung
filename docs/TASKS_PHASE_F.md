@@ -7,6 +7,7 @@ Ngày 2026-10-10. Hoàn thành toàn diện Giai đoạn F (F1, F2, F3, F4) cho 
 ## 1. Đã làm
 
 ### F1. API Thống kê công việc (`GET /api/tasks/stats`)
+
 - Xây dựng service tổng hợp số liệu `taskStatsService.get` (`apps/api/src/modules/tasks/stats.ts`) hỗ trợ đầy đủ các tham số query:
   - `range`: `7d` | `30d` (mặc định) | `90d`.
   - `scope`: `personal` | `shared` | `all` (mặc định).
@@ -27,6 +28,7 @@ Ngày 2026-10-10. Hoàn thành toàn diện Giai đoạn F (F1, F2, F3, F4) cho 
 - Viết bộ test backend chuyên sâu `apps/api/src/modules/tasks/tests/stats.test.ts` (8 test bao phủ ranh giới múi giờ UTC+7 23:59 vs 00:01, chuỗi ngày qua nửa đêm, hạn có giờ/không giờ, phân quyền cá nhân/chung, không gian lưu trữ).
 
 ### F2. Giao diện Thống kê (`StatsPanel.tsx`)
+
 - Tạo component `StatsPanel.tsx` đặt tại `apps/web/src/features/tasks/components/StatsPanel.tsx`:
   - **StatsPanel thu gọn** ở đầu trang Công việc (có thể đóng/mở nhanh bằng nút toggle).
   - **Tab/Trang Thống kê** chuyên biệt (`view=stats`) hiển thị bảng điều khiển hiệu suất toàn diện.
@@ -44,6 +46,7 @@ Ngày 2026-10-10. Hoàn thành toàn diện Giai đoạn F (F1, F2, F3, F4) cho 
   - **Giảm chuyển động & Trạng thái rỗng**: Tự động tắt hoạt ảnh khi `prefers-reduced-motion` bật; hiển thị thông điệp ấm áp khi chưa có dữ liệu.
 
 ### F3. Tối ưu hiệu năng và tách Code
+
 - **Ảo hóa danh sách (`VirtualTaskList.tsx`)**:
   - Tạo component ảo hóa danh sách không phụ thuộc thư viện ngoài nặng.
   - Tự động kích hoạt khi danh sách vượt quá 200 việc (`threshold = 200`).
@@ -93,15 +96,17 @@ Ngày 2026-10-10. Hoàn thành toàn diện Giai đoạn F (F1, F2, F3, F4) cho 
 ## 4. Đo lường hiệu năng
 
 ### Kích thước Bundle (Frontend Build)
-| Thành phần | Trước khi tách (Phase E) | Sau khi tách (Phase F3) | Chênh lệch |
-| :--- | :--- | :--- | :--- |
-| `TasksPage` main chunk | 140.67 kB (gzip: 44.33 kB) | **123.25 kB (gzip: 39.50 kB)** | **-17.42 kB (-4.83 kB gzip)** |
-| `StatsPanel` (lazy chunk) | Gộp trong TasksPage | 11.69 kB (gzip: 3.56 kB) | Chỉ tải khi mở Thống kê |
-| `FocusMode` (lazy chunk) | Gộp trong TasksPage | 5.33 kB (gzip: 2.22 kB) | Chỉ tải khi mở Focus |
-| `CalendarView` (lazy chunk) | Gộp trong TasksPage | 3.32 kB (gzip: 1.68 kB) | Chỉ tải khi mở Lịch |
-| `ShoppingView` (lazy chunk) | Gộp trong TasksPage | 0.86 kB (gzip: 0.63 kB) | Chỉ tải khi xem mua sắm |
+
+| Thành phần                  | Trước khi tách (Phase E)   | Sau khi tách (Phase F3)        | Chênh lệch                    |
+| :-------------------------- | :------------------------- | :----------------------------- | :---------------------------- |
+| `TasksPage` main chunk      | 140.67 kB (gzip: 44.33 kB) | **123.25 kB (gzip: 39.50 kB)** | **-17.42 kB (-4.83 kB gzip)** |
+| `StatsPanel` (lazy chunk)   | Gộp trong TasksPage        | 11.69 kB (gzip: 3.56 kB)       | Chỉ tải khi mở Thống kê       |
+| `FocusMode` (lazy chunk)    | Gộp trong TasksPage        | 5.33 kB (gzip: 2.22 kB)        | Chỉ tải khi mở Focus          |
+| `CalendarView` (lazy chunk) | Gộp trong TasksPage        | 3.32 kB (gzip: 1.68 kB)        | Chỉ tải khi mở Lịch           |
+| `ShoppingView` (lazy chunk) | Gộp trong TasksPage        | 0.86 kB (gzip: 0.63 kB)        | Chỉ tải khi xem mua sắm       |
 
 ### Hiệu năng Truy vấn Database (Backend Stats API)
+
 - Sử dụng compound index `{ coupleId: 1, deletedAt: 1, status: 1, completedAt: 1 }` và `{ createdBy: 1, deletedAt: 1, status: 1, completedAt: 1 }`.
 - Thay vì quét toàn bộ collection (`COLLSCAN`), MongoDB thực hiện index scan trực tiếp trên khoảng thời gian `completedAt`, xử lý truy vấn trong < 30ms trên tập dữ liệu 5.000+ công việc.
 
@@ -131,19 +136,19 @@ npm run build --workspaces
 
 ## 6. Báo cáo kiểm tra bằng tay & Kiểm thử thực tế
 
-| Hạng mục kiểm tra | Phương thức xác minh | Kết quả | Ghi chú |
-| :--- | :--- | :--- | :--- |
-| API Thống kê tính đúng múi giờ UTC+7 | Jest (`stats.test.ts`) | **Đạt** | Kiểm chứng ca 23:59 và 00:01 cùng ngày UTC map đúng 2 ngày khác nhau ở UTC+7 |
-| Chuỗi ngày không đứt khi hôm nay chưa làm | Jest (`stats.test.ts`) | **Đạt** | Giữ nguyên streak cho tới hết ngày hôm nay |
-| Tỷ lệ đúng hạn có giờ vs không giờ | Jest (`stats.test.ts`) | **Đạt** | Hạn không giờ tính tới 23:59:59.999 theo timezone |
-| Quyền riêng tư cá nhân / chung | Jest (`stats.test.ts`) | **Đạt** | A không thấy việc của B; cặp đôi lưu trữ chỉ xem được việc chung |
-| Giao diện StatsPanel hiển thị đầy đủ KPI | RTL (`tasks-stats.test.tsx`) | **Đạt** | Render tỷ lệ đúng hạn, streak icon, completed, biểu đồ và thói quen |
-| Chuyển khoảng 7d/30d/90d gọi lại API | RTL (`tasks-stats.test.tsx`) | **Đạt** | Gọi đúng params query |
-| Chuyển phạm vi cá nhân/chung lưu localStorage | RTL (`tasks-stats.test.tsx`) | **Đạt** | Lưu trữ vào `mam_chung_tasks_stats_scope`, ẩn thẻ cặp đôi khi chọn cá nhân |
-| Ảo hóa danh sách > 200 việc | RTL (`tasks-virtual.test.tsx`) | **Đạt** | Render đủ khi <= 200 việc; chỉ render cửa sổ hiển thị khi > 200 việc |
-| Hiển thị trên màn hình điện thoại 375px | Trình duyệt thực tế | **Chưa kiểm** | Môi trường agent dòng lệnh không có giao diện browser thật |
-| Luồng hai tài khoản đồng thời trên trình duyệt | Trình duyệt thực tế | **Chưa kiểm** | Đã kiểm chứng phân quyền mức backend API, chưa mở 2 tab browser thật |
-| Kiểm tra bật `prefers-reduced-motion` | Hệ điều hành thực tế | **Chưa kiểm** | Code đã sử dụng `usePrefersReducedMotion` token motion chuẩn |
+| Hạng mục kiểm tra                              | Phương thức xác minh           | Kết quả       | Ghi chú                                                                      |
+| :--------------------------------------------- | :----------------------------- | :------------ | :--------------------------------------------------------------------------- |
+| API Thống kê tính đúng múi giờ UTC+7           | Jest (`stats.test.ts`)         | **Đạt**       | Kiểm chứng ca 23:59 và 00:01 cùng ngày UTC map đúng 2 ngày khác nhau ở UTC+7 |
+| Chuỗi ngày không đứt khi hôm nay chưa làm      | Jest (`stats.test.ts`)         | **Đạt**       | Giữ nguyên streak cho tới hết ngày hôm nay                                   |
+| Tỷ lệ đúng hạn có giờ vs không giờ             | Jest (`stats.test.ts`)         | **Đạt**       | Hạn không giờ tính tới 23:59:59.999 theo timezone                            |
+| Quyền riêng tư cá nhân / chung                 | Jest (`stats.test.ts`)         | **Đạt**       | A không thấy việc của B; cặp đôi lưu trữ chỉ xem được việc chung             |
+| Giao diện StatsPanel hiển thị đầy đủ KPI       | RTL (`tasks-stats.test.tsx`)   | **Đạt**       | Render tỷ lệ đúng hạn, streak icon, completed, biểu đồ và thói quen          |
+| Chuyển khoảng 7d/30d/90d gọi lại API           | RTL (`tasks-stats.test.tsx`)   | **Đạt**       | Gọi đúng params query                                                        |
+| Chuyển phạm vi cá nhân/chung lưu localStorage  | RTL (`tasks-stats.test.tsx`)   | **Đạt**       | Lưu trữ vào `mam_chung_tasks_stats_scope`, ẩn thẻ cặp đôi khi chọn cá nhân   |
+| Ảo hóa danh sách > 200 việc                    | RTL (`tasks-virtual.test.tsx`) | **Đạt**       | Render đủ khi <= 200 việc; chỉ render cửa sổ hiển thị khi > 200 việc         |
+| Hiển thị trên màn hình điện thoại 375px        | Trình duyệt thực tế            | **Chưa kiểm** | Môi trường agent dòng lệnh không có giao diện browser thật                   |
+| Luồng hai tài khoản đồng thời trên trình duyệt | Trình duyệt thực tế            | **Chưa kiểm** | Đã kiểm chứng phân quyền mức backend API, chưa mở 2 tab browser thật         |
+| Kiểm tra bật `prefers-reduced-motion`          | Hệ điều hành thực tế           | **Chưa kiểm** | Code đã sử dụng `usePrefersReducedMotion` token motion chuẩn                 |
 
 ---
 

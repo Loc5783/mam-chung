@@ -148,6 +148,37 @@ npm run admin:reset-password -- --email <email_nguoi_dung>
    - Người quản trị gửi mật khẩu tạm này qua tin nhắn riêng tư an toàn cho người dùng.
    - Nhắc người dùng đăng nhập và truy cập trang **Cài đặt** để đổi sang mật khẩu riêng của mình ngay lập tức.
 
+## 8. Quản lý quyền Quản trị viên (Admin CLI)
+
+Hệ thống Mầm Chung áp dụng nguyên tắc đặc quyền tối thiểu: Không có API hay giao diện web nào cho phép tự cấp quyền admin. **Cấp hoặc thu hồi quyền quản trị viên chỉ thực hiện được qua CLI trực tiếp trên server.**
+
+### Lệnh chạy trên máy chủ Production
+
+```sh
+# Cấp quyền admin cho tài khoản:
+docker compose --env-file .env.production -f docker-compose.prod.yml exec api node apps/api/dist/scripts/admin-grant.js --email <email_admin>
+
+# Xem danh sách tất cả admin:
+docker compose --env-file .env.production -f docker-compose.prod.yml exec api node apps/api/dist/scripts/admin-list.js
+
+# Gỡ quyền admin (chặn gỡ admin cuối cùng):
+docker compose --env-file .env.production -f docker-compose.prod.yml exec api node apps/api/dist/scripts/admin-revoke.js --email <email_admin>
+```
+
+### Lệnh chạy ở môi trường phát triển (Local/Dev)
+
+```sh
+npm run admin:grant -- --email <email_admin>
+npm run admin:list
+npm run admin:revoke -- --email <email_admin>
+```
+
+### Giới hạn tốc độ truy cập Admin (Rate Limiting)
+
+- Mọi route `/api/admin/*` được bảo vệ bằng rate limiter riêng biệt (`adminLimiter`): tối đa 60 requests/phút/IP.
+- Mọi route ghi yêu cầu xác thực lại mật khẩu quản trị (`adminPassword`), nếu nhập sai nhiều lần sẽ kích hoạt cơ chế khóa đăng nhập theo cấp số nhân để phòng chống tấn công brute-force.
+- Xem chi tiết tại [docs/ADMIN.md](ADMIN.md).
+
 ## Bằng chứng kiểm tra và nguồn
 
 Xem PHASE_11.md cho phân biệt giữa đã kiểm chứng local và chưa chạy trên Docker/server. Cách dump/restore có oplog theo [MongoDB Tools](https://www.mongodb.com/docs/database-tools/mongodump/) và [mongorestore](https://www.mongodb.com/docs/database-tools/mongorestore/). Xác thực nội bộ và giới hạn keyfile: [MongoDB](https://www.mongodb.com/docs/manual/tutorial/deploy-replica-set-with-keyfile-access-control/). Startup health theo [Docker](https://docs.docker.com/compose/how-tos/startup-order/); xử lý forwarded headers theo [Caddy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy). Dòng Node20 đã EOL nên runtime chuyển Node24 LTS theo [lịch phát hành Node.js](https://github.com/nodejs/Release/blob/main/README.md).

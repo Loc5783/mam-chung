@@ -44,8 +44,14 @@ import {
   LogIn,
   ChevronRight,
   Plus,
+  ShieldAlert,
 } from "lucide-react";
 import { AuthPage } from "../features/auth/AuthPage";
+const AdminPage = lazy(() =>
+  import("../features/admin/AdminPage").then((m) => ({
+    default: m.AdminPage,
+  })),
+);
 const Dashboard = lazy(() =>
   import("../features/dashboard/Dashboard").then((m) => ({
     default: m.Dashboard,
@@ -87,10 +93,12 @@ function Layout({ preview = false }: { preview?: boolean }) {
         ? "Tài chính chung"
         : location.pathname.startsWith("/invite/")
           ? "Lời mời"
-          : navigation.find((n) => n.to === location.pathname)?.label ||
-            (location.pathname === "/settings"
-              ? "Cài đặt"
-              : "Không tìm thấy trang");
+          : location.pathname.startsWith("/admin")
+            ? "Quản trị"
+            : navigation.find((n) => n.to === location.pathname)?.label ||
+              (location.pathname === "/settings"
+                ? "Cài đặt"
+                : "Không tìm thấy trang");
   useEffect(() => {
     if (!location.hash) {
       try {
@@ -142,6 +150,12 @@ function Layout({ preview = false }: { preview?: boolean }) {
           <p>Những thói quen nhỏ tạo nên một cuộc sống tốt đẹp.</p>
         </div>
         <div className="sidebar-bottom">
+          {user?.role === "admin" && (
+            <NavLink to="/admin" data-testid="nav-admin">
+              <ShieldAlert size={20} />
+              Quản trị
+            </NavLink>
+          )}
           <NavLink to="/settings">
             <Settings size={20} />
             Cài đặt
@@ -251,6 +265,7 @@ export function App() {
           <Route element={<Layout />}>
             <Route index element={<AccountHome />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/admin/*" element={<AdminPage />} />
             <Route path="/finance" element={<FinancePage />} />
             <Route path="/couple" element={<CouplePage />} />
             <Route path="/shared" element={<SharedFinancePage />} />

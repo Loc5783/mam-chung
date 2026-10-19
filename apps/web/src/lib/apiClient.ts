@@ -141,9 +141,22 @@ export type ApiErrorInfo = {
 };
 
 export function parseApiError(error: unknown): ApiErrorInfo {
-  if (axios.isAxiosError(error)) {
-    const status = error.response?.status;
-    const data = error.response?.data as
+  if (
+    axios.isAxiosError(error) ||
+    (error && typeof error === "object" && "response" in error)
+  ) {
+    const errObj = error as {
+      response?: {
+        status?: number;
+        data?: unknown;
+        headers?: Record<string, unknown>;
+      };
+      code?: string;
+      message?: string;
+      request?: unknown;
+    };
+    const status = errObj.response?.status;
+    const data = errObj.response?.data as
       | {
           error?: {
             code?: string;
@@ -161,7 +174,7 @@ export function parseApiError(error: unknown): ApiErrorInfo {
     const serverMsg = data?.error?.message;
 
     // 1. Session Epoch Changed
-    if (error.code === "SESSION_CHANGED") {
+    if (errObj.code === "SESSION_CHANGED") {
       return {
         message: "Phiên đăng nhập đã thay đổi. Vui lòng đăng nhập lại.",
         code: "SESSION_CHANGED",
@@ -181,15 +194,15 @@ export function parseApiError(error: unknown): ApiErrorInfo {
 
     // 2. Network error / Timeout
     const isTimeout =
-      error.code === "ECONNABORTED" ||
-      (typeof error.message === "string" &&
-        error.message.toLowerCase().includes("timeout"));
+      errObj.code === "ECONNABORTED" ||
+      (typeof errObj.message === "string" &&
+        errObj.message.toLowerCase().includes("timeout"));
     const isNetwork =
       !isTimeout &&
       (!navigator.onLine ||
-        error.code === "ERR_NETWORK" ||
-        error.message === "Network Error" ||
-        (!error.response && !!error.request));
+        errObj.code === "ERR_NETWORK" ||
+        errObj.message === "Network Error" ||
+        (!errObj.response && !!errObj.request));
 
     if (isTimeout) {
       return {
@@ -309,7 +322,8 @@ export function parseApiError(error: unknown): ApiErrorInfo {
     }
 
     if (status === 429) {
-      const retryHeader = error.response?.headers?.["retry-after"];
+      const retryHeader = errObj.response?.headers?.["retry-after"] as
+        string | number | undefined;
       const retrySec = retryHeader
         ? Number(retryHeader)
         : data?.error?.retryAfter;
@@ -480,3 +494,5 @@ export function parseApiError(error: unknown): ApiErrorInfo {
 export function errorMessage(error: unknown): string {
   return parseApiError(error).message;
 }
+
+export const classifyError = parseApiError;

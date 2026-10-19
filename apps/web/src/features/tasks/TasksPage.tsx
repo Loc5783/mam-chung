@@ -94,8 +94,12 @@ export function TasksPage() {
   const write = useTaskWrite((input, saved) => {
     if (input.remove) {
       setRemoving(null);
-      setUndo({ task: { ...input.task, revision: input.task.revision + 1 }, restore: true });
-    } else if (input.status === "DONE" && saved) setUndo({ task: saved, status: input.task.status });
+      setUndo({
+        task: { ...input.task, revision: input.task.revision + 1 },
+        restore: true,
+      });
+    } else if (input.status === "DONE" && saved)
+      setUndo({ task: saved, status: input.task.status });
   });
 
   const {
@@ -136,13 +140,20 @@ export function TasksPage() {
     labels: string[];
   }>("/tasks/summary", context);
 
-  const detail = useTasksQuery<Task>(`/tasks/${selectedId ?? "none"}`, {}, !!selectedId);
+  const detail = useTasksQuery<Task>(
+    `/tasks/${selectedId ?? "none"}`,
+    {},
+    !!selectedId,
+  );
   const lists = listsQuery.data?.items ?? [];
   const activeList = lists.find((l) => l.id === listId);
   const listReady = !listId || !!activeList;
 
   const archiveList = useTaskMutation(async (list: TaskList) =>
-    apiClient.put(`/task-lists/${list.id}`, { revision: list.revision, archived: !list.archivedAt }),
+    apiClient.put(`/task-lists/${list.id}`, {
+      revision: list.revision,
+      archived: !list.archivedAt,
+    }),
   );
 
   const q = useTasksQuery<TaskPage>("/tasks", {
@@ -163,12 +174,25 @@ export function TasksPage() {
   const reschedule = useTaskMutation(
     async ({ task, deadline }: { task: Task; deadline: string }) => ({
       task,
-      saved: (await apiClient.put<Task>(`/tasks/${task.id}`, { revision: task.revision, deadline })).data,
+      saved: (
+        await apiClient.put<Task>(`/tasks/${task.id}`, {
+          revision: task.revision,
+          deadline,
+        })
+      ).data,
     }),
     (result) => {
       const { task, saved } = result as { task: Task; saved: Task };
       setUndo(null);
-      setBulkUndo({ items: [{ id: saved.id, revision: saved.revision, changes: { deadline: task.deadline } }] });
+      setBulkUndo({
+        items: [
+          {
+            id: saved.id,
+            revision: saved.revision,
+            changes: { deadline: task.deadline },
+          },
+        ],
+      });
     },
   );
 
@@ -188,7 +212,10 @@ export function TasksPage() {
     hasSingleUndo: Boolean(undo),
     triggerSingleUndo,
     onOpenShortcuts: () => setShortcuts(true),
-    onOpenDetail: (task) => { setSelected(task); select(task.id); },
+    onOpenDetail: (task) => {
+      setSelected(task);
+      select(task.id);
+    },
     onSetRemoving: (task) => setRemoving(task),
   });
 
@@ -209,20 +236,42 @@ export function TasksPage() {
       listName={lists.find((l) => l.id === task.listId)?.name}
       isChosen={chosen.includes(task.id)}
       isWritePending={write.isPending}
-      isExitAnimation={Boolean(write.isPending && write.variables?.task.id === task.id && write.variables?.remove)}
+      isExitAnimation={Boolean(
+        write.isPending &&
+        write.variables?.task.id === task.id &&
+        write.variables?.remove,
+      )}
       online={online}
-      onToggleChosen={(c) => setChosen((old) => (c ? [...old, task.id] : old.filter((id) => id !== task.id)))}
+      onToggleChosen={(c) =>
+        setChosen((old) =>
+          c ? [...old, task.id] : old.filter((id) => id !== task.id),
+        )
+      }
       onTomorrow={(deadline) => reschedule.mutate({ task, deadline })}
       onStatus={(s) => write.mutate({ task, status: s })}
-      onEdit={() => { setSelected(task); select(task.id); }}
+      onEdit={() => {
+        setSelected(task);
+        select(task.id);
+      }}
       onComments={() => setComments(task)}
       onDelete={() => setRemoving(task)}
       onCheck={(id, done) => checkTask(task, id, done)}
-      onClickCapture={(e) => handleRowClickCapture(e, task, q.data?.items ?? [], write.isPending, online)}
+      onClickCapture={(e) =>
+        handleRowClickCapture(
+          e,
+          task,
+          q.data?.items ?? [],
+          write.isPending,
+          online,
+        )
+      }
     />
   );
 
-  const title = activeList?.name ?? smartLists.find(([k]) => k === smart)?.[1] ?? "Công việc";
+  const title =
+    activeList?.name ??
+    smartLists.find(([k]) => k === smart)?.[1] ??
+    "Công việc";
 
   return (
     <>
@@ -242,13 +291,20 @@ export function TasksPage() {
       {summary.isError && (
         <p role="alert" className="form-error">
           Chưa tải được tiến độ.{" "}
-          <button className="text-button" onClick={() => void summary.refetch()}>
+          <button
+            className="text-button"
+            onClick={() => void summary.refetch()}
+          >
             Tải lại tiến độ
           </button>
         </p>
       )}
 
-      <TaskHeader name={user.name} timezone={user.timezone} counts={summary.data?.counts} />
+      <TaskHeader
+        name={user.name}
+        timezone={user.timezone}
+        counts={summary.data?.counts}
+      />
 
       <div className="todo-workspace">
         <SmartListSidebar
@@ -263,7 +319,9 @@ export function TasksPage() {
           error={listsQuery.isError}
           onRetry={() => void listsQuery.refetch()}
           archived={archivedLists}
-          onToggleArchive={() => update("archivedLists", archivedLists ? "" : "1")}
+          onToggleArchive={() =>
+            update("archivedLists", archivedLists ? "" : "1")
+          }
           historyReadOnly={!!cid}
           readOnly={readOnly}
           online={online}
@@ -271,7 +329,9 @@ export function TasksPage() {
           onList={(list) => selectList(list.id)}
           onLabel={setLabel}
           onNew={() => setCreatingList(true)}
-          onArchive={(list) => { if (online) archiveList.mutate(list); }}
+          onArchive={(list) => {
+            if (online) archiveList.mutate(list);
+          }}
         />
 
         <div className="todo-main">
@@ -279,7 +339,9 @@ export function TasksPage() {
             title={title}
             total={q.data?.total}
             readOnly={readOnly}
-            canAdd={online && listReady && !members.isPending && !members.isError}
+            canAdd={
+              online && listReady && !members.isPending && !members.isError
+            }
             onOpenShortcuts={() => setShortcuts(true)}
             onAddTask={() => setEditing(true)}
           />
@@ -298,9 +360,15 @@ export function TasksPage() {
                 user: { id: user.id, name: user.name },
                 members: members.data?.items ?? [],
                 lists,
-                scope: activeList?.coupleId || scope === "shared" ? "shared" : "personal",
+                scope:
+                  activeList?.coupleId || scope === "shared"
+                    ? "shared"
+                    : "personal",
                 listId: listId || undefined,
-                deadline: smart === "today" ? localInputDate(new Date(), user.timezone) : undefined,
+                deadline:
+                  smart === "today"
+                    ? localInputDate(new Date(), user.timezone)
+                    : undefined,
               }}
             />
           )}
@@ -319,13 +387,17 @@ export function TasksPage() {
               lists={lists}
               members={members.data ?? { items: [], readOnly: false }}
               disabled={!online || readOnly || write.isPending}
-              onUndo={(payload) => { setUndo(null); setBulkUndo(payload); }}
+              onUndo={(payload) => {
+                setUndo(null);
+                setBulkUndo(payload);
+              }}
               onClear={() => setChosen([])}
             />
           )}
 
           <p className="todo-swipe-hint">
-            Trên điện thoại: vuốt phải để hoàn thành, vuốt trái để dời hạn hoặc xóa. Bấm ? để xem phím tắt.
+            Trên điện thoại: vuốt phải để hoàn thành, vuốt trái để dời hạn hoặc
+            xóa. Bấm ? để xem phím tắt.
           </p>
 
           <TaskToolbar
@@ -396,9 +468,17 @@ export function TasksPage() {
               else update("list", habit.name);
               setView("list");
             }}
-            onCalendarAdd={(date) => { setQuickDeadline(date); setMobileQuick(true); }}
-            onCalendarMove={(task, deadline) => reschedule.mutate({ task, deadline })}
-            onOpenTask={(task) => { setSelected(task); select(task.id); }}
+            onCalendarAdd={(date) => {
+              setQuickDeadline(date);
+              setMobileQuick(true);
+            }}
+            onCalendarMove={(task, deadline) =>
+              reschedule.mutate({ task, deadline })
+            }
+            onOpenTask={(task) => {
+              setSelected(task);
+              select(task.id);
+            }}
             activeList={activeList}
             sort={sort}
             listId={listId}
@@ -419,10 +499,15 @@ export function TasksPage() {
         members={members.data ?? { items: [], readOnly: false }}
         lists={lists}
         isWritePending={write.isPending}
-        onCloseDetail={() => { select(null); setSelected(null); }}
+        onCloseDetail={() => {
+          select(null);
+          setSelected(null);
+        }}
         onStatusTask={(task, s) => write.mutate({ task, status: s })}
         onOpenComments={(task) => setComments(task)}
-        onUndoDetail={undo?.task.id === selectedId ? triggerSingleUndo : undefined}
+        onUndoDetail={
+          undo?.task.id === selectedId ? triggerSingleUndo : undefined
+        }
         onViewFocus={() => setView("focus")}
         editing={editing}
         onCloseEditing={() => setEditing(null)}
@@ -436,11 +521,16 @@ export function TasksPage() {
         removePending={write.isPending}
         removeError={write.error}
         onCloseRemoving={() => setRemoving(null)}
-        onConfirmRemoving={() => { if (removing) write.mutate({ task: removing, remove: true }); }}
+        onConfirmRemoving={() => {
+          if (removing) write.mutate({ task: removing, remove: true });
+        }}
         creatingList={creatingList}
         onCloseCreatingList={() => setCreatingList(false)}
         mobileQuick={mobileQuick}
-        onCloseMobileQuick={() => { setMobileQuick(false); setQuickDeadline(null); }}
+        onCloseMobileQuick={() => {
+          setMobileQuick(false);
+          setQuickDeadline(null);
+        }}
         quickBusy={quickBusy}
         setQuickBusy={setQuickBusy}
         quickDeadline={quickDeadline}

@@ -28,7 +28,10 @@ export function ChartTooltip({
       {label && <b className="chart-tooltip-label">{label}</b>}
       <div className="chart-tooltip-list">
         {payload.map((entry, index) => {
-          const val = typeof entry.value === "number" ? formatter(entry.value) : entry.value;
+          const val =
+            typeof entry.value === "number"
+              ? formatter(entry.value)
+              : entry.value;
           return (
             <div key={`${entry.name || index}`} className="chart-tooltip-item">
               {entry.color && (
@@ -37,7 +40,9 @@ export function ChartTooltip({
                   style={{ backgroundColor: entry.color }}
                 />
               )}
-              <span className="chart-tooltip-name">{entry.name || "Giá trị"}:</span>
+              <span className="chart-tooltip-name">
+                {entry.name || "Giá trị"}:
+              </span>
               <strong className="chart-tooltip-val tabular-nums">{val}</strong>
               {entry.payload && renderExtra?.(entry.payload)}
             </div>

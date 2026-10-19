@@ -1,5 +1,9 @@
 import { useRef } from "react";
-import { useInView, usePrefersReducedMotion, formatPercent } from "../../lib/motion";
+import {
+  useInView,
+  usePrefersReducedMotion,
+  formatPercent,
+} from "../../lib/motion";
 
 export interface ProgressBarProps {
   value: number; // 0 to 100
@@ -28,11 +32,15 @@ export function ProgressBar({
   const scale = inView || reduced ? clamped / 100 : 0;
 
   return (
-    <div className={`progress-bar-wrapper flex flex-col gap-1.5 ${className}`.trim()}>
+    <div
+      className={`progress-bar-wrapper flex flex-col gap-1.5 ${className}`.trim()}
+    >
       {(label || showText) && (
         <div className="flex justify-between text-xs text-muted">
           {label && <span>{label}</span>}
-          {showText && <strong className="tabular-nums">{formatPercent(clamped)}</strong>}
+          {showText && (
+            <strong className="tabular-nums">{formatPercent(clamped)}</strong>
+          )}
         </div>
       )}
       <div

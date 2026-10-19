@@ -172,7 +172,10 @@ export function Dashboard() {
               <ChevronRight size={20} />
             </Link>
           </div>
-          <div className="task-row stagger-item" style={{ "--i": 0 } as React.CSSProperties}>
+          <div
+            className="task-row stagger-item"
+            style={{ "--i": 0 } as React.CSSProperties}
+          >
             <span className="task-check" />
             <div>
               <b>Đi chợ cho bữa tối</b>
@@ -182,7 +185,10 @@ export function Dashboard() {
             </div>
             <span className="pill pink">Vừa</span>
           </div>
-          <div className="task-row stagger-item" style={{ "--i": 1 } as React.CSSProperties}>
+          <div
+            className="task-row stagger-item"
+            style={{ "--i": 1 } as React.CSSProperties}
+          >
             <span className="task-check" />
             <div>
               <b>Hoàn thành báo cáo tuần</b>
@@ -192,7 +198,10 @@ export function Dashboard() {
             </div>
             <span className="pill">Cao</span>
           </div>
-          <div className="task-row completed stagger-item" style={{ "--i": 2 } as React.CSSProperties}>
+          <div
+            className="task-row completed stagger-item"
+            style={{ "--i": 2 } as React.CSSProperties}
+          >
             <span className="task-check checked">
               <Check size={14} />
             </span>

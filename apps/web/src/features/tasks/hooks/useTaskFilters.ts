@@ -64,7 +64,9 @@ export function useTaskFilters() {
     : "deadline";
 
   const rawGroup = params.get("group") ?? "deadline";
-  const groupBy = VALID_GROUPS.includes(rawGroup as (typeof VALID_GROUPS)[number])
+  const groupBy = VALID_GROUPS.includes(
+    rawGroup as (typeof VALID_GROUPS)[number],
+  )
     ? rawGroup
     : "deadline";
 
@@ -72,7 +74,9 @@ export function useTaskFilters() {
   const kind = ["task", "shopping"].includes(rawKind) ? rawKind : "";
 
   const rawStatus = params.get("status") ?? "";
-  const status = ["TODO", "IN_PROGRESS", "DONE", "CANCELLED"].includes(rawStatus)
+  const status = ["TODO", "IN_PROGRESS", "DONE", "CANCELLED"].includes(
+    rawStatus,
+  )
     ? rawStatus
     : "";
 

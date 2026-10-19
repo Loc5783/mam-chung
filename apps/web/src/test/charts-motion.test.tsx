@@ -16,7 +16,8 @@ beforeAll(() => {
     unobserve() {}
     disconnect() {}
   }
-  globalThis.ResizeObserver = ResizeObserverMock as unknown as typeof ResizeObserver;
+  globalThis.ResizeObserver =
+    ResizeObserverMock as unknown as typeof ResizeObserver;
 });
 
 describe("Charts Motion Components", () => {
@@ -44,7 +45,7 @@ describe("Charts Motion Components", () => {
   describe("ProgressBar", () => {
     it("renders with transform scaleX instead of width animation", () => {
       const { container } = render(
-        <ProgressBar value={60} label="Ngân sách ăn uống" showText />
+        <ProgressBar value={60} label="Ngân sách ăn uống" showText />,
       );
       const bar = screen.getByRole("progressbar");
       expect(bar).toBeInTheDocument();
@@ -72,7 +73,7 @@ describe("Charts Motion Components", () => {
           total={4000000}
           activeId={null}
           onHover={onHover}
-        />
+        />,
       );
 
       expect(screen.getByText("Ăn uống")).toBeInTheDocument();
@@ -102,7 +103,7 @@ describe("Charts Motion Components", () => {
             { name: "Thu nhập", value: 15000000, color: "#7E9B57" },
             { name: "Chi tiêu", value: 8000000, color: "#E38FA9" },
           ]}
-        />
+        />,
       );
 
       expect(screen.getByText("Tháng 10/2026")).toBeInTheDocument();
@@ -113,7 +114,9 @@ describe("Charts Motion Components", () => {
     });
 
     it("renders nothing when inactive or payload is empty", () => {
-      const { container } = render(<ChartTooltip active={false} payload={[]} />);
+      const { container } = render(
+        <ChartTooltip active={false} payload={[]} />,
+      );
       expect(container.firstChild).toBeNull();
     });
   });
@@ -129,10 +132,12 @@ describe("Charts Motion Components", () => {
           centerLabel="Tổng chi"
           centerValue={700000}
           ariaLabel="Biểu đồ chi tiêu tháng này"
-        />
+        />,
       );
 
-      expect(screen.getByRole("img", { name: "Biểu đồ chi tiêu tháng này" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("img", { name: "Biểu đồ chi tiêu tháng này" }),
+      ).toBeInTheDocument();
       expect(screen.getByText("Tổng chi")).toBeInTheDocument();
     });
   });
@@ -144,9 +149,11 @@ describe("Charts Motion Components", () => {
           data={[{ date: "01/10", val: 50 }]}
           lines={[{ key: "val", name: "Điểm", color: "#7E9B57" }]}
           ariaLabel="Biểu đồ tập luyện"
-        />
+        />,
       );
-      expect(screen.getByRole("img", { name: "Biểu đồ tập luyện" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("img", { name: "Biểu đồ tập luyện" }),
+      ).toBeInTheDocument();
     });
 
     it("renders AnimatedBar wrapper with aria-label", () => {
@@ -158,9 +165,11 @@ describe("Charts Motion Components", () => {
             { key: "expense", name: "Chi", color: "#E38FA9" },
           ]}
           ariaLabel="Biểu đồ thu chi"
-        />
+        />,
       );
-      expect(screen.getByRole("img", { name: "Biểu đồ thu chi" })).toBeInTheDocument();
+      expect(
+        screen.getByRole("img", { name: "Biểu đồ thu chi" }),
+      ).toBeInTheDocument();
     });
   });
 });

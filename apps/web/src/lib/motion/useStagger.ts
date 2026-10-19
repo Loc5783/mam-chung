@@ -3,7 +3,7 @@ import { usePrefersReducedMotion } from "./usePrefersReducedMotion";
 
 export interface StaggerOptions {
   step?: number; // Delay increment in ms (default: 45)
-  max?: number;  // Maximum items to stagger (default: 12)
+  max?: number; // Maximum items to stagger (default: 12)
 }
 
 /**
@@ -40,4 +40,3 @@ export function useStagger(
     };
   }, [index, options.step, options.max, reduced]);
 }
-

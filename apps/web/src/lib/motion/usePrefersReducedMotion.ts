@@ -39,7 +39,9 @@ export function setMotionPreference(preference: MotionPreference): void {
   }
 
   if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent(MOTION_CHANGE_EVENT, { detail: preference }));
+    window.dispatchEvent(
+      new CustomEvent(MOTION_CHANGE_EVENT, { detail: preference }),
+    );
   }
 }
 
@@ -56,7 +58,9 @@ export function checkIsReducedMotion(): boolean {
   if (attr === "full") return false;
 
   if (typeof window.matchMedia === "function") {
-    return Boolean(window.matchMedia("(prefers-reduced-motion: reduce)")?.matches);
+    return Boolean(
+      window.matchMedia("(prefers-reduced-motion: reduce)")?.matches,
+    );
   }
 
   return false;

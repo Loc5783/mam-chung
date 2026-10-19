@@ -57,3 +57,41 @@ Xác minh:
 - `npm test -w @mam-chung/api`: 15/15 test suites, 321/321 tests đạt (Coverage statements: 98.39%, lines: 99.06%).
 - `npm run build`: Biên dịch TypeScript và đóng gói Vite thành công không lỗi.
 - `npm run test:ops` & `npm run check:headers`: 12/12 ops tests đạt.
+
+---
+
+# Rà soát & Kiểm toán an toàn Trang Quản trị (Admin Panel) ngày 19/10/2026
+
+Phạm vi: Toàn bộ module Quản trị viên (`apps/api/src/modules/admin`, middleware `requireAdmin`, scripts CLI, giao diện web `apps/web/src/features/admin`).
+
+Các nội dung đã thực hiện & nguyên tắc bảo mật tối thượng:
+
+1. **Cách ly dữ liệu người dùng ở cấp kiến trúc & Lint:**
+   - Cấu hình ESLint `no-restricted-imports` nghiêm cấm toàn bộ file trong `apps/api/src/modules/admin/**` import model/service của: `finance, shared, tasks, fitness, planning, dashboard`.
+   - Bổ sung test tự động `isolation.test.ts` quét AST mã nguồn đảm bảo quy tắc cách ly không bị phá vỡ. Quản trị viên tuyệt đối không có đường dẫn tới dữ liệu nội dung riêng tư của người dùng.
+
+2. **Allowlist DTO tường minh cho mọi phản hồi API:**
+   - Tất cả các endpoint đọc (`/overview`, `/users`, `/couples`, `/audit`) trả về đối tượng DTO với danh sách trường cho phép rõ ràng.
+   - Tuyệt đối không bao giờ trả về `passwordHash`, `refreshToken`, `tokenHash`, hay hash mã mời.
+   - Bộ test tự động `read-api.test.ts` duyệt quét toàn bộ khóa JSON của các phản hồi admin để đối chiếu danh sách cho phép.
+
+3. **Cổng chặn phân quyền & Xác thực Step-up:**
+   - Trường `User.role` ("user" | "admin") không thể bị thay đổi qua body của bất kỳ route công khai nào (toàn bộ schema Zod cập nhật hồ sơ/đăng ký là `.strict()`).
+   - Middleware `requireAdmin` đọc trực tiếp `role` từ database mỗi request (không tin cậy claim trong JWT) và từ chối nếu tài khoản bị khóa (`disabledAt`) hoặc xóa mềm (`deletedAt`).
+   - Mọi thao tác ghi nhạy cảm bắt buộc truyền `adminPassword` để kiểm tra bằng bcrypt với mật khẩu của chính admin đang thao tác (`verifyAdminPassword`). Nhập sai sẽ bị tăng bộ đếm lỗi và khóa theo cấp số nhân để phòng chống tấn công brute-force.
+
+4. **Xóa mềm an toàn (Phương án A):**
+   - Khi xóa tài khoản người dùng: email và tên được ẩn danh hóa thành `deleted-<id>-<timestamp>@deleted.local` và `Người dùng cũ`, đặt `deletedAt = new Date()`, thu hồi toàn bộ token.
+   - Xử lý rời không gian chung an toàn: tự động chuyển quyền chủ không gian nếu còn thành viên, hoặc lưu trữ cặp nếu là thành viên cuối; toàn vẹn lịch sử giao dịch và sổ cái tài chính.
+   - Chặn xóa hoặc gỡ quyền nếu là quản trị viên cuối cùng của hệ thống.
+
+5. **Nhật ký Quản trị (Audit Log) & Rate Limiting riêng biệt:**
+   - Mọi hành vi nhạy cảm đều được ghi nhận vào collection `admin_audit_logs` (thời gian, IP, admin email, loại hành vi, tóm tắt tham số).
+   - Rate limit riêng cho `/api/admin/*` ở mức 60 requests/phút/IP (`adminLimiter`).
+
+6. **Giao diện Web & Cách ly DOM:**
+   - Route `/admin/*` được chia chunk độc lập, bọc trong `AuthGate` và guard chuyển hướng người dùng thường về `/`.
+   - Sidebar chỉ hiển thị mục Quản trị cho tài khoản `role: "admin"`.
+   - Thiết kế responsive thân thiện: hiển thị dạng bảng trên màn hình lớn và chuyển sang danh sách thẻ dọc trên màn hình di động hẹp (375px), không gây tràn ngang.
+   - Thẻ cặp đôi trong tab Không gian chung chỉ hiển thị thành viên và số mã mời. Bộ test `admin.test.tsx` thực hiện quét DOM xác nhận không có bất kỳ từ khóa nào liên quan đến tiền, ví, nhiệm vụ, số đo hay cân nặng.
+   - Khi cổng đăng ký đóng (`registrationOpen: false`), trang đăng ký hiển thị thông báo dịu dàng và khóa form; backend từ chối đăng ký mới với mã `403 REGISTRATION_CLOSED`.

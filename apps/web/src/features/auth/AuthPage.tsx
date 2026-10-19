@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate, Navigate } from "react-router-dom";
 import { Sprout, ArrowLeft, Heart, Leaf } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -44,7 +44,25 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
     resolver: zodResolver(registerMode ? registerSchema : loginSchema),
   });
   const [error, setError] = useState("");
+  const [registrationOpen, setRegistrationOpen] = useState(true);
   const notify = useUiStore((s) => s.notify);
+
+  useEffect(() => {
+    let active = true;
+    if (registerMode) {
+      apiClient
+        .get<{ open: boolean }>("/auth/registration-status")
+        .then((res) => {
+          if (active && typeof res.data?.open === "boolean") {
+            setRegistrationOpen(res.data.open);
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      active = false;
+    };
+  }, [registerMode]);
   const navigate = useNavigate();
   const location = useLocation();
   const status = useAuthStore((s) => s.status);
@@ -127,13 +145,28 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
             onSubmit={handleSubmit(submit)}
             noValidate
           >
+            {registerMode && !registrationOpen && (
+              <div
+                role="alert"
+                className="form-error"
+                style={{
+                  marginBottom: "1rem",
+                  backgroundColor: "var(--color-bg-amber, #FEF3C7)",
+                  color: "var(--color-text-amber, #92400E)",
+                  borderColor: "var(--color-border-amber, #FDE68A)",
+                }}
+              >
+                Hiện chưa mở đăng ký. Vui lòng quay lại sau hoặc liên hệ quản
+                trị viên.
+              </div>
+            )}
             {registerMode && (
               <label>
                 Họ và tên
                 <input
                   autoComplete="name"
                   placeholder="Tên của bạn"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || (registerMode && !registrationOpen)}
                   aria-invalid={!!errors.name}
                   aria-describedby={errors.name ? "auth-name-error" : undefined}
                   {...register("name")}
@@ -155,7 +188,7 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
                 type="email"
                 autoComplete="email"
                 placeholder="ban@example.com"
-                disabled={isSubmitting}
+                disabled={isSubmitting || (registerMode && !registrationOpen)}
                 aria-invalid={!!errors.email}
                 aria-describedby={errors.email ? "auth-email-error" : undefined}
                 {...register("email")}
@@ -182,7 +215,7 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
                     ? "Ít nhất 8 ký tự, có chữ và số"
                     : "Nhập mật khẩu của bạn"
                 }
-                disabled={isSubmitting}
+                disabled={isSubmitting || (registerMode && !registrationOpen)}
                 aria-invalid={!!errors.password}
                 aria-describedby={
                   errors.password ? "auth-password-error" : undefined
@@ -204,7 +237,10 @@ export function AuthPage({ registerMode = false }: { registerMode?: boolean }) {
                 {error}
               </div>
             )}
-            <Button type="submit" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              disabled={isSubmitting || (registerMode && !registrationOpen)}
+            >
               {isSubmitting
                 ? "Đang xử lý…"
                 : registerMode

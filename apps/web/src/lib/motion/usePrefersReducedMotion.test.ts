@@ -21,7 +21,9 @@ describe("usePrefersReducedMotion", () => {
   it("sets and persists explicit reduced motion preference", () => {
     setMotionPreference("reduced");
     expect(getMotionPreference()).toBe("reduced");
-    expect(document.documentElement.getAttribute("data-motion")).toBe("reduced");
+    expect(document.documentElement.getAttribute("data-motion")).toBe(
+      "reduced",
+    );
     expect(checkIsReducedMotion()).toBe(true);
   });
 
@@ -58,4 +60,3 @@ describe("usePrefersReducedMotion", () => {
     expect(result.current).toBe(false);
   });
 });
-

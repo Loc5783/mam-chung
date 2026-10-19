@@ -60,9 +60,16 @@ export function AnimatedLine({
       {...(ariaLabel ? { role: "img", "aria-label": ariaLabel } : {})}
     >
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 16, right: 16, left: 4, bottom: 8 }}>
+        <LineChart
+          data={data}
+          margin={{ top: 16, right: 16, left: 4, bottom: 8 }}
+        >
           {showGrid && (
-            <CartesianGrid strokeDasharray="3 3" stroke="#e4e8d9" vertical={false} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="#e4e8d9"
+              vertical={false}
+            />
           )}
           <XAxis
             dataKey={xAxisKey}

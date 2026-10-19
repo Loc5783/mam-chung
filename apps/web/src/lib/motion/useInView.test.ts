@@ -43,7 +43,9 @@ describe("useInView", () => {
     const div = document.createElement("div");
     const ref = { current: div };
 
-    const { result } = renderHook(() => useInView(ref, { threshold: 0.35, once: true }));
+    const { result } = renderHook(() =>
+      useInView(ref, { threshold: 0.35, once: true }),
+    );
     expect(observeMock).toHaveBeenCalledWith(div);
     expect(result.current).toBe(false);
 
@@ -62,4 +64,3 @@ describe("useInView", () => {
     expect(disconnectMock).toHaveBeenCalled();
   });
 });
-

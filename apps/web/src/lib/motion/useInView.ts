@@ -57,4 +57,3 @@ export function useInView(
 
   return inView;
 }
-

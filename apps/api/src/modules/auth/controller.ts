@@ -1,6 +1,7 @@
 import { CookieOptions, Request, Response } from "express";
 import { env } from "../../config/env";
 import { authService } from "./service";
+import { AppSettings } from "../admin/models";
 const options: CookieOptions = {
   httpOnly: true,
   secure: env.NODE_ENV === "production",
@@ -44,5 +45,9 @@ export const authController = {
     await authService.changePassword(req.user!.id, req.body);
     clearRefresh(res);
     res.status(204).end();
+  },
+  registrationStatus: async (_req: Request, res: Response) => {
+    const settings = await AppSettings.findOne({ key: "global" });
+    res.json({ open: settings?.registrationOpen ?? true });
   },
 };

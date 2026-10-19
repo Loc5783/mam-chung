@@ -626,9 +626,9 @@ describe("bcrypt v6 tương thích ngược với hash tạo từ bcrypt v5", ()
     expect(
       await bcrypt.compare(LEGACY_BCRYPT5_PASSWORD, LEGACY_BCRYPT5_HASH),
     ).toBe(true);
-    expect(
-      await bcrypt.compare("WrongPassword123!", LEGACY_BCRYPT5_HASH),
-    ).toBe(false);
+    expect(await bcrypt.compare("WrongPassword123!", LEGACY_BCRYPT5_HASH)).toBe(
+      false,
+    );
   });
 
   test("người dùng mang hash từ phiên bản cũ đăng nhập bình thường qua authService.login", async () => {
@@ -656,5 +656,3 @@ describe("bcrypt v6 tương thích ngược với hash tạo từ bcrypt v5", ()
     ).rejects.toMatchObject({ code: "INVALID_CREDENTIALS" });
   });
 });
-
-

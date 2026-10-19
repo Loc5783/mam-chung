@@ -19,6 +19,7 @@ import { errorHandler } from "./middlewares/errorHandler";
 import { authRoutes } from "./modules/auth/routes";
 import { userRoutes } from "./modules/users/routes";
 import { financeRoutes } from "./modules/finance/routes";
+import { adminRoutes } from "./modules/admin/routes";
 export function createApp() {
   const app = express();
   app.disable("x-powered-by");
@@ -86,6 +87,7 @@ export function createApp() {
   app.use("/api", dashboardRoutes());
   app.use("/api", planningRoutes());
   app.use("/api", financeRoutes());
+  app.use("/api/admin", adminRoutes());
   app.use((_req, _res, next) =>
     next(new AppError(404, "NOT_FOUND", "Không tìm thấy tài nguyên.")),
   );

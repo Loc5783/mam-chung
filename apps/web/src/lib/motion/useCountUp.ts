@@ -94,4 +94,3 @@ export function useCountUp(
 
   return format(Math.round(currentValue));
 }
-

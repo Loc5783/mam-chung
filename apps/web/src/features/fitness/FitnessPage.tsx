@@ -300,7 +300,10 @@ function Analytics({
                 innerRadius={65}
                 outerRadius={95}
                 centerLabel="Tổng set"
-                centerValue={report.repDistribution.reduce((sum, r) => sum + r.count, 0)}
+                centerValue={report.repDistribution.reduce(
+                  (sum, r) => sum + r.count,
+                  0,
+                )}
                 centerFormatter={(v) => `${v} set`}
                 height={260}
                 tooltipFormatter={(val, name) => [`${val} set`, String(name)]}

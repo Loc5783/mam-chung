@@ -88,7 +88,9 @@ export function FinanceOverview({
   budgets?: Budget[];
 }) {
   const [chartType, setChartType] = useState<"income" | "expense">("expense");
-  const [activeCategory, setActiveCategory] = useState<string | number | null>(null);
+  const [activeCategory, setActiveCategory] = useState<string | number | null>(
+    null,
+  );
   const chartId = useId();
   const query = useFinanceDashboard(!overview);
   if (!overview && query.isPending)
@@ -254,7 +256,9 @@ export function FinanceOverview({
                           cursor: "pointer",
                           padding: "4px 8px",
                           borderRadius: "8px",
-                          backgroundColor: isHovered ? "var(--primary-lighter)" : "transparent",
+                          backgroundColor: isHovered
+                            ? "var(--primary-lighter)"
+                            : "transparent",
                         }}
                         onMouseEnter={() => setActiveCategory(item.categoryId)}
                         onMouseLeave={() => setActiveCategory(null)}

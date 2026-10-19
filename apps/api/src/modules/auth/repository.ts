@@ -32,10 +32,10 @@ export const tokenRepository = {
       revokedAt: null,
       expiresAt: { $gt: new Date() },
     }),
-  revoke: (userId: string, session: ClientSession, family?: string) =>
+  revoke: (userId: string, session?: ClientSession, family?: string) =>
     RefreshToken.updateMany(
       { userId, ...(family ? { family } : {}), revokedAt: null },
       { $set: { revokedAt: new Date() } },
-      { session },
+      { ...(session ? { session } : {}) },
     ),
 };

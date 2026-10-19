@@ -33,4 +33,3 @@ describe("useStagger", () => {
     expect(result.current.animationDelay).toBe("0ms");
   });
 });
-

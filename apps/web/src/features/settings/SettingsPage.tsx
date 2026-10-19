@@ -174,7 +174,9 @@ function ProfileForm({ user }: { user: Profile }) {
 }
 
 function MotionPreferenceControl() {
-  const [pref, setPref] = useState<MotionPreference>(() => getMotionPreference());
+  const [pref, setPref] = useState<MotionPreference>(() =>
+    getMotionPreference(),
+  );
   const notify = useUiStore((s) => s.notify);
 
   const selectPreference = (next: MotionPreference) => {
@@ -399,7 +401,8 @@ export function SettingsPage() {
               <Sparkles size={22} />
             </div>
             <p className="settings-description">
-              Tùy chỉnh chuyển động mượt mà, số đếm tăng và hiệu ứng biểu đồ trên toàn ứng dụng.
+              Tùy chỉnh chuyển động mượt mà, số đếm tăng và hiệu ứng biểu đồ
+              trên toàn ứng dụng.
             </p>
             <MotionPreferenceControl />
           </Card>

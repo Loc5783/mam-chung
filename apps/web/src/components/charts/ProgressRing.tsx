@@ -1,5 +1,9 @@
 import { useRef } from "react";
-import { useInView, usePrefersReducedMotion, formatPercent } from "../../lib/motion";
+import {
+  useInView,
+  usePrefersReducedMotion,
+  formatPercent,
+} from "../../lib/motion";
 
 export interface ProgressRingProps {
   value: number; // 0 to 100
@@ -34,7 +38,8 @@ export function ProgressRing({
 
   // If in view (or reduced motion), compute offset; otherwise start at 100% (empty ring)
   const animatedPercent = inView || reduced ? clampedValue : 0;
-  const strokeDashoffset = circumference - (circumference * animatedPercent) / 100;
+  const strokeDashoffset =
+    circumference - (circumference * animatedPercent) / 100;
 
   return (
     <div
@@ -89,7 +94,9 @@ export function ProgressRing({
             <strong className="text-base font-bold tabular-nums text-ink">
               {formatPercent(clampedValue)}
             </strong>
-            {label && <small className="text-xs text-muted mt-0.5">{label}</small>}
+            {label && (
+              <small className="text-xs text-muted mt-0.5">{label}</small>
+            )}
           </>
         ) : null}
       </div>

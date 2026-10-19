@@ -9,7 +9,10 @@
     "lint": "tsc --noEmit && eslint src",
     "test": "jest --runInBand",
     "migrate:tasks": "tsx src/scripts/migrate-tasks.ts",
-    "admin:reset-password": "tsx src/scripts/admin-reset-password.ts"
+    "admin:reset-password": "tsx src/scripts/admin-reset-password.ts",
+    "admin:grant": "tsx src/scripts/admin-grant.ts",
+    "admin:revoke": "tsx src/scripts/admin-revoke.ts",
+    "admin:list": "tsx src/scripts/admin-list.ts"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",

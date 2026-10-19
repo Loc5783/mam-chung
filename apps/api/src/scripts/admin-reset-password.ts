@@ -64,7 +64,9 @@ async function main() {
     console.log(
       "1. Mật khẩu tạm này chỉ hiển thị MỘT LẦN DUY NHẤT tại màn hình này.",
     );
-    console.log("2. Toàn bộ phiên đăng nhập cũ trên mọi thiết bị đã bị thu hồi.");
+    console.log(
+      "2. Toàn bộ phiên đăng nhập cũ trên mọi thiết bị đã bị thu hồi.",
+    );
     console.log(
       "3. Gửi mật khẩu qua kênh riêng an toàn và nhắc người dùng đổi ngay sau khi vào.",
     );

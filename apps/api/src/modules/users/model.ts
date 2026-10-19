@@ -7,6 +7,9 @@ const userSchema = new Schema(
     avatar: { type: String, default: null },
     timezone: { type: String, default: "Asia/Ho_Chi_Minh" },
     coupleId: { type: Schema.Types.ObjectId, default: null },
+    role: { type: String, enum: ["user", "admin"], default: "user" },
+    disabledAt: { type: Date, default: null },
+    lastLoginAt: { type: Date, default: null },
     securityVersion: { type: Number, default: 0 },
     sessionRevision: { type: Number, default: 0 },
     loginAttempts: { type: Number, default: 0 },
@@ -25,6 +28,7 @@ export function publicUser(user: UserDocument) {
     avatar: user.avatar,
     timezone: user.timezone,
     coupleId: user.coupleId?.toString() ?? null,
+    role: (user.role ?? "user") as "user" | "admin",
     createdAt: user.createdAt,
   };
 }

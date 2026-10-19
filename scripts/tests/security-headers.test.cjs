@@ -1,6 +1,10 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { checkAll, validateCaddyfile, validateNginxConfig } = require("../check-security-headers.cjs");
+const {
+  checkAll,
+  validateCaddyfile,
+  validateNginxConfig,
+} = require("../check-security-headers.cjs");
 
 test("security headers script validates Caddyfile and nginx.conf successfully", () => {
   const result = checkAll();
@@ -8,10 +12,7 @@ test("security headers script validates Caddyfile and nginx.conf successfully", 
 });
 
 test("validateCaddyfile catches missing headers or unsafe-inline in script-src", () => {
-  assert.throws(
-    () => validateCaddyfile(""),
-    /Caddyfile thiếu header/,
-  );
+  assert.throws(() => validateCaddyfile(""), /Caddyfile thiếu header/);
 
   const unsafeCaddy = `
 {$DOMAIN} {

@@ -18,4 +18,3 @@ export function formatPercent(value: number, decimals = 0): string {
   }).format(value);
   return `${formatted}%`;
 }
-

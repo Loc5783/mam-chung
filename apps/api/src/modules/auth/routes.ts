@@ -41,5 +41,9 @@ export function authRoutes() {
     validate(changePasswordSchema),
     asyncHandler(authController.changePassword),
   );
+  router.get(
+    "/registration-status",
+    asyncHandler(authController.registrationStatus),
+  );
   return router;
 }

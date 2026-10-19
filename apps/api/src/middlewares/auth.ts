@@ -44,6 +44,12 @@ export const auth: RequestHandler = (req, _res, next) => {
       !(await tokenRepository.active(claims.sub, claims.family))
     )
       throw new AppError(401, "UNAUTHORIZED", "Phiên đăng nhập đã bị thu hồi.");
+    if (user.disabledAt)
+      throw new AppError(
+        403,
+        "ACCOUNT_DISABLED",
+        "Tài khoản của bạn đang bị tạm khóa. Hãy liên hệ người quản trị.",
+      );
     req.user = {
       id: user.id as string,
       coupleId: user.coupleId?.toString() ?? null,

@@ -1,7 +1,10 @@
 import { type HTMLAttributes } from "react";
 import { useCountUp } from "./useCountUp";
 
-export interface CountUpProps extends Omit<HTMLAttributes<HTMLSpanElement>, "children"> {
+export interface CountUpProps extends Omit<
+  HTMLAttributes<HTMLSpanElement>,
+  "children"
+> {
   value: number;
   duration?: number;
   format?: (value: number) => string;

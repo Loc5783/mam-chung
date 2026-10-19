@@ -33,4 +33,3 @@ export const SHADOWS = {
   hoverPink: "0 8px 20px rgba(227, 143, 169, 0.30)",
   cardHover: "0 12px 28px rgba(43, 51, 36, 0.10)",
 } as const;
-

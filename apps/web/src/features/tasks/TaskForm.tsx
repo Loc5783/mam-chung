@@ -11,7 +11,11 @@ import { Task, TaskList, Members, ChecklistItem, priorities } from "./types";
 import { FormattedDescription } from "./components/FormattedDescription";
 const schema = z
   .object({
-    title: z.string().trim().min(1, "Nhập tiêu đề công việc.").max(160, "Tiêu đề tối đa 160 ký tự."),
+    title: z
+      .string()
+      .trim()
+      .min(1, "Nhập tiêu đề công việc.")
+      .max(160, "Tiêu đề tối đa 160 ký tự."),
     description: z.string().max(2000, "Mô tả tối đa 2000 ký tự."),
     scope: z.enum(["personal", "shared"]),
     deadline: z.string(),

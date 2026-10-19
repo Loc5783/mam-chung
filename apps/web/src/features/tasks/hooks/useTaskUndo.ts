@@ -19,7 +19,9 @@ export type BulkUndoState = {
   }[];
 } | null;
 
-export function useTaskUndo(writeMutate: ReturnType<typeof useTaskWrite>["mutate"]) {
+export function useTaskUndo(
+  writeMutate: ReturnType<typeof useTaskWrite>["mutate"],
+) {
   const [undo, setUndo] = useState<SingleUndoState>(null);
   const [bulkUndo, setBulkUndo] = useState<BulkUndoState>(null);
 

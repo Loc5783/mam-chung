@@ -14,6 +14,7 @@ import {
 } from "./models";
 import { coupleRepository as repo } from "./repository";
 import * as schema from "./schema";
+import { AppSettings } from "../admin/models";
 import { objectId } from "../finance/schema";
 const missing = () =>
   new AppError(
@@ -181,6 +182,14 @@ function checkAnniversary(day: string | null | undefined, zone: string) {
 export const coupleService = {
   async create(userId: string, raw: unknown) {
     const input = schema.createSchema.parse(raw);
+    const settings = await AppSettings.findOne({ key: "global" });
+    if (settings && settings.allowNewCouples === false) {
+      throw new AppError(
+        403,
+        "COUPLE_CREATION_CLOSED",
+        "Hiện tại hệ thống tạm ngưng tạo không gian chung mới.",
+      );
+    }
     return inTransaction(async (session) => {
       const user = await lockUser(userId, session);
       if (

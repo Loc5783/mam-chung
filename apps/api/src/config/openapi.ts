@@ -5,6 +5,7 @@ import { sharedSchemas, sharedPaths } from "../modules/shared/openapi";
 import { coupleSchemas, couplePaths } from "../modules/couples/openapi";
 import { planningSchemas, planningPaths } from "../modules/planning/openapi";
 import { financeSchemas, financePaths } from "../modules/finance/openapi";
+import { adminSchemas, adminPaths } from "../modules/admin/openapi";
 const error = {
   description: "Lỗi thống nhất",
   content: {
@@ -67,6 +68,7 @@ export const openapi = {
       ...financeSchemas,
       ...planningSchemas,
       ...coupleSchemas,
+      ...adminSchemas,
       Error: {
         type: "object",
         properties: {
@@ -89,6 +91,7 @@ export const openapi = {
           avatar: { type: "string", nullable: true },
           timezone: { type: "string" },
           coupleId: { type: "string", nullable: true },
+          role: { type: "string", enum: ["user", "admin"] },
           createdAt: { type: "string", format: "date-time" },
         },
       },
@@ -161,6 +164,7 @@ export const openapi = {
     ...apiPaths(couplePaths),
     ...apiPaths(sharedPaths),
     ...apiPaths(planningPaths),
+    ...apiPaths(adminPaths),
     "/api/health": {
       get: {
         summary: "Kiểm tra tình trạng hệ thống",
