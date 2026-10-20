@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import fs from "node:fs";
 import path from "node:path";
 
 function parseArgs(args: string[]): { email?: string } {
@@ -28,6 +29,21 @@ async function main() {
   dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
+  // Tự động nhận diện cấu hình local dev nếu chưa có file .env
+  if (!process.env.MONGODB_URI) {
+    process.env.MONGODB_URI =
+      "mongodb://127.0.0.1:27118/mam_chung_local?replicaSet=mam-chung-local";
+  }
+  if (!process.env.JWT_SECRET) {
+    const secretPath = path.resolve(__dirname, "../../../.local/jwt-secret");
+    if (fs.existsSync(secretPath)) {
+      process.env.JWT_SECRET = fs.readFileSync(secretPath, "utf8").trim();
+    } else {
+      process.env.JWT_SECRET =
+        "dev-secret-longer-than-thirty-two-characters-fallback";
+    }
+  }
+
   let mongoose: typeof import("mongoose");
   try {
     const dbModule = await import("../config/db");
@@ -48,21 +64,22 @@ async function main() {
     console.log(
       "\n================================================================================",
     );
-    if (!result.changed) {
-      console.log("THÔNG BÁO: Người dùng đã có quyền quản trị viên từ trước.");
-      console.log(`Người dùng : ${result.user.name} (${result.user.email})`);
-    } else {
-      console.log("CẤP QUYỀN QUẢN TRỊ VIÊN THÀNH CÔNG");
-      console.log(`Người dùng : ${result.user.name} (${result.user.email})`);
-      console.log(`Vai trò    : admin`);
-      console.log("Đã ghi nhật ký hoạt động (audit log).");
-    }
+    console.log("CẤP QUYỀN QUẢN TRỊ VIÊN THÀNH CÔNG");
+    console.log(
+      "================================================================================",
+    );
+    console.log(`- Tài khoản: ${result.user.email} (${result.user.name})`);
+    console.log(`- ID: ${result.user.id}`);
+    console.log(`- Vai trò: ${result.user.role}`);
+    console.log(
+      `- Trạng thái: ${result.changed ? "Đã nâng cấp quyền quản trị" : "Tài khoản vốn đã là quản trị viên"}`,
+    );
     console.log(
       "================================================================================\n",
     );
   } catch (err) {
     console.error(
-      "Lỗi cấp quyền quản trị:",
+      "Lỗi khi cấp quyền admin:",
       err instanceof Error ? err.message : String(err),
     );
     process.exitCode = 1;

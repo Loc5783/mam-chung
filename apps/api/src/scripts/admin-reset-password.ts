@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import fs from "node:fs";
 import path from "node:path";
 
 function parseArgs(args: string[]): { email?: string } {
@@ -32,6 +33,21 @@ async function main() {
   dotenv.config({ path: path.resolve(__dirname, "../../.env") });
   dotenv.config({ path: path.resolve(__dirname, "../../../.env") });
 
+  // Tự động nhận diện cấu hình local dev nếu chưa có file .env
+  if (!process.env.MONGODB_URI) {
+    process.env.MONGODB_URI =
+      "mongodb://127.0.0.1:27118/mam_chung_local?replicaSet=mam-chung-local";
+  }
+  if (!process.env.JWT_SECRET) {
+    const secretPath = path.resolve(__dirname, "../../../.local/jwt-secret");
+    if (fs.existsSync(secretPath)) {
+      process.env.JWT_SECRET = fs.readFileSync(secretPath, "utf8").trim();
+    } else {
+      process.env.JWT_SECRET =
+        "dev-secret-longer-than-thirty-two-characters-fallback";
+    }
+  }
+
   let mongoose: typeof import("mongoose");
   try {
     const dbModule = await import("../config/db");
@@ -49,33 +65,32 @@ async function main() {
   try {
     const { authService } = await import("../modules/auth/service");
     const result = await authService.adminResetPassword(email.trim());
+
+    // Chỉ in ra màn hình terminal một lần duy nhất, KHÔNG ghi vào file log hay logger chung
     console.log(
       "\n================================================================================",
     );
-    console.log("ĐẶT LẠI MẬT KHẨU THÀNH CÔNG");
+    console.log("ĐẶT LẠI MẬT KHẨU TẠM THỜI THÀNH CÔNG");
     console.log(
-      `Người dùng       : ${result.user.name} (${result.user.email})`,
+      "================================================================================",
     );
-    console.log(`Mật khẩu tạm thời: ${result.temporaryPassword}`);
+    console.log(`- Tài khoản: ${result.user.email} (${result.user.name})`);
+    console.log(`- Mật khẩu tạm thời: ${result.temporaryPassword}`);
     console.log(
       "--------------------------------------------------------------------------------",
     );
-    console.log("LƯU Ý BẢO MẬT:");
     console.log(
-      "1. Mật khẩu tạm này chỉ hiển thị MỘT LẦN DUY NHẤT tại màn hình này.",
-    );
-    console.log(
-      "2. Toàn bộ phiên đăng nhập cũ trên mọi thiết bị đã bị thu hồi.",
-    );
-    console.log(
-      "3. Gửi mật khẩu qua kênh riêng an toàn và nhắc người dùng đổi ngay sau khi vào.",
+      "LƯU Ý AN NINH:\n" +
+        "1. Hãy sao chép mật khẩu tạm trên và gửi qua kênh tin cậy riêng tư cho người dùng.\n" +
+        "2. Toàn bộ phiên đăng nhập cũ trên mọi thiết bị của tài khoản này đã bị thu hồi.\n" +
+        "3. Nhắc người dùng đăng nhập và đổi sang mật khẩu riêng ngay tại trang Cài đặt.",
     );
     console.log(
       "================================================================================\n",
     );
   } catch (err) {
     console.error(
-      "Lỗi đặt lại mật khẩu:",
+      "Lỗi khi đặt lại mật khẩu:",
       err instanceof Error ? err.message : String(err),
     );
     process.exitCode = 1;
