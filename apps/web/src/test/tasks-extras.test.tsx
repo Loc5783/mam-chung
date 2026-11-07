@@ -447,6 +447,160 @@ describe("FocusMode Component", () => {
     unmount();
     expect(clearIntervalSpy).toHaveBeenCalled();
   });
+
+  it("retains custom rest configurations (short and long rest) across unmount and remount (navigation)", () => {
+    const { unmount } = renderWithProviders(
+      <FocusMode tasks={[mockTask]} disabled={false} onCheck={vi.fn()} />,
+    );
+
+    const select = screen.getByLabelText("Việc tập trung");
+    const workInput = screen.getByLabelText("Thời gian tập trung");
+    const restInput = screen.getByLabelText("Thời gian nghỉ ngắn");
+    const longRestInput = screen.getByLabelText("Thời gian nghỉ dài");
+
+    fireEvent.change(select, { target: { value: mockTask.id } });
+    fireEvent.change(workInput, { target: { value: "30" } });
+    fireEvent.change(restInput, { target: { value: "3" } });
+    fireEvent.change(longRestInput, { target: { value: "12" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Bắt đầu tập trung" }));
+
+    // Verify session store has custom parameters
+    const session = useFocusStore.getState().session;
+    expect(session?.workMinutes).toBe(30);
+    expect(session?.shortRestMinutes).toBe(3);
+    expect(session?.longRestMinutes).toBe(12);
+
+    // Simulate navigating to another page and returning (unmount and remount)
+    unmount();
+
+    // Manually set phase to rest to inspect rest buttons
+    useFocusStore.getState().set({
+      ...session!,
+      phase: "rest",
+      restType: "short",
+    });
+
+    renderWithProviders(
+      <FocusMode tasks={[mockTask]} disabled={false} onCheck={vi.fn()} />,
+    );
+
+    // Buttons must reflect the configured values from session (3m and 12m), NOT the default 5m and 15m
+    const shortRestBtn = screen.getByRole("button", { name: "Nghỉ ngắn (3p)" });
+    const longRestBtn = screen.getByRole("button", { name: "Nghỉ dài (12p)" });
+    expect(shortRestBtn).toBeInTheDocument();
+    expect(longRestBtn).toBeInTheDocument();
+
+    // Switch to long rest
+    fireEvent.click(longRestBtn);
+    expect(useFocusStore.getState().session?.restMinutes).toBe(12);
+    expect(useFocusStore.getState().session?.restType).toBe("long");
+
+    // Switch back to short rest: must still be 3m
+    fireEvent.click(shortRestBtn);
+    expect(useFocusStore.getState().session?.restMinutes).toBe(3);
+    expect(useFocusStore.getState().session?.restType).toBe("short");
+  });
+
+  it("allows discarding session and picking a new task when task returns 404 (deleted/lost access)", async () => {
+    vi.spyOn(apiClient, "get").mockImplementation(async (url) => {
+      if (url.startsWith("/tasks/")) {
+        const error = Object.assign(new Error("Task not found"), {
+          response: { status: 404, data: { message: "Task not found" } },
+        });
+        throw error;
+      }
+      return { data: { items: [mockTask], total: 1 } };
+    });
+
+    useFocusStore.getState().set({
+      userId: mockUser.id,
+      taskId: mockTask.id,
+      title: mockTask.title,
+      phase: "work",
+      workMinutes: 25,
+      shortRestMinutes: 5,
+      restMinutes: 5,
+      longRestMinutes: 15,
+      restType: "short",
+      elapsedMs: 120000,
+      runningSince: null,
+      sessionId: "test-session-id",
+      pendingSeconds: 120,
+    });
+
+    renderWithProviders(
+      <FocusMode tasks={[mockTask]} disabled={false} onCheck={vi.fn()} />,
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          "Công việc không còn tồn tại hoặc bạn không còn quyền truy cập.",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    const saveBtn = screen.getByRole("button", { name: "Thử lưu lại" });
+    expect(saveBtn).toBeDisabled();
+
+    const discardBtn = screen.getByRole("button", {
+      name: "Bỏ phiên tập trung",
+    });
+    expect(discardBtn).toBeInTheDocument();
+
+    fireEvent.click(discardBtn);
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Hủy" }));
+    expect(useFocusStore.getState().session).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Bỏ phiên tập trung" }));
+    fireEvent.click(screen.getByRole("button", { name: "Xác nhận bỏ phiên" }));
+
+    expect(useFocusStore.getState().session).toBeNull();
+    expect(screen.getByLabelText("Việc tập trung")).toBeInTheDocument();
+  });
+
+  it("does not disable 'Kết thúc nghỉ' during rest phase when task query fails", async () => {
+    vi.spyOn(apiClient, "get").mockImplementation(async (url) => {
+      if (url.startsWith("/tasks/")) {
+        const error = Object.assign(new Error("Task not found"), {
+          response: { status: 404, data: { message: "Task not found" } },
+        });
+        throw error;
+      }
+      return { data: { items: [mockTask], total: 1 } };
+    });
+
+    useFocusStore.getState().set({
+      userId: mockUser.id,
+      taskId: mockTask.id,
+      title: mockTask.title,
+      phase: "rest",
+      workMinutes: 25,
+      shortRestMinutes: 5,
+      restMinutes: 5,
+      longRestMinutes: 15,
+      restType: "short",
+      elapsedMs: 0,
+      runningSince: null,
+      sessionId: "test-session-id",
+      pendingSeconds: null,
+    });
+
+    renderWithProviders(
+      <FocusMode tasks={[mockTask]} disabled={false} onCheck={vi.fn()} />,
+    );
+
+    const finishRestBtn = screen.getByRole("button", {
+      name: "Kết thúc nghỉ",
+    });
+    expect(finishRestBtn).not.toBeDisabled();
+
+    fireEvent.click(finishRestBtn);
+    expect(useFocusStore.getState().session).toBeNull();
+  });
 });
 
 describe("TemplatePicker Component", () => {

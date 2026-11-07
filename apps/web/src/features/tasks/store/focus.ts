@@ -6,6 +6,7 @@ export type FocusSession = {
   title: string;
   phase: "work" | "rest";
   workMinutes: number;
+  shortRestMinutes?: number;
   restMinutes: number;
   longRestMinutes?: number;
   restType?: "short" | "long";

@@ -1,9 +1,9 @@
+import { ViewErrorBoundary } from "../../../components/ui/ViewErrorBoundary";
 import { lazy, Suspense, ReactNode } from "react";
 import {
   Card,
   Button,
   Skeleton,
-  ViewErrorBoundary,
 } from "../../../components/ui";
 import { errorMessage } from "../../../lib/apiClient";
 import { TaskListView } from "./TaskListView";

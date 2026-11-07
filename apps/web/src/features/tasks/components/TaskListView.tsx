@@ -1,10 +1,10 @@
+import { ViewErrorBoundary } from "../../../components/ui/ViewErrorBoundary";
 import React, { Suspense, lazy } from "react";
 import {
   Card,
   Button,
   EmptyState,
   Skeleton,
-  ViewErrorBoundary,
 } from "../../../components/ui";
 import { KanbanView } from "./KanbanView";
 import { SortableTaskList } from "./SortableTaskList";

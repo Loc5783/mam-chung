@@ -1,5 +1,5 @@
+import { ViewErrorBoundary } from "../../../components/ui/ViewErrorBoundary";
 import { Modal } from "../../../components/ui/Modal";
-import { ViewErrorBoundary } from "../../../components/ui";
 import { ShortcutsModal } from "./ShortcutsModal";
 import { TaskDetailDrawer } from "./TaskDetailDrawer";
 import { TaskCommentsModal } from "./TaskCommentsModal";

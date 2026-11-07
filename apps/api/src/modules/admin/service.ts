@@ -1,5 +1,10 @@
-import { User } from "../users/model";
-import { Couple, CoupleMember, CoupleInvite } from "../couples/models";
+import { User, UserDocument } from "../users/model";
+import {
+  Couple,
+  CoupleMember,
+  CoupleInvite,
+  CoupleActivity,
+} from "../couples/models";
 import { tokenRepository } from "../auth/repository";
 import { AdminAuditLog, AppSettings } from "./models";
 import { AppError } from "../../utils/AppError";
@@ -48,6 +53,14 @@ export async function recordAuditLog(entry: {
     after: entry.after ?? null,
     details: entry.details ?? null,
   });
+}
+
+async function acquireAdminMutex(session: import("mongoose").ClientSession) {
+  await AppSettings.findOneAndUpdate(
+    { key: "global" },
+    { $set: { updatedAt: new Date() } },
+    { upsert: true, session },
+  );
 }
 
 export const adminService = {
@@ -305,52 +318,75 @@ export const adminService = {
 
   async revokeAdminRole(rawEmail: string, actorEmail = "system:cli") {
     const email = emailSchema.parse(rawEmail);
-    const user = await User.findOne({ email, deletedAt: null });
-    if (!user) {
-      throw new AppError(
-        404,
-        "USER_NOT_FOUND",
-        `Không tìm thấy người dùng với email: ${email}`,
-      );
-    }
-    if (user.role !== "admin") {
-      throw new AppError(
-        400,
-        "NOT_AN_ADMIN",
-        `Người dùng ${email} không phải là quản trị viên.`,
-      );
-    }
+    let targetUser: UserDocument;
 
-    const adminCount = await User.countDocuments({
-      role: "admin",
-      deletedAt: null,
+    await inTransaction(async (session) => {
+      await acquireAdminMutex(session);
+
+      const user = await User.findOne({ email, deletedAt: null }).session(
+        session,
+      );
+      if (!user) {
+        throw new AppError(
+          404,
+          "USER_NOT_FOUND",
+          `Không tìm thấy người dùng với email: ${email}`,
+        );
+      }
+      if (user.role !== "admin") {
+        throw new AppError(
+          400,
+          "NOT_AN_ADMIN",
+          `Người dùng ${email} không phải là quản trị viên.`,
+        );
+      }
+
+      const activeAdminCount = await User.countDocuments({
+        role: "admin",
+        deletedAt: null,
+        disabledAt: null,
+      }).session(session);
+
+      if (!user.disabledAt && activeAdminCount <= 1) {
+        throw new AppError(
+          400,
+          "LAST_ADMIN_CANNOT_BE_REVOKED",
+          "Không thể gỡ quyền: Đây là quản trị viên cuối cùng có thể đăng nhập của hệ thống.",
+        );
+      }
+
+      const totalAdminCount = await User.countDocuments({
+        role: "admin",
+        deletedAt: null,
+      }).session(session);
+      if (totalAdminCount <= 1) {
+        throw new AppError(
+          400,
+          "LAST_ADMIN_CANNOT_BE_REVOKED",
+          "Không thể gỡ quyền: Đây là quản trị viên cuối cùng của hệ thống.",
+        );
+      }
+
+      user.role = "user";
+      user.securityVersion += 1;
+      user.sessionRevision += 1;
+      await user.save({ session });
+      await tokenRepository.revoke(user.id as string, session);
+      targetUser = user;
     });
-    if (adminCount <= 1) {
-      throw new AppError(
-        400,
-        "LAST_ADMIN_CANNOT_BE_REVOKED",
-        "Không thể gỡ quyền: Đây là quản trị viên cuối cùng của hệ thống.",
-      );
-    }
-
-    user.role = "user";
-    user.securityVersion += 1;
-    user.sessionRevision += 1;
-    await user.save();
-    await tokenRepository.revoke(user.id as string);
 
     await recordAuditLog({
       adminId: null,
       adminEmail: actorEmail,
       action: "admin_revoke",
       targetType: "user",
-      targetId: user.id as string,
+      targetId: targetUser!.id as string,
       before: { role: "admin" },
       after: { role: "user" },
-      details: { email: user.email, name: user.name },
+      details: { email: targetUser!.email, name: targetUser!.name },
     });
 
-    return { user, changed: true };
+    return { user: targetUser!, changed: true };
   },
 
   async listAdmins() {
@@ -372,18 +408,47 @@ export const adminService = {
         "Quản trị viên không thể tự khóa chính mình.",
       );
     }
-    const target = await User.findOne({ _id: targetUserId, deletedAt: null });
-    if (!target) {
-      throw new AppError(404, "USER_NOT_FOUND", "Không tìm thấy người dùng.");
-    }
-    const before = {
-      disabledAt: target.disabledAt ? target.disabledAt.toISOString() : null,
-    };
-    target.disabledAt = new Date();
-    target.securityVersion += 1;
-    target.sessionRevision += 1;
-    await target.save();
-    await tokenRepository.revoke(target.id as string);
+
+    let targetUser: UserDocument;
+    let beforeState: { disabledAt: string | null };
+
+    await inTransaction(async (session) => {
+      await acquireAdminMutex(session);
+
+      const target = await User.findOne({
+        _id: targetUserId,
+        deletedAt: null,
+      }).session(session);
+      if (!target) {
+        throw new AppError(404, "USER_NOT_FOUND", "Không tìm thấy người dùng.");
+      }
+
+      if (target.role === "admin") {
+        const activeAdminCount = await User.countDocuments({
+          role: "admin",
+          deletedAt: null,
+          disabledAt: null,
+        }).session(session);
+
+        if (!target.disabledAt && activeAdminCount <= 1) {
+          throw new AppError(
+            400,
+            "LAST_ADMIN_CANNOT_BE_LOCKED",
+            "Không thể khóa quản trị viên hoạt động cuối cùng của hệ thống.",
+          );
+        }
+      }
+
+      beforeState = {
+        disabledAt: target.disabledAt ? target.disabledAt.toISOString() : null,
+      };
+      target.disabledAt = new Date();
+      target.securityVersion += 1;
+      target.sessionRevision += 1;
+      await target.save({ session });
+      await tokenRepository.revoke(target.id as string, session);
+      targetUser = target;
+    });
 
     await recordAuditLog({
       adminId,
@@ -391,10 +456,10 @@ export const adminService = {
       ip,
       action: "lock_user",
       targetType: "user",
-      targetId: target.id as string,
-      before,
-      after: { disabledAt: target.disabledAt.toISOString() },
-      details: { email: target.email, name: target.name },
+      targetId: targetUser!.id as string,
+      before: beforeState!,
+      after: { disabledAt: targetUser!.disabledAt!.toISOString() },
+      details: { email: targetUser!.email, name: targetUser!.name },
     });
 
     return { success: true, message: "Đã tạm khóa tài khoản." };
@@ -488,29 +553,54 @@ export const adminService = {
         "Quản trị viên không thể tự xóa tài khoản của mình.",
       );
     }
-    const target = await User.findOne({ _id: targetUserId, deletedAt: null });
-    if (!target) {
-      throw new AppError(404, "USER_NOT_FOUND", "Không tìm thấy người dùng.");
-    }
-    if (target.role === "admin") {
-      const adminCount = await User.countDocuments({
-        role: "admin",
-        deletedAt: null,
-      });
-      if (adminCount <= 1) {
-        throw new AppError(
-          400,
-          "LAST_ADMIN_CANNOT_BE_DELETED",
-          "Không thể xóa quản trị viên cuối cùng của hệ thống.",
-        );
-      }
-    }
 
-    const oldEmail = target.email;
-    const oldName = target.name;
-    const deletedEmail = `deleted_${Date.now()}_${oldEmail}`;
+    let oldEmail = "";
+    let oldName = "";
+    let deletedAtIso: string | null = null;
 
     await inTransaction(async (session) => {
+      await acquireAdminMutex(session);
+
+      const target = await User.findOne({
+        _id: targetUserId,
+        deletedAt: null,
+      }).session(session);
+      if (!target) {
+        throw new AppError(404, "USER_NOT_FOUND", "Không tìm thấy người dùng.");
+      }
+
+      if (target.role === "admin") {
+        const activeAdminCount = await User.countDocuments({
+          role: "admin",
+          deletedAt: null,
+          disabledAt: null,
+        }).session(session);
+
+        if (!target.disabledAt && activeAdminCount <= 1) {
+          throw new AppError(
+            400,
+            "LAST_ADMIN_CANNOT_BE_DELETED",
+            "Không thể xóa quản trị viên có khả năng đăng nhập cuối cùng của hệ thống.",
+          );
+        }
+
+        const totalAdminCount = await User.countDocuments({
+          role: "admin",
+          deletedAt: null,
+        }).session(session);
+        if (totalAdminCount <= 1) {
+          throw new AppError(
+            400,
+            "LAST_ADMIN_CANNOT_BE_DELETED",
+            "Không thể xóa quản trị viên cuối cùng của hệ thống.",
+          );
+        }
+      }
+
+      oldEmail = target.email;
+      oldName = target.name;
+      const deletedEmail = `deleted_${Date.now()}_${oldEmail}`;
+
       let coupleId = target.coupleId;
       if (!coupleId) {
         const activeMembership = await CoupleMember.findOne({
@@ -573,10 +663,12 @@ export const adminService = {
         target.coupleId = null;
       }
 
+      const now = new Date();
+      deletedAtIso = now.toISOString();
       target.email = deletedEmail;
       target.name = "Tài khoản đã xóa";
       target.passwordHash = "deleted";
-      target.deletedAt = new Date();
+      target.deletedAt = now;
       target.securityVersion += 1;
       target.sessionRevision += 1;
       await target.save({ session });
@@ -589,9 +681,9 @@ export const adminService = {
       ip,
       action: "delete_user",
       targetType: "user",
-      targetId: target.id as string,
+      targetId: targetUserId,
       before: { email: oldEmail, name: oldName },
-      after: { deletedAt: target.deletedAt?.toISOString() },
+      after: { deletedAt: deletedAtIso },
       details: { originalEmail: oldEmail },
     });
 
@@ -634,31 +726,79 @@ export const adminService = {
     adminEmail: string,
     ip?: string | null,
   ) {
-    const couple = await Couple.findOne({ _id: coupleId, deletedAt: null });
-    if (!couple) {
-      throw new AppError(
-        404,
-        "COUPLE_NOT_FOUND",
-        "Không tìm thấy không gian chung.",
-      );
-    }
-    if (couple.status === "archived") {
-      throw new AppError(
-        400,
-        "COUPLE_ALREADY_ARCHIVED",
-        "Không gian chung đã được lưu trữ trước đó.",
-      );
-    }
+    let coupleName = "";
 
     await inTransaction(async (session) => {
+      const couple = await Couple.findOne({
+        _id: coupleId,
+        deletedAt: null,
+      }).session(session);
+
+      if (!couple) {
+        throw new AppError(
+          404,
+          "COUPLE_NOT_FOUND",
+          "Không tìm thấy không gian chung.",
+        );
+      }
+      if (couple.status === "archived") {
+        throw new AppError(
+          400,
+          "COUPLE_ALREADY_ARCHIVED",
+          "Không gian chung đã được lưu trữ trước đó.",
+        );
+      }
+
+      coupleName = couple.name;
+      const now = new Date();
+
+      const members = await CoupleMember.find({
+        coupleId: couple._id,
+        deletedAt: null,
+      }).session(session);
+
+      for (const m of members) {
+        const u = await User.findOne({
+          _id: m.userId,
+          deletedAt: null,
+        }).session(session);
+
+        if (u) {
+          m.nameSnapshot = u.name;
+          m.avatarSnapshot = u.avatar;
+          if (u.coupleId && u.coupleId.toString() === couple._id.toString()) {
+            u.coupleId = null;
+            await u.save({ session });
+          }
+        }
+        if (m.active) {
+          m.active = false;
+          m.leftAt = now;
+        }
+        await m.save({ session });
+      }
+
       couple.status = "archived";
-      couple.archivedAt = new Date();
+      couple.archivedAt = now;
       couple.archivedReason = "admin_action";
       await couple.save({ session });
 
       await CoupleInvite.updateMany(
         { coupleId: couple._id, status: "active" },
         { $set: { status: "revoked" } },
+        { session },
+      );
+
+      await CoupleActivity.create(
+        [
+          {
+            coupleId: couple._id,
+            actorId: adminId,
+            actorName: `Quản trị viên (${adminEmail})`,
+            type: "archived",
+            message: `Không gian chung đã được lưu trữ bởi quản trị viên (${adminEmail}).`,
+          },
+        ],
         { session },
       );
     });
@@ -669,10 +809,10 @@ export const adminService = {
       ip,
       action: "archive_couple",
       targetType: "couple",
-      targetId: couple.id as string,
+      targetId: coupleId,
       before: { status: "active" },
       after: { status: "archived", archivedReason: "admin_action" },
-      details: { name: couple.name },
+      details: { name: coupleName },
     });
 
     return {

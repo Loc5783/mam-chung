@@ -243,6 +243,23 @@ it("lỗi tạo bản lặp rollback trạng thái và activity", async () => {
   expect(await Task.countDocuments()).toBe(1);
   expect(await CoupleActivity.countDocuments({ type: "tasks" })).toBe(1);
 });
+it("hoàn thành việc lặp có reminderAt: bản kế tiếp có reminderAt là null (nhắc một lần)", async () => {
+  const t = await create({
+    deadline: "2026-10-03",
+    recurrence: "daily",
+  });
+  await Task.updateOne(
+    { _id: t.id },
+    { $set: { reminderAt: new Date(Date.now() + 3600000) } },
+  );
+
+  await s.status(a, t.id, { status: "DONE", revision: 0 });
+
+  const next = await Task.findOne({ sourceTaskId: t.id });
+  expect(next).not.toBeNull();
+  expect(next!.deadline).toBe("2026-10-04");
+  expect(next!.reminderAt).toBeNull();
+});
 it("thiếu hạn hoặc ngày vượt9999 không hoàn thành nửa chừng", async () => {
   await expect(create({ recurrence: "daily" })).rejects.toMatchObject({
     code: "DEADLINE_REQUIRED",
