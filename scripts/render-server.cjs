@@ -78,7 +78,8 @@ async function start() {
   process.on("SIGTERM", stop);
   process.on("SIGINT", stop);
 }
-start().catch(() => {
+start().catch((error) => {
+  console.error(JSON.stringify({ stage: "startup", errorType: error.name, code: error.code, topology: error.reason?.type }));
   console.error("Startup failed. Check private environment configuration and MongoDB connectivity.");
   process.exit(1);
 });
