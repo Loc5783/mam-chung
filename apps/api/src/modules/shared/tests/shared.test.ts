@@ -313,12 +313,13 @@ describe("Quỹ và khoản chi chung", () => {
     });
   });
   test("lọc thời gian, quỹ, phân trang và dashboard không tính tiền nạp vào chi", async () => {
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
     await deposit();
-    await tx();
-    await tx({ date: "2026-09-30", description: "Tháng trước" });
+    await tx({ date: today });
+    await tx({ date: "2000-01-01", description: "Tháng trước" });
     const page = await s.transactions(b, {
-      from: date,
-      to: date,
+      from: today,
+      to: today,
       sharedWalletId: walletId,
       limit: 1,
     });
