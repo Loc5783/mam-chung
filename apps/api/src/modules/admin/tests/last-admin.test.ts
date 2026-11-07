@@ -13,7 +13,6 @@ let replica: MongoMemoryReplSet;
 beforeAll(async () => {
   replica = await MongoMemoryReplSet.create({
     binary: { version: "7.0.14" },
-    instanceOpts: [{ ip: "127.0.0.1" }],
     replSet: { count: 1, storageEngine: "wiredTiger", ip: "127.0.0.1" },
   });
   await mongoose.connect(replica.getUri());
